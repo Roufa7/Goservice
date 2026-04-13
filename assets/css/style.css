@@ -1652,3 +1652,155 @@ body.dark .auth-form input {
     flex-wrap: wrap;
     gap: 8px;
 }
+/* panel create post */
+.create-post-panel {
+    padding: 30px 32px !important;
+}
+
+/* grid principal */
+.create-post-grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 18px !important;
+    margin-top: 18px !important;
+    align-items: start !important;
+    width: 100% !important;
+}
+
+/* chaque bloc champ */
+.create-post-field {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    min-width: 0 !important;
+}
+
+/* textarea sur toute la largeur */
+.create-post-field.full-width {
+    grid-column: 1 / -1 !important;
+}
+
+/* inputs / selects / textarea */
+.create-post-input,
+.create-post-file,
+.create-post-textarea {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    border: 1px solid #d9dee7 !important;
+    border-radius: 20px !important;
+    background: #fff !important;
+    font-size: 16px !important;
+    color: #243447 !important;
+    outline: none !important;
+    display: block !important;
+}
+
+/* inputs + selects */
+.create-post-input {
+    height: 64px !important;
+    padding: 0 20px !important;
+    appearance: none;
+    -webkit-appearance: none;
+}
+
+/* file input */
+.create-post-file {
+    height: 64px !important;
+    padding: 16px 18px !important;
+}
+
+/* textarea */
+.create-post-textarea {
+    min-height: 170px !important;
+    padding: 18px 20px !important;
+    resize: vertical !important;
+}
+
+/* focus */
+.create-post-input:focus,
+.create-post-file:focus,
+.create-post-textarea:focus {
+    border-color: rgba(249, 115, 22, 0.35) !important;
+    box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.08) !important;
+}
+
+/* boutons */
+.create-post-actions {
+    display: flex !important;
+    gap: 16px !important;
+    align-items: center !important;
+    margin-top: 22px !important;
+    flex-wrap: wrap !important;
+}
+
+/* erreurs */
+.field-error {
+    display: block !important;
+    min-height: 18px !important;
+    margin-top: 8px !important;
+    color: #eb5b5b !important;
+    font-size: 13px !important;
+    padding-left: 4px !important;
+}
+
+.field-invalid {
+    border: 1.8px solid #eb5b5b !important;
+    box-shadow: 0 0 0 4px rgba(235, 91, 91, 0.08) !important;
+}
+
+/* responsive */
+@media (max-width: 900px) {
+    .create-post-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .create-post-field.full-width {
+        grid-column: auto !important;
+    }
+}
+#postForm .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+    align-items: start;
+}
+
+#postForm .form-grid > div {
+    width: 100%;
+    min-width: 0;
+}
+
+#postForm input[type="text"],
+#postForm input[type="file"],
+#postForm select,
+#postForm textarea {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+#postForm input[type="text"],
+#postForm input[type="file"],
+#postForm select {
+    min-height: 58px;
+}
+
+#postForm textarea {
+    min-height: 170px;
+    resize: vertical;
+}
+
+#postForm .field-error {
+    display: block;
+    margin-top: 8px;
+    min-height: 18px;
+}
+
+@media (max-width: 900px) {
+    #postForm .form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    #postForm .form-grid > div[style*="grid-column"] {
+        grid-column: auto !important;
+    }
+}
