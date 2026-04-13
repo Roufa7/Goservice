@@ -10,6 +10,9 @@ $allowedPages = [
     'events',
     'profile',
     'register',
+    'serviceDetails',
+    'addService',
+    
 ];
 
 if (!in_array($page, $allowedPages, true)) {
