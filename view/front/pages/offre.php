@@ -23,21 +23,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             throw new Exception('Offre invalide. Veuillez sélectionner une offre existante.');
         }
 
+        // Assume user is logged in, get id_user from session
+        $userId = $_SESSION['user_id'] ?? 1; // Placeholder
+
         $cvPath = null;
         if (isset($_FILES['cv']) && $_FILES['cv']['error'] === UPLOAD_ERR_OK) {
             $cvPath = $applicationController->uploadCV($_FILES['cv']);
         }
 
         $applicationController->submitApplication([
-            'offer_id' => $offerId,
-            'user_id' => null,
-            'nom' => htmlspecialchars($_POST['nom'] ?? ''),
-            'email' => filter_var($_POST['email'] ?? '', FILTER_SANITIZE_EMAIL),
+            'id_offre' => $offerId,
+            'id_user' => $userId,
             'experience' => htmlspecialchars($_POST['experience'] ?? ''),
             'competences' => htmlspecialchars($_POST['competences'] ?? ''),
-            'cv_path' => $cvPath,
+            'cv' => $cvPath,
             'message' => htmlspecialchars($_POST['message'] ?? ''),
-            'statut' => 'en_attente',
+            'statut' => 'en attente',
         ]);
 
         $message = '✅ Candidature soumise avec succès ! Nous vous recontacterons bientôt.';
@@ -54,9 +55,8 @@ function formatOfferDate(?string $value): string {
 
 function getOfferBadgeClass(string $statut): string {
     return match($statut) {
-        'active' => 'badge-active',
-        'inactive' => 'badge-inactive',
-        'expiree' => 'badge-expired',
+        'ouverte' => 'badge-active',
+        'fermee' => 'badge-inactive',
         default => 'badge-default'
     };
 }
@@ -101,12 +101,12 @@ function getOfferBadgeClass(string $statut): string {
         <span>Offres Actives</span>
     </article>
     <article class="admin-stat">
-        <strong><?php echo htmlspecialchars(count(array_filter($activeOffers, fn($o) => $o['prix'] > 0)), ENT_QUOTES, 'UTF-8'); ?></strong>
-        <span>Réductions Disponibles</span>
+        <strong><?php echo htmlspecialchars(count(array_filter($activeOffers, fn($o) => !empty($o['localisation']))), ENT_QUOTES, 'UTF-8'); ?></strong>
+        <span>Offres Localisées</span>
     </article>
     <article class="admin-stat">
-        <strong><?php echo number_format(array_reduce($activeOffers, fn($sum, $o) => $sum + ($o['prix'] ?? 0), 0), 2); ?> €</strong>
-        <span>Économies Potentielles</span>
+        <strong><?php echo htmlspecialchars(count(array_unique(array_column($activeOffers, 'type_service'))), ENT_QUOTES, 'UTF-8'); ?></strong>
+        <span>Types de Services</span>
     </article>
 </section>
 
@@ -121,7 +121,7 @@ function getOfferBadgeClass(string $statut): string {
             <?php foreach ($activeOffers as $offer): ?>
                 <article class="card offer-card">
                     <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
-                        <span class="section-badge"><?php echo htmlspecialchars($offer['service_categorie'] ?: 'Service', ENT_QUOTES, 'UTF-8'); ?></span>
+                        <span class="section-badge"><?php echo htmlspecialchars($offer['type_service'] ?: 'Service', ENT_QUOTES, 'UTF-8'); ?></span>
                         <span class="badge <?php echo htmlspecialchars(getOfferBadgeClass($offer['statut']), ENT_QUOTES, 'UTF-8'); ?>" style="font-size: 11px; padding: 4px 8px; border-radius: 4px; background: #4CAF50; color: white;">
                             <?php echo htmlspecialchars(ucfirst($offer['statut']), ENT_QUOTES, 'UTF-8'); ?>
                         </span>
@@ -137,25 +137,25 @@ function getOfferBadgeClass(string $statut): string {
 
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 15px 0; padding: 12px; background: #f5f5f5; border-radius: 6px;">
                         <div>
-                            <strong style="font-size: 12px; color: #999;">Prix</strong>
-                            <p style="font-size: 18px; color: #4CAF50; margin: 5px 0; font-weight: bold;">
-                                <?php echo htmlspecialchars($offer['prix'] > 0 ? $offer['prix'] . '€' : 'À déterminer', ENT_QUOTES, 'UTF-8'); ?>
+                            <strong style="font-size: 12px; color: #999;">Localisation</strong>
+                            <p style="font-size: 14px; color: #333; margin: 5px 0;">
+                                <?php echo htmlspecialchars($offer['localisation'] ?: 'Non spécifiée', ENT_QUOTES, 'UTF-8'); ?>
                             </p>
                         </div>
                         <div>
                             <strong style="font-size: 12px; color: #999;">Valide jusqu'au</strong>
                             <p style="font-size: 14px; color: #333; margin: 5px 0;">
-                                <?php echo htmlspecialchars(formatOfferDate($offer['date_fin']), ENT_QUOTES, 'UTF-8'); ?>
+                                <?php echo htmlspecialchars(formatOfferDate($offer['date_expiration']), ENT_QUOTES, 'UTF-8'); ?>
                             </p>
                         </div>
                     </div>
 
                     <div class="meta-row" style="font-size: 13px; color: #999; margin: 10px 0;">
-                        <span>📅 Publié : <?php echo htmlspecialchars(formatOfferDate($offer['date_debut']), ENT_QUOTES, 'UTF-8'); ?></span>
+                        <span>📅 Publié : <?php echo htmlspecialchars(formatOfferDate($offer['date_publication']), ENT_QUOTES, 'UTF-8'); ?></span>
                     </div>
 
                     <div class="icon-actions" style="margin-top: 14px;">
-                        <a class="solid-btn postuler-btn" href="#postuler-offre" data-offer-id="<?php echo htmlspecialchars($offer['id'], ENT_QUOTES, 'UTF-8'); ?>" data-offer-title="<?php echo htmlspecialchars($offer['titre'], ENT_QUOTES, 'UTF-8'); ?>">✓ Postuler</a>
+                        <a class="solid-btn postuler-btn" href="#postuler-offre" data-offer-id="<?php echo htmlspecialchars($offer['id_offre'], ENT_QUOTES, 'UTF-8'); ?>" data-offer-title="<?php echo htmlspecialchars($offer['titre'], ENT_QUOTES, 'UTF-8'); ?>">✓ Postuler</a>
                         <button class="small-btn" onclick="toggleDetails(this)">Voir détails</button>
                     </div>
 
@@ -179,16 +179,13 @@ function getOfferBadgeClass(string $statut): string {
                     <input type="hidden" name="action" value="submit_application">
                     <select name="offer_id" id="offerIdField" style="display:none;">
                         <?php foreach ($activeOffers as $offerOption): ?>
-                            <option value="<?php echo htmlspecialchars($offerOption['id'], ENT_QUOTES, 'UTF-8'); ?>"<?php echo (string) $offerOption['id'] === (string) ($activeOffers[0]['id'] ?? '') ? ' selected' : ''; ?>><?php echo htmlspecialchars($offerOption['titre'], ENT_QUOTES, 'UTF-8'); ?></option>
+                            <option value="<?php echo htmlspecialchars($offerOption['id_offre'], ENT_QUOTES, 'UTF-8'); ?>"<?php echo (string) $offerOption['id_offre'] === (string) ($activeOffers[0]['id_offre'] ?? '') ? ' selected' : ''; ?>><?php echo htmlspecialchars($offerOption['titre'], ENT_QUOTES, 'UTF-8'); ?></option>
                         <?php endforeach; ?>
                     </select>
                     <p id="selectedOfferLabel" style="font-weight:700; margin-bottom:0.75rem;">
                         Offre sélectionnée : <span><?php echo htmlspecialchars($activeOffers[0]['titre'] ?? 'Aucune offre', ENT_QUOTES, 'UTF-8'); ?></span>
                     </p>
                     <div class="form-grid" style="gap: 10px;">
-                        <input type="text" name="nom" placeholder="Votre nom" required style="padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
-                        <input type="email" name="email" placeholder="Votre email" required style="padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
-
                         <input type="text" name="experience" placeholder="Années d'expérience" required style="padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
                         <input type="text" name="competences" placeholder="Vos compétences clés" required style="padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
 

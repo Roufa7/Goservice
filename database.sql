@@ -1,156 +1,161 @@
--- Database Structure for GoService Platform
--- Created: 2026-04-13
+-- 🔷 CREATION BASE
+DROP DATABASE IF EXISTS goservice;
+CREATE DATABASE goservice;
+USE goservice;
 
--- Users Table
-CREATE TABLE IF NOT EXISTS users (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    nom VARCHAR(100) NOT NULL,
-    prenom VARCHAR(100) NOT NULL,
-    email VARCHAR(255) UNIQUE NOT NULL,
-    password VARCHAR(255) NOT NULL,
-    role ENUM('utilisateur', 'provider', 'admin') DEFAULT 'utilisateur',
+-- 🔷 MODULE USER
+CREATE TABLE users (
+    id_user INT AUTO_INCREMENT PRIMARY KEY,
+    nom VARCHAR(100),
+    prenom VARCHAR(100),
+    email VARCHAR(150) NOT NULL UNIQUE,
+    password VARCHAR(255),
     telephone VARCHAR(20),
     adresse VARCHAR(255),
     photo VARCHAR(255),
-    bio TEXT,
-    statut ENUM('actif', 'inactif', 'suspendu') DEFAULT 'actif',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    role ENUM('user', 'admin') DEFAULT 'user'
+);
 
--- Services Table
-CREATE TABLE IF NOT EXISTS services (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    titre VARCHAR(255) NOT NULL,
+CREATE TABLE provider (
+    id_provider INT AUTO_INCREMENT PRIMARY KEY,
+    specialite VARCHAR(100),
     description TEXT,
-    categorie VARCHAR(100),
-    prix DECIMAL(10, 2),
-    provider_id INT NOT NULL,
-    image VARCHAR(255),
-    rating DECIMAL(3, 2) DEFAULT 0,
-    statut ENUM('disponible', 'indisponible', 'enattente') DEFAULT 'disponible',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (provider_id) REFERENCES users(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    disponibilite BOOLEAN DEFAULT TRUE,
+    id_user INT UNIQUE,
+    FOREIGN KEY (id_user) REFERENCES users(id_user) ON DELETE CASCADE
+);
 
--- Events Table
-CREATE TABLE IF NOT EXISTS events (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    titre VARCHAR(255) NOT NULL,
+CREATE TABLE portfolio (
+    id_portfolio INT AUTO_INCREMENT PRIMARY KEY,
+    titre VARCHAR(150),
     description TEXT,
-    date_event DATETIME NOT NULL,
-    lieu VARCHAR(255),
-    organisateur_id INT NOT NULL,
     image VARCHAR(255),
-    participant_count INT DEFAULT 0,
-    statut ENUM('a_venir', 'en_cours', 'terminee') DEFAULT 'a_venir',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (organisateur_id) REFERENCES users(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    id_provider INT,
+    FOREIGN KEY (id_provider) REFERENCES provider(id_provider) ON DELETE CASCADE
+);
 
--- Forum Posts Table
-CREATE TABLE IF NOT EXISTS forum_posts (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    titre VARCHAR(255) NOT NULL,
-    contenu TEXT NOT NULL,
-    auteur_id INT NOT NULL,
-    categorie VARCHAR(100),
-    views INT DEFAULT 0,
-    replies INT DEFAULT 0,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (auteur_id) REFERENCES users(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- Forum Comments Table
-CREATE TABLE IF NOT EXISTS forum_comments (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    post_id INT NOT NULL,
-    auteur_id INT NOT NULL,
-    contenu TEXT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (post_id) REFERENCES forum_posts(id) ON DELETE CASCADE,
-    FOREIGN KEY (auteur_id) REFERENCES users(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- Offers Table
-CREATE TABLE IF NOT EXISTS offers (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    titre VARCHAR(255) NOT NULL,
-    description TEXT,
-    prix DECIMAL(10, 2),
-    service_id INT,
-    creator_id INT NOT NULL,
-    image VARCHAR(255),
-    statut ENUM('active', 'inactive', 'expiree') DEFAULT 'active',
-    date_debut DATETIME,
-    date_fin DATETIME,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (service_id) REFERENCES services(id) ON DELETE CASCADE,
-    FOREIGN KEY (creator_id) REFERENCES users(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- Applications Table (Candidatures)
-CREATE TABLE IF NOT EXISTS applications (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    offer_id INT NOT NULL,
-    user_id INT DEFAULT NULL,
+-- 🔷 MODULE SERVICE
+CREATE TABLE categorie (
+    id_categorie INT(11) AUTO_INCREMENT PRIMARY KEY,
     nom VARCHAR(100) NOT NULL,
-    email VARCHAR(255) NOT NULL,
-    experience VARCHAR(100),
-    competences TEXT,
-    cv_path VARCHAR(255),
-    message TEXT,
-    statut ENUM('en_attente', 'acceptee', 'rejetee') DEFAULT 'en_attente',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (offer_id) REFERENCES offers(id) ON DELETE CASCADE,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    description TEXT NOT NULL
+);
 
--- Reclamations Table
-CREATE TABLE IF NOT EXISTS reclamations (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+CREATE TABLE service (
+    id_service INT(11) AUTO_INCREMENT PRIMARY KEY,
     titre VARCHAR(255) NOT NULL,
     description TEXT NOT NULL,
-    user_id INT NOT NULL,
-    service_id INT,
-    type VARCHAR(100),
-    priorite ENUM('basse', 'normale', 'haute', 'urgente') DEFAULT 'normale',
-    statut ENUM('ouverte', 'en_cours', 'resolue', 'fermee') DEFAULT 'ouverte',
-    response TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (service_id) REFERENCES services(id) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    prix DECIMAL(10,2) NOT NULL,
+    disponibilite VARCHAR(50) NOT NULL,
+    statut VARCHAR(50) NOT NULL,
+    image VARCHAR(255) DEFAULT NULL,
+    id_provider INT(11) NOT NULL,
+    id_categorie INT(11) NOT NULL,
+    FOREIGN KEY (id_provider) REFERENCES provider(id_provider) ON DELETE CASCADE,
+    FOREIGN KEY (id_categorie) REFERENCES categorie(id_categorie) ON DELETE CASCADE
+);
 
--- Bookings/Reservations Table
-CREATE TABLE IF NOT EXISTS bookings (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
-    service_id INT NOT NULL,
-    date_reservation DATETIME NOT NULL,
-    statut ENUM('confirmee', 'en_attente', 'annulee', 'completee') DEFAULT 'en_attente',
-    notes TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (service_id) REFERENCES services(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+-- 🔷 MODULE EVENEMENT
+CREATE TABLE evenement (
+    id_evenement INT AUTO_INCREMENT PRIMARY KEY,
+    titre VARCHAR(150),
+    description TEXT,
+    date_debut DATETIME,
+    date_fin DATETIME,
+    lieu VARCHAR(150),
+    type_evenement VARCHAR(50),
+    nb_places INT,
+    image VARCHAR(255),
+    statut VARCHAR(50),
+    date_creation DATETIME DEFAULT CURRENT_TIMESTAMP
+);
 
--- Create indexes for better performance
-CREATE INDEX idx_users_role ON users(role);
-CREATE INDEX idx_users_email ON users(email);
-CREATE INDEX idx_services_provider ON services(provider_id);
-CREATE INDEX idx_services_categorie ON services(categorie);
-CREATE INDEX idx_events_organisateur ON events(organisateur_id);
-CREATE INDEX idx_forum_posts_auteur ON forum_posts(auteur_id);
-CREATE INDEX idx_offers_creator ON offers(creator_id);
-CREATE INDEX idx_reclamations_user ON reclamations(user_id);
-CREATE INDEX idx_bookings_user ON bookings(user_id);
-CREATE INDEX idx_bookings_service ON bookings(service_id);
+CREATE TABLE participation (
+    id_participation INT AUTO_INCREMENT PRIMARY KEY,
+    id_evenement INT,
+    nom_participant VARCHAR(100),
+    email_participant VARCHAR(150),
+    telephone VARCHAR(20),
+    date_inscription DATETIME DEFAULT CURRENT_TIMESTAMP,
+    statut_participation VARCHAR(50),
+    FOREIGN KEY (id_evenement) REFERENCES evenement(id_evenement) ON DELETE CASCADE
+);
+
+-- 🔷 MODULE OFFRE
+CREATE TABLE offre (
+    id_offre INT AUTO_INCREMENT PRIMARY KEY,
+    titre VARCHAR(150),
+    description TEXT,
+    localisation VARCHAR(150),
+    date_publication DATETIME DEFAULT CURRENT_TIMESTAMP,
+    date_expiration DATETIME,
+    statut ENUM('ouverte', 'fermee'),
+    type_service ENUM('cuisine', 'juridique', 'plomberie', 'design', 'nettoyage', 'evenementiel') DEFAULT 'cuisine',
+    prix DECIMAL(10,2) DEFAULT NULL,
+    id_admin INT,
+    FOREIGN KEY (id_admin) REFERENCES users(id_user) ON DELETE CASCADE
+);
+
+CREATE TABLE candidature (
+    id_candidature INT AUTO_INCREMENT PRIMARY KEY,
+    date_candidature DATETIME DEFAULT CURRENT_TIMESTAMP,
+    statut ENUM('en attente', 'acceptee', 'refusee'),
+    experience TEXT,
+    competences TEXT,
+    cv VARCHAR(255),
+    message TEXT,
+    id_user INT,
+    id_offre INT,
+    FOREIGN KEY (id_user) REFERENCES users(id_user) ON DELETE CASCADE,
+    FOREIGN KEY (id_offre) REFERENCES offre(id_offre) ON DELETE CASCADE
+);
+
+-- 🔷 MODULE POST
+CREATE TABLE post (
+    id_post INT AUTO_INCREMENT PRIMARY KEY,
+    titre VARCHAR(255),
+    contenu TEXT,
+    image VARCHAR(255),
+    date_publication DATETIME DEFAULT CURRENT_TIMESTAMP,
+    type_post VARCHAR(50),
+    statut_post VARCHAR(50),
+    id_user INT,
+    FOREIGN KEY (id_user) REFERENCES users(id_user) ON DELETE CASCADE
+);
+
+CREATE TABLE commentaire (
+    id_commentaire INT AUTO_INCREMENT PRIMARY KEY,
+    contenu_commentaire TEXT,
+    date_commentaire DATETIME DEFAULT CURRENT_TIMESTAMP,
+    id_post INT,
+    id_user INT,
+    FOREIGN KEY (id_post) REFERENCES post(id_post) ON DELETE CASCADE,
+    FOREIGN KEY (id_user) REFERENCES users(id_user) ON DELETE CASCADE
+);
+
+-- 🔷 MODULE RECLAMATION
+CREATE TABLE reclamation (
+    id_reclamation INT AUTO_INCREMENT PRIMARY KEY,
+    id_user INT NOT NULL,
+    subject VARCHAR(255),
+    description TEXT,
+    status ENUM('pending','resolved','rejected') DEFAULT 'pending',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (id_user) REFERENCES users(id_user) ON DELETE CASCADE
+);
+
+CREATE TABLE reponse (
+    id_reponse INT AUTO_INCREMENT PRIMARY KEY,
+    id_reclamation INT NOT NULL,
+    content TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (id_reclamation) REFERENCES reclamation(id_reclamation) ON DELETE CASCADE
+);
+
+CREATE TABLE avis (
+    id_avis INT AUTO_INCREMENT PRIMARY KEY,
+    id_reclamation INT NOT NULL,
+    commentaire TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (id_reclamation) REFERENCES reclamation(id_reclamation) ON DELETE CASCADE
+);

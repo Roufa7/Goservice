@@ -18,24 +18,26 @@ $currentOffer = null;
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['action'])) {
         if ($_POST['action'] === 'update_application_status' && !empty($_POST['application_id']) && !empty($_POST['status'])) {
-            $allowedStatuses = ['en_attente', 'acceptee', 'rejetee'];
+            $allowedStatuses = ['en attente', 'acceptee', 'refusee'];
             $status = $_POST['status'];
 
             if (in_array($status, $allowedStatuses, true)) {
                 $applicationController->updateApplicationStatus(intval($_POST['application_id']), $status);
                 $message = 'Statut de candidature mis à jour !';
+                header('Location: ?page=offers');
+                exit;
             }
         } elseif ($_POST['action'] === 'create') {
             if (!empty($_POST['titre'])) {
                 $offerController->createOffer([
                     'titre' => htmlspecialchars($_POST['titre']),
                     'description' => htmlspecialchars($_POST['description'] ?? ''),
-                    'prix' => floatval($_POST['prix'] ?? 0),
-                    'service_id' => intval($_POST['service_id'] ?? 0),
-                    'creator_id' => 1,
-                    'statut' => htmlspecialchars($_POST['statut'] ?? 'active'),
-                    'date_debut' => $_POST['date_debut'] ?? null,
-                    'date_fin' => $_POST['date_fin'] ?? null,
+                    'localisation' => htmlspecialchars($_POST['localisation'] ?? ''),
+                    'date_expiration' => $_POST['date_expiration'] ?? null,
+                    'statut' => htmlspecialchars($_POST['statut'] ?? 'ouverte'),
+                    'type_service' => htmlspecialchars($_POST['type_service'] ?? ''),
+                    'prix' => isset($_POST['prix']) ? floatval($_POST['prix']) : null,
+                    'id_admin' => session_status() === PHP_SESSION_ACTIVE && !empty($_SESSION['user_id']) ? intval($_SESSION['user_id']) : null,
                 ]);
                 $message = 'Offre créée avec succès !';
             }
@@ -43,11 +45,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $offerController->updateOffer(intval($_POST['offer_id']), [
                 'titre' => htmlspecialchars($_POST['titre']),
                 'description' => htmlspecialchars($_POST['description'] ?? ''),
-                'prix' => floatval($_POST['prix'] ?? 0),
-                'service_id' => intval($_POST['service_id'] ?? 0),
-                'statut' => htmlspecialchars($_POST['statut'] ?? 'active'),
-                'date_debut' => $_POST['date_debut'] ?? null,
-                'date_fin' => $_POST['date_fin'] ?? null,
+                'localisation' => htmlspecialchars($_POST['localisation'] ?? ''),
+                'date_expiration' => $_POST['date_expiration'] ?? null,
+                'statut' => htmlspecialchars($_POST['statut'] ?? 'ouverte'),
+                'type_service' => htmlspecialchars($_POST['type_service'] ?? ''),
+                'prix' => isset($_POST['prix']) ? floatval($_POST['prix']) : null,
             ]);
             $message = 'Offre mise à jour !';
             $currentOffer = null;
@@ -65,11 +67,11 @@ if (isset($_GET['edit'])) {
 }
 
 $offers = $offerController->listOffers();
-$serviceOptions = $pdo->query('SELECT id, titre, categorie FROM services ORDER BY categorie, titre')->fetchAll(PDO::FETCH_ASSOC);
+$typeServiceOptions = Offer::getTypeServiceOptions();
 $stats = $offerController->getStats();
 $applicationStats = $applicationController->getApplicationStats();
 $recentApplications = array_slice($applicationController->getAllApplications(), 0, 10);
-$closedOffers = $stats['inactive'] + $stats['expiree'];
+$closedOffers = $stats['fermee'];
 
 function formatDate(?string $value): string {
     return $value ? date('d/m/Y', strtotime($value)) : 'N/A';
@@ -82,6 +84,7 @@ function formatDateInput(?string $value): string {
 function formatApplicationStatus(string $status): string {
     return match($status) {
         'acceptee' => 'Acceptée',
+        'refusee' => 'Refusée',
         'rejetee' => 'Refusée',
         default => 'En attente'
     };
@@ -116,7 +119,7 @@ function formatApplicationStatus(string $status): string {
 
 <section class="admin-stats reveal">
     <article class="admin-stat"><strong><?php echo htmlspecialchars($stats['total'], ENT_QUOTES, 'UTF-8'); ?></strong><span>Offres</span></article>
-    <article class="admin-stat"><strong><?php echo htmlspecialchars($stats['active'], ENT_QUOTES, 'UTF-8'); ?></strong><span>Ouvertes</span></article>
+    <article class="admin-stat"><strong><?php echo htmlspecialchars($stats['ouverte'], ENT_QUOTES, 'UTF-8'); ?></strong><span>Ouvertes</span></article>
     <article class="admin-stat"><strong><?php echo htmlspecialchars($closedOffers, ENT_QUOTES, 'UTF-8'); ?></strong><span>Fermées</span></article>
     <article class="admin-stat"><strong><?php echo htmlspecialchars($applicationStats['total'], ENT_QUOTES, 'UTF-8'); ?></strong><span>Candidatures</span></article>
 </section>
@@ -129,11 +132,11 @@ function formatApplicationStatus(string $status): string {
             <thead>
                 <tr>
                     <th>Titre</th>
-                    <th>Service</th>
+                    <th>Type service</th>
+                    <th>Localisation</th>
                     <th>Publication</th>
                     <th>Expiration</th>
                     <th>Statut</th>
-                    <th>Type service</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -146,16 +149,16 @@ function formatApplicationStatus(string $status): string {
                     <?php foreach ($offers as $offer): ?>
                         <tr>
                             <td><?php echo htmlspecialchars($offer['titre'], ENT_QUOTES, 'UTF-8'); ?></td>
-                            <td><?php echo htmlspecialchars($offer['service_title'] ?: 'N/A', ENT_QUOTES, 'UTF-8'); ?></td>
-                            <td><?php echo htmlspecialchars(formatDate($offer['date_debut']), ENT_QUOTES, 'UTF-8'); ?></td>
-                            <td><?php echo htmlspecialchars(formatDate($offer['date_fin']), ENT_QUOTES, 'UTF-8'); ?></td>
+                            <td><?php echo htmlspecialchars($offer['type_service'] ?: 'N/A', ENT_QUOTES, 'UTF-8'); ?></td>
+                            <td><?php echo htmlspecialchars($offer['localisation'] ?: 'N/A', ENT_QUOTES, 'UTF-8'); ?></td>
+                            <td><?php echo htmlspecialchars(formatDate($offer['date_publication']), ENT_QUOTES, 'UTF-8'); ?></td>
+                            <td><?php echo htmlspecialchars(formatDate($offer['date_expiration']), ENT_QUOTES, 'UTF-8'); ?></td>
                             <td><?php echo htmlspecialchars(ucfirst($offer['statut']), ENT_QUOTES, 'UTF-8'); ?></td>
-                            <td><?php echo htmlspecialchars($offer['service_categorie'] ?: 'N/A', ENT_QUOTES, 'UTF-8'); ?></td>
                             <td class="admin-tools">
-                                <a href="?page=offers&edit=<?php echo htmlspecialchars($offer['id'], ENT_QUOTES, 'UTF-8'); ?>" class="small-btn">Voir</a>
+                                <a href="?page=offers&edit=<?php echo htmlspecialchars($offer['id_offre'], ENT_QUOTES, 'UTF-8'); ?>" class="small-btn">Voir</a>
                                 <form method="POST" style="display:inline;">
                                     <input type="hidden" name="action" value="delete">
-                                    <input type="hidden" name="offer_id" value="<?php echo htmlspecialchars($offer['id'], ENT_QUOTES, 'UTF-8'); ?>">
+                                    <input type="hidden" name="offer_id" value="<?php echo htmlspecialchars($offer['id_offre'], ENT_QUOTES, 'UTF-8'); ?>">
                                     <button type="submit" class="danger-btn" onclick="return confirm('Supprimer cette offre ?');">Supprimer</button>
                                 </form>
                             </td>
@@ -173,38 +176,34 @@ function formatApplicationStatus(string $status): string {
     <form method="POST" id="form-grid" class="form-grid">
         <input type="hidden" name="action" value="<?php echo $currentOffer ? 'update' : 'create'; ?>">
         <?php if ($currentOffer): ?>
-            <input type="hidden" name="offer_id" value="<?php echo htmlspecialchars($currentOffer['id'], ENT_QUOTES, 'UTF-8'); ?>">
+            <input type="hidden" name="offer_id" value="<?php echo htmlspecialchars($currentOffer['id_offre'], ENT_QUOTES, 'UTF-8'); ?>">
         <?php endif; ?>
 
         <input type="text" name="titre" placeholder="Titre de l'offre" value="<?php echo $currentOffer ? htmlspecialchars($currentOffer['titre'], ENT_QUOTES, 'UTF-8') : ''; ?>" required>
-        <select name="service_id" required>
+        <select name="type_service" required>
             <option value="">Sélectionnez le type de service</option>
-            <?php foreach ($serviceOptions as $serviceOption): ?>
-                <option value="<?php echo htmlspecialchars($serviceOption['id'], ENT_QUOTES, 'UTF-8'); ?>" <?php echo $currentOffer && $currentOffer['service_id'] == $serviceOption['id'] ? 'selected' : ''; ?>>
-                    <?php echo htmlspecialchars($serviceOption['categorie'] . ' — ' . $serviceOption['titre'], ENT_QUOTES, 'UTF-8'); ?>
+            <?php foreach ($typeServiceOptions as $option): ?>
+                <option value="<?php echo htmlspecialchars($option, ENT_QUOTES, 'UTF-8'); ?>" <?php echo $currentOffer && $currentOffer['type_service'] === $option ? 'selected' : ''; ?>>
+                    <?php echo htmlspecialchars(ucfirst($option), ENT_QUOTES, 'UTF-8'); ?>
                 </option>
             <?php endforeach; ?>
         </select>
 
-        <div class="field-block">
-            <label for="date_publication">Date de publication</label>
-            <input type="date" id="date_publication" name="date_debut" value="<?php echo $currentOffer ? formatDateInput($currentOffer['date_debut']) : ''; ?>">
-        </div>
+        <input type="text" name="localisation" placeholder="Localisation" value="<?php echo $currentOffer ? htmlspecialchars($currentOffer['localisation'], ENT_QUOTES, 'UTF-8') : ''; ?>">
 
         <div class="field-block">
             <label for="date_expiration">Date d'expiration</label>
-            <input type="date" id="date_expiration" name="date_fin" value="<?php echo $currentOffer ? formatDateInput($currentOffer['date_fin']) : ''; ?>">
+            <input type="date" id="date_expiration" name="date_expiration" value="<?php echo $currentOffer ? formatDateInput($currentOffer['date_expiration']) : ''; ?>">
         </div>
 
         <select name="statut">
-            <option value="active" <?php echo $currentOffer && $currentOffer['statut'] === 'active' ? 'selected' : ''; ?>>Ouverte</option>
-            <option value="inactive" <?php echo $currentOffer && $currentOffer['statut'] === 'inactive' ? 'selected' : ''; ?>>Fermée</option>
-            <option value="expiree" <?php echo $currentOffer && $currentOffer['statut'] === 'expiree' ? 'selected' : ''; ?>>Expirée</option>
+            <option value="ouverte" <?php echo $currentOffer && $currentOffer['statut'] === 'ouverte' ? 'selected' : ''; ?>>Ouverte</option>
+            <option value="fermee" <?php echo $currentOffer && $currentOffer['statut'] === 'fermee' ? 'selected' : ''; ?>>Fermée</option>
         </select>
 
         <input type="number" name="prix" step="0.01" placeholder="Prix" value="<?php echo $currentOffer ? htmlspecialchars($currentOffer['prix'], ENT_QUOTES, 'UTF-8') : ''; ?>">
 
-        <textarea name="description" placeholder="Description de l'offre..."><?php echo $currentOffer ? htmlspecialchars($currentOffer['description'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
+        <textarea name="description" placeholder="Description de l'offre..." rows="4"><?php echo $currentOffer ? htmlspecialchars($currentOffer['description'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
 
         <div class="icon-actions" style="margin-top: 14px;">
             <button type="submit" class="solid-btn"><?php echo $currentOffer ? 'Mettre à jour' : 'Publier'; ?></button>
@@ -250,13 +249,13 @@ function formatApplicationStatus(string $status): string {
                                     <input type="hidden" name="action" value="update_application_status">
                                     <input type="hidden" name="application_id" value="<?php echo htmlspecialchars($application['id'], ENT_QUOTES, 'UTF-8'); ?>">
                                     <input type="hidden" name="status" value="acceptee">
-                                    <button type="submit" class="success-btn" <?php echo $application['statut'] === 'acceptee' ? 'disabled' : ''; ?>>Accepter</button>
+                                    <button type="submit" class="success-btn" <?php echo strtolower(trim($application['statut'] ?? '')) === 'acceptee' ? 'disabled' : ''; ?> aria-disabled="<?php echo strtolower(trim($application['statut'] ?? '')) === 'acceptee' ? 'true' : 'false'; ?>">Accepter</button>
                                 </form>
                                 <form method="POST" style="display:inline;">
                                     <input type="hidden" name="action" value="update_application_status">
                                     <input type="hidden" name="application_id" value="<?php echo htmlspecialchars($application['id'], ENT_QUOTES, 'UTF-8'); ?>">
-                                    <input type="hidden" name="status" value="rejetee">
-                                    <button type="submit" class="danger-btn" <?php echo $application['statut'] === 'rejetee' ? 'disabled' : ''; ?>>Refuser</button>
+                                    <input type="hidden" name="status" value="refusee">
+                                    <button type="submit" class="danger-btn" <?php echo strtolower(trim($application['statut'] ?? '')) === 'refusee' ? 'disabled' : ''; ?> aria-disabled="<?php echo strtolower(trim($application['statut'] ?? '')) === 'refusee' ? 'true' : 'false'; ?>">Refuser</button>
                                 </form>
                             </td>
                         </tr>
