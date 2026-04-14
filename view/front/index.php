@@ -1,4 +1,5 @@
 <?php
+session_start();
 $page = $_GET['page'] ?? 'home';
 
 $allowedPages = [
@@ -10,6 +11,7 @@ $allowedPages = [
     'events',
     'profile',
     'register',
+    'login',
 ];
 
 if (!in_array($page, $allowedPages, true)) {

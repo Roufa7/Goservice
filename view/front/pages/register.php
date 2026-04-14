@@ -6,7 +6,12 @@
 
 <section class="section reveal">
     <article class="panel auth-card">
-        <form class="auth-form">
+        <?php if (isset($_GET['error'])): ?>
+            <div style="color: red; margin-bottom: 15px;">
+                <?php echo htmlspecialchars($_GET['error']); ?>
+            </div>
+        <?php endif; ?>
+        <form class="auth-form" action="../../../controller/AuthController.php?action=register" method="POST" enctype="multipart/form-data">
             <div class="form-grid">
                 <div class="field-block">
                     <label for="nom">Nom</label>

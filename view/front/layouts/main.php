@@ -56,8 +56,13 @@ $mainNav = [
 
             <div class="nav-actions">
                 <button id="themeToggle" class="theme-btn" type="button">☾</button>
-                <a href="#" class="ghost-btn" id="openLoginModal">Connexion</a>
-                <a href="index.php?page=register" class="solid-btn">S’inscrire</a>
+                <?php if (isset($_SESSION['user_id'])): ?>
+                    <span style="font-weight: bold; margin-right: 10px;">Bienvenue, <?php echo htmlspecialchars($_SESSION['user_name']); ?></span>
+                    <a href="../../../controller/AuthController.php?action=logout" class="ghost-btn">Déconnexion</a>
+                <?php else: ?>
+                    <a href="#" class="ghost-btn" id="openLoginModal">Connexion</a>
+                    <a href="index.php?page=register" class="solid-btn">S’inscrire</a>
+                <?php endif; ?>
             </div>
         </div>
     </header>
@@ -98,7 +103,7 @@ $mainNav = [
         <h2>Connexion</h2>
         <p>Connectez-vous avec votre email et votre mot de passe.</p>
 
-        <form class="auth-form">
+        <form class="auth-form" action="../../../controller/AuthController.php?action=login" method="POST">
             <div class="field-block">
                 <label for="login_email">Email</label>
                 <input type="email" id="login_email" name="email" required>
