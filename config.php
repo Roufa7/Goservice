@@ -1,17 +1,23 @@
 <?php
-class config {
-    public static function getConnexion() {
+// config/database.php
+class Database {
+    private $host = "localhost";
+    private $db_name = "goservice";
+    private $username = "root";
+    private $password = "";
+    public $conn;
+
+    public function getConnection() {
+        $this->conn = null;
         try {
-            $pdo = new PDO(
-                'mysql:host=localhost;dbname=goservice;charset=utf8',
-                'root',
-                ''
-            );
-            $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-            return $pdo;
-        } catch (Exception $e) {
-            die('Erreur de connexion : ' . $e->getMessage());
+            $this->conn = new PDO("mysql:host=" . $this->host . ";dbname=" . $this->db_name, 
+                                  $this->username, $this->password);
+            $this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            $this->conn->exec("set names utf8");
+        } catch(PDOException $exception) {
+            echo "Connection error: " . $exception->getMessage();
         }
+        return $this->conn;
     }
 }
 ?>

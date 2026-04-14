@@ -1,3 +1,23 @@
+<?php
+// Display messages if any
+$success_message = $_SESSION['success_message'] ?? '';
+$error_message = $_SESSION['error_message'] ?? '';
+unset($_SESSION['success_message'], $_SESSION['error_message']);
+?>
+
+<!-- Add this right after the opening <body> tag or before the form -->
+<?php if ($success_message): ?>
+    <div class="alert alert-success" style="background: #d4edda; color: #155724; padding: 10px; margin: 10px 0; border-radius: 5px;">
+        <?php echo htmlspecialchars($success_message); ?>
+    </div>
+<?php endif; ?>
+
+<?php if ($error_message): ?>
+    <div class="alert alert-error" style="background: #f8d7da; color: #721c24; padding: 10px; margin: 10px 0; border-radius: 5px;">
+        <?php echo htmlspecialchars($error_message); ?>
+    </div>
+<?php endif; ?>
+
 <section class="page-hero reveal">
     <span class="section-badge">Réclamations</span>
     <h1 class="page-title">Mes réclamations, réponses et avis</h1>
@@ -25,66 +45,27 @@
 </section>
 
 <section class="module-split reveal">
-    <div>
-        <article class="post-card">
-            <span class="section-badge">Ma réclamation</span>
-            <h3>Retard dans la prise en charge du service</h3>
-            <p>Réclamation personnelle liée à un délai de traitement trop long après validation de la demande.</p>
-            <div class="meta-row">
-                <span>12/04/2026</span>
-                <span class="status-badge status-pending">En attente</span>
-            </div>
-            <div class="icon-actions" style="margin-top:14px;">
-                <button class="small-btn">Modifier</button>
-                <button class="danger-btn">Supprimer</button>
-            </div>
-        </article>
-
-        <article class="post-card" style="margin-top:18px;">
-            <span class="section-badge">Réponse</span>
-            <h3>Réponse du support</h3>
-            <p>Nous avons bien reçu votre réclamation. Une vérification est en cours avec le provider concerné.</p>
-            <div class="meta-row">
-                <span>13/04/2026</span>
-                <span class="status-badge status-open">Traitement</span>
-            </div>
-        </article>
-
-        <article class="post-card" style="margin-top:18px;">
-            <span class="section-badge">Publier un avis</span>
-            <div class="review-stars" style="margin-bottom:12px;">
-                <span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">☆</span>
-            </div>
-            <div class="form-grid">
-                <textarea placeholder="Écrire votre avis après traitement de la réclamation..."></textarea>
-            </div>
-            <div class="icon-actions" style="margin-top:14px;">
-                <button class="solid-btn">Publier l’avis</button>
-                <button class="outline-btn">Mettre à jour</button>
-                <button class="danger-btn">Supprimer</button>
-            </div>
-        </article>
+    <div id="reclamations-list">
+        <!-- Reclamations will be loaded here via AJAX -->
+        <p class="page-intro">Chargement de vos réclamations...</p>
     </div>
 
     <div>
-        <article class="panel" id="deposer-reclamation">
-            <span class="section-badge">Déposer / modifier</span>
-            <div class="form-grid">
-                <input type="text" placeholder="Sujet de la réclamation">
-                <select>
-                    <option>Statut</option>
-                    <option>En attente</option>
-                    <option>Résolue</option>
-                    <option>Rejetée</option>
-                </select>
-                <textarea placeholder="Décrivez votre réclamation..."></textarea>
-            </div>
-            <div class="icon-actions" style="margin-top:14px;">
-                <button class="solid-btn">Envoyer</button>
-                <button class="outline-btn">Mettre à jour</button>
-                <button class="danger-btn">Supprimer</button>
-            </div>
-        </article>
+        <!-- Replace the form section in reclamation.php with this -->
+<article class="panel" id="deposer-reclamation">
+    <span class="section-badge">Déposer / modifier</span>
+    <form id="form-reclamation" method="POST">
+        <div class="form-grid">
+            <input type="text" id="sujet-reclamation" name="subject" placeholder="Sujet de la réclamation">
+            <textarea id="desc-reclamation" name="description" placeholder="Décrivez votre réclamation..."></textarea>
+        </div>
+        <div id="error-message" style="color: red; margin-top: 10px; display: none;"></div>
+        <div id="success-message" style="color: green; margin-top: 10px; display: none;"></div>
+        <div class="icon-actions" style="margin-top:14px;">
+            <button type="submit" class="solid-btn" name="submit_reclamation">Envoyer</button>
+        </div>
+    </form>
+</article>
 
         <article class="panel" style="margin-top:18px;">
             <span class="section-badge">Avis des utilisateurs</span>
@@ -122,3 +103,5 @@
         </article>
     </div>
 </section>
+
+<script src="../../controller/reclamation.js"></script>
