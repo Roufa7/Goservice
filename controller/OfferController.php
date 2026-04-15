@@ -7,7 +7,7 @@ class OfferController {
     }
 
     public function listOffers(): array {
-        return $this->offerModel->findAll();
+        return $this->offerModel->findAll(); //appel findAll() du modèle pour obtenir toutes les offres
     }
 
     public function getStats(): array {
@@ -15,7 +15,7 @@ class OfferController {
     }
 
     public function getOffer(int $id): ?array {
-        return $this->offerModel->findById($id);
+        return $this->offerModel->findById($id);// Appel findById() du modèle avec l'identifiant
     }
 
     public function createOffer(array $data): int {

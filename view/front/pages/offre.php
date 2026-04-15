@@ -1,3 +1,4 @@
+
 <?php
 require_once __DIR__ . '/../../../config.php';
 require_once __DIR__ . '/../../../model/Offer.php';
@@ -21,7 +22,7 @@ $fieldErrors = [
     'cv' => '',
     'message' => '',
 ];
-$formData = [
+$formData = [ //stocke les valeurs du formulaire
     'offer_id' => (string) ($activeOffers[0]['id_offre'] ?? ''),
     'experience' => '',
     'competences' => '',

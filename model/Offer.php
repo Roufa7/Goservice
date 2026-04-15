@@ -2,7 +2,7 @@
 class Offer {
     private $pdo;
     private string $offerTable;
-    private string $offerPk;
+    private string $offerPk; //cle primaire 
     private string $userPk;
 
     public const TYPE_SERVICE_OPTIONS = [
@@ -32,7 +32,7 @@ class Offer {
     }
 
     private function columnExists(string $table, string $column): bool {
-        $stmt = $this->pdo->prepare(
+        $stmt = $this->pdo->prepare( //requête SQL préparée.
             'SELECT COUNT(*)
              FROM information_schema.columns
              WHERE table_schema = DATABASE()
@@ -114,7 +114,7 @@ class Offer {
                  ORDER BY COALESCE(o.created_at, o.date_debut) DESC'
             );
             $stmt->execute();
-            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: []; //récupérer toutes les lignes en tab
         }
 
         $stmt = $this->pdo->prepare(
@@ -287,7 +287,7 @@ class Offer {
             $fields = [];
             $values = ['id' => $id];
 
-            $mapping = [
+            $mapping = [ //correspondance champs formulaire
                 'titre' => 'titre',
                 'description' => 'description',
                 'prix' => 'prix',
@@ -330,6 +330,7 @@ class Offer {
         $values = ['id' => $id];
         
         foreach (['titre', 'description', 'localisation', 'date_expiration', 'statut', 'type_service', 'prix', 'id_admin'] as $field) {
+            //parcourir un tableau et le traite un par un
             if (!array_key_exists($field, $data)) {
                 continue;
             }

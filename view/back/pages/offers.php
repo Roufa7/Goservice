@@ -33,10 +33,11 @@ $formData = [
     'description' => '',
 ];
 
-function cleanInput(?string $value): string {
+function cleanInput(?string $value): string { //supprimer espaces inutiles
     return trim((string) $value);
 }
 
+//VALIDATION BACKEND
 function validateOfferPayload(array $input, array $typeServiceOptions): array {
     $errors = [
         'titre' => '',
@@ -47,7 +48,6 @@ function validateOfferPayload(array $input, array $typeServiceOptions): array {
         'prix' => '',
         'description' => '',
     ];
-
     $titre = cleanInput($input['titre'] ?? '');
     $typeService = cleanInput($input['type_service'] ?? '');
     $localisation = cleanInput($input['localisation'] ?? '');
@@ -68,7 +68,9 @@ function validateOfferPayload(array $input, array $typeServiceOptions): array {
         $errors['type_service'] = 'Le type de service selectionne est invalide.';
     }
 
-    if ($localisation !== '' && mb_strlen($localisation) > 150) {
+    if ($localisation === '') {
+        $errors['localisation'] = 'La localisation est obligatoire.';
+    } elseif (mb_strlen($localisation) > 150) {
         $errors['localisation'] = 'La localisation ne doit pas depasser 150 caracteres.';
     }
 
@@ -90,18 +92,20 @@ function validateOfferPayload(array $input, array $typeServiceOptions): array {
         $errors['statut'] = 'Le statut est invalide.';
     }
 
-    if ($prix !== '') {
-        if (!is_numeric($prix)) {
-            $errors['prix'] = 'Le prix doit etre numerique.';
-        } else {
-            $prixValue = (float) $prix;
-            if ($prixValue <= 0 || $prixValue > 1000000) {
-                $errors['prix'] = 'Le prix doit etre superieur a 0 et inferieur a 1 000 000.';
-            }
+    if ($prix === '') { 
+        $errors['prix'] = 'Le prix est obligatoire.';
+    } elseif (!is_numeric($prix)) {
+        $errors['prix'] = 'Le prix doit etre numerique.';
+    } else {
+        $prixValue = (float) $prix;
+        if ($prixValue <= 0 || $prixValue > 1000000) {
+            $errors['prix'] = 'Le prix doit etre superieur a 0 et inferieur a 1 000 000.';
         }
     }
 
-    if ($description !== '' && mb_strlen($description) > 2000) {
+    if ($description === '') { 
+        $errors['description'] = 'La description est obligatoire.';
+    } elseif (mb_strlen($description) > 2000) {
         $errors['description'] = 'La description ne doit pas depasser 2000 caracteres.';
     }
 
@@ -109,8 +113,9 @@ function validateOfferPayload(array $input, array $typeServiceOptions): array {
 }
 
 // Traiter les actions CRUD
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST') { //exécute uniquement si formulaire envoyé
     if (isset($_POST['action'])) {
+        //UPDATE STATUT CANDIDATURE
         if ($_POST['action'] === 'update_application_status' && !empty($_POST['application_id']) && !empty($_POST['status'])) {
             $allowedStatuses = ['en attente', 'en_attente', 'acceptee', 'refusee', 'rejetee'];
             $status = $_POST['status'];
@@ -145,6 +150,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ]);
                 exit;
             }
+        //CREATE / UPDATE OFFER    
         } elseif ($_POST['action'] === 'create' || ($_POST['action'] === 'update' && !empty($_POST['offer_id']))) {
             $formData = [
                 'titre' => cleanInput($_POST['titre'] ?? ''),
@@ -209,8 +215,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $currentOffer = null;
                 }
             }
+        //DELETE OFFER
         } elseif ($_POST['action'] === 'update' && !empty($_POST['offer_id'])) {
-            // no-op branch kept intentionally for compatibility with previous flow
         } elseif ($_POST['action'] === 'delete' && !empty($_POST['offer_id'])) {
             $offerController->deleteOffer(intval($_POST['offer_id']));
             $message = 'Offre supprimée !';
@@ -220,14 +226,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Charger une offre si "Voir/Modifier" est cliqué
+// Charger une offre si "Voir" est cliqué
 if (isset($_GET['edit'])) {
     $currentOffer = $offerController->getOffer(intval($_GET['edit']));
 }
 
-$offers = $offerController->listOffers();
-$typeServiceOptions = Offer::getTypeServiceOptions();
-$stats = $offerController->getStats();
+$offers = $offerController->listOffers(); // tgoutes les offres
+$typeServiceOptions = Offer::getTypeServiceOptions(); //liste des services
+$stats = $offerController->getStats(); //statistiques
 $applicationStats = $applicationController->getApplicationStats();
 $recentApplications = array_slice($applicationController->getAllApplications(), 0, 10);
 $closedOffers = $stats['fermee'];
@@ -274,9 +280,9 @@ if ($currentOffer) {
 }
 ?>
 
-<?php if (!empty($message)): ?>
+<?php if (!empty($message)): ?> 
     <div style="padding: 10px; background: <?php echo $messageType === 'error' ? '#c62828' : '#2e7d32'; ?>; color: white; margin-bottom: 20px; border-radius: 4px;">
-        <?php echo htmlspecialchars($message, ENT_QUOTES, 'UTF-8'); ?>
+        <?php echo htmlspecialchars($message, ENT_QUOTES, 'UTF-8'); ?> 
     </div>
 <?php endif; ?>
 
@@ -418,6 +424,7 @@ function clearAdminFieldErrors() {
     });
 }
 
+//VALIDATION JS FRONTEND
 document.getElementById('form-grid')?.addEventListener('submit', function(event) {
     clearAdminFieldErrors();
 
@@ -440,8 +447,10 @@ document.getElementById('form-grid')?.addEventListener('submit', function(event)
         errors.type_service = 'Le type de service est obligatoire.';
     }
 
-    if (localisation.length > 150) {
-        errors.localisation = 'La localisation ne doit pas depasser 150 caracteres.';
+    if (localisation.trim() === '') { 
+    errors.localisation = 'La localisation est obligatoire.';
+    } else if (localisation.length > 150) {
+    errors.localisation = 'La localisation ne doit pas depasser 150 caracteres.';
     }
 
     if (dateExpiration) {
@@ -457,15 +466,19 @@ document.getElementById('form-grid')?.addEventListener('submit', function(event)
         errors.statut = 'Le statut est invalide.';
     }
 
-    if (prix !== '') {
+    if (prix.trim() === '') { 
+    errors.prix = 'Le prix est obligatoire.';
+    } else {
         const numericPrice = Number(prix);
         if (Number.isNaN(numericPrice) || numericPrice <= 0 || numericPrice > 1000000) {
             errors.prix = 'Le prix doit etre superieur a 0 et inferieur a 1 000 000.';
         }
     }
 
-    if (description.length > 2000) {
-        errors.description = 'La description ne doit pas depasser 2000 caracteres.';
+    if (description.trim() === '') { 
+    errors.description = 'La description est obligatoire.';
+    } else if (description.length > 2000) {
+    errors.description = 'La description ne doit pas depasser 2000 caracteres.';
     }
 
     if (Object.keys(errors).length > 0) {
@@ -513,7 +526,7 @@ document.getElementById('form-grid')?.addEventListener('submit', function(event)
                         <td colspan="7">Aucune candidature pour le moment.</td>
                     </tr>
                 <?php else: ?>
-                    <?php foreach ($recentApplications as $application): ?>
+                    <?php foreach ($recentApplications as $application): ?> 
                         <?php $normalizedStatus = normalizeApplicationStatus((string) ($application['statut'] ?? '')); ?>
                         <tr>
                             <td><?php echo htmlspecialchars($application['nom'], ENT_QUOTES, 'UTF-8'); ?></td>
