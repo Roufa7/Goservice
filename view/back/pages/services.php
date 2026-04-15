@@ -37,6 +37,17 @@ function statutBadgeStyle(string $statut): string {
 }
 ?>
 
+<?php if (isset($_GET['added'])): ?>
+    <div style="background:rgba(76,175,80,0.12); border:1px solid rgba(76,175,80,0.3); color:#4cd774; border-radius:12px; padding:14px 20px; margin-bottom:20px; font-size:14px; font-weight:500; display:flex; align-items:center; gap:10px;">
+        ✓ Service ajouté avec succès.
+    </div>
+<?php endif; ?>
+<?php if (isset($_GET['updated'])): ?>
+    <div style="background:rgba(76,175,80,0.12); border:1px solid rgba(76,175,80,0.3); color:#4cd774; border-radius:12px; padding:14px 20px; margin-bottom:20px; font-size:14px; font-weight:500; display:flex; align-items:center; gap:10px;">
+        ✓ Service mis à jour avec succès.
+    </div>
+<?php endif; ?>
+
 <section class="action-bar reveal">
     <div class="search-box">
         <input type="text" placeholder="Rechercher un service ou une catégorie...">
@@ -70,12 +81,11 @@ function statutBadgeStyle(string $statut): string {
 </section>
 
 <section class="admin-panel reveal" style="margin-top: 22px;">
-    <div style="
-        background: linear-gradient(180deg, #10263d 0%, #112b45 100%);
-        border-radius: 22px;
-        overflow: hidden;
-        box-shadow: 0 18px 40px rgba(7, 20, 34, 0.18);
-    ">
+    <div class="table-container" style="
+    border-radius: 22px;
+    overflow: hidden;
+    box-shadow: 0 18px 40px rgba(7, 20, 34, 0.18);
+">
         <table class="module-table" style="width:100%; border-collapse:collapse;">
             <thead>
                 <tr style="background: rgba(255,255,255,0.02);">
@@ -106,17 +116,17 @@ function statutBadgeStyle(string $statut): string {
                                 >
                             </td>
 
-                            <td style="color:#ffffff; padding:18px 18px; font-size:15px; font-weight:600;">
-                                <?php echo htmlspecialchars($service['titre'] ?? ''); ?>
-                            </td>
+                            <td class="table-text table-text-strong" style="padding:18px 18px; font-size:15px; font-weight:600;">
+    <?php echo htmlspecialchars($service['titre'] ?? ''); ?>
+</td>
 
-                            <td style="color:#ffffff; padding:18px 18px; font-size:15px;">
-                                <?php echo htmlspecialchars($service['nom_categorie'] ?? ''); ?>
-                            </td>
+<td class="table-text" style="padding:18px 18px; font-size:15px;">
+    <?php echo htmlspecialchars($service['nom_categorie'] ?? ''); ?>
+</td>
 
-                            <td style="color:#ffffff; padding:18px 18px; font-size:15px;">
-                                <?php echo number_format((float)($service['prix'] ?? 0), 2, '.', ''); ?> €
-                            </td>
+<td class="table-text" style="padding:18px 18px; font-size:15px;">
+    <?php echo number_format((float)($service['prix'] ?? 0), 2, '.', ''); ?> €
+</td>
 
                             <td style="padding:18px 18px;">
                                 <span style="display:inline-block; padding:7px 14px; border-radius:999px; font-size:13px; font-weight:700; <?php echo dispoBadgeStyle((string)($service['disponibilite'] ?? '')); ?>">
@@ -132,13 +142,7 @@ function statutBadgeStyle(string $statut): string {
 
                             <td style="padding:18px 18px;">
                                 <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                                    <a
-                                        href="index.php?page=serviceDetails&id=<?php echo (int)$service['id_service']; ?>"
-                                        style="text-decoration:none; padding:9px 14px; border-radius:10px; background:rgba(76,138,255,0.14); color:#8ab7ff; font-size:14px; font-weight:700;"
-                                    >
-                                        Voir
-                                    </a>
-
+        
                                     <a
                                         href="index.php?page=editService&id=<?php echo (int)$service['id_service']; ?>"
                                         style="text-decoration:none; padding:9px 14px; border-radius:10px; background:rgba(76,138,255,0.14); color:#8ab7ff; font-size:14px; font-weight:700;"
@@ -159,9 +163,9 @@ function statutBadgeStyle(string $statut): string {
                     <?php endforeach; ?>
                 <?php else: ?>
                     <tr>
-                        <td colspan="7" style="color:#ffffff; padding:24px 18px; text-align:center;">
-                            Aucun service trouvé.
-                        </td>
+                        <td colspan="7" class="table-text" style="padding:24px 18px; text-align:center;">
+    Aucun service trouvé.
+</td>
                     </tr>
                 <?php endif; ?>
             </tbody>

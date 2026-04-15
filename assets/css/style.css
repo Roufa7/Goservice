@@ -3886,3 +3886,90 @@ body.dark .small-btn {
         grid-template-columns: 1fr;
     }
 }
+
+/* ===== TABLEAU SERVICES BACK : MODE JOUR / NUIT ===== */
+
+.table-container {
+    border-radius: 22px;
+    overflow: hidden;
+    background: #ffffff;
+}
+
+/* fond dark */
+body.admin-body.dark .table-container {
+    background: linear-gradient(180deg, #10263d 0%, #112b45 100%);
+}
+
+/* table */
+.module-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+/* head */
+body.admin-body:not(.dark) .table-container .module-table th {
+    background: #f9fafb;
+    color: #6b7280 !important;
+}
+
+body.admin-body.dark .table-container .module-table th {
+    color: rgba(255,255,255,0.72) !important;
+}
+
+/* td */
+body.admin-body:not(.dark) .table-container .module-table td {
+    color: #111827 !important;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+body.admin-body.dark .table-container .module-table td {
+    color: #ffffff !important;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+/* lignes */
+body.admin-body:not(.dark) .table-container .module-table tr:hover {
+    background: #f3f4f6;
+}
+
+/* boutons */
+.actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.btn-edit {
+    background: rgba(76,138,255,0.14);
+    color: #6ea8ff;
+    padding: 8px 12px;
+    border-radius: 10px;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.btn-delete {
+    background: rgba(255,95,95,0.14);
+    color: #ff8b8b;
+    padding: 8px 12px;
+    border-radius: 10px;
+    text-decoration: none;
+    font-weight: 600;
+}
+/* titres du tableau */
+body.admin-body .table-container .module-table thead tr {
+    background: #f9fafb;
+}
+
+body.admin-body .table-container .module-table th {
+    color: #142738 !important;
+    font-weight: 700;
+}
+
+body.admin-body.dark .table-container .module-table thead tr {
+    background: rgba(255,255,255,0.02);
+}
+
+body.admin-body.dark .table-container .module-table th {
+    color: rgba(255,255,255,0.72) !important;
+}

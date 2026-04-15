@@ -11,6 +11,24 @@ $categorieController = new CategorieController();
 $categories          = $categorieController->listCategories();
 $errors              = [];
 
+// Récupérer l'ID depuis GET ou POST
+$id = isset($_GET['id']) && is_numeric($_GET['id'])
+    ? (int)$_GET['id']
+    : (isset($_POST['id']) && is_numeric($_POST['id']) ? (int)$_POST['id'] : null);
+
+if (!$id) {
+    header('Location: index.php?page=services');
+    exit;
+}
+
+$serviceData = $serviceController->getService($id);
+
+if (!$serviceData) {
+    header('Location: index.php?page=services');
+    exit;
+}
+
+// Traitement du formulaire de modification
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $titre         = trim($_POST['titre'] ?? '');
     $description   = trim($_POST['description'] ?? '');
@@ -43,7 +61,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errors[] = "Veuillez choisir une catégorie valide.";
     }
 
-    $image_path = null;
+    $image_path = $serviceData['image'];
 
     if (!empty($_FILES['image']['name'])) {
         $allowed = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
@@ -55,7 +73,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $errors[] = "L'image ne doit pas dépasser 5 Mo.";
         } else {
             $upload_dir = __DIR__ . '/../../../assets/images/services/';
-
             if (!is_dir($upload_dir)) {
                 mkdir($upload_dir, 0777, true);
             }
@@ -78,15 +95,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $disponibilite,
             $statut,
             $image_path,
-            1,
+            $serviceData['id_provider'] ?? 1,
             $id_categorie
         );
 
-        $serviceController->addService($service);
-        header('Location: index.php?page=services&added=1');
+        $serviceController->updateService($service, $id);
+        header('Location: index.php?page=services&updated=1');
         exit;
     }
 }
+
+// Valeurs à afficher dans le formulaire
+$titre         = $_POST['titre'] ?? $serviceData['titre'];
+$description   = $_POST['description'] ?? $serviceData['description'];
+$prix          = $_POST['prix'] ?? $serviceData['prix'];
+$disponibilite = $_POST['disponibilite'] ?? $serviceData['disponibilite'];
+$statut        = $_POST['statut'] ?? $serviceData['statut'];
+$id_categorie  = $_POST['categorie'] ?? $serviceData['id_categorie'];
 ?>
 
 <style>
@@ -156,6 +181,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     object-fit: cover;
     box-shadow: 0 8px 24px rgba(0,0,0,0.22);
 }
+
+.current-image-box {
+    margin-bottom: 20px;
+    padding: 14px 16px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.08);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.current-image-box img {
+    width: 72px;
+    height: 54px;
+    object-fit: cover;
+    border-radius: 8px;
+}
 </style>
 
 <?php if (!empty($errors)): ?>
@@ -168,7 +211,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <section class="add-service-wrap reveal">
     <div class="add-service-box">
-        <form action="" method="POST" enctype="multipart/form-data" class="add-service-form" id="addServiceForm" novalidate>
+
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:28px;">
+            <h2 style="color:#fff; font-size:20px; font-weight:700;">
+                Modifier le service <span style="color:var(--orange);">#<?php echo $id; ?></span>
+            </h2>
+            <a href="index.php?page=services" class="outline-btn" style="text-decoration:none;">
+                ← Retour à la liste
+            </a>
+        </div>
+
+        <?php if (!empty($serviceData['image'])): ?>
+        <div class="current-image-box">
+            <img
+                src="/GoService/<?php echo htmlspecialchars(ltrim($serviceData['image'], '/')); ?>"
+                alt="Image actuelle"
+                onerror="this.style.display='none'"
+            >
+            <div>
+                <div style="color:#fff; font-size:13px; font-weight:600; margin-bottom:3px;">Image actuelle</div>
+                <div style="color:rgba(255,255,255,0.5); font-size:12px;">
+                    Choisissez une nouvelle image pour la remplacer, ou laissez vide pour conserver.
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
+
+        <form action="" method="POST" enctype="multipart/form-data" class="add-service-form" id="editServiceForm" novalidate>
+            <input type="hidden" name="id" value="<?php echo $id; ?>">
 
             <div class="add-service-grid">
                 <div class="field-block">
@@ -178,7 +248,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         id="titre"
                         name="titre"
                         placeholder="Ex : Plombier urgence"
-                        value="<?php echo htmlspecialchars($_POST['titre'] ?? ''); ?>"
+                        value="<?php echo htmlspecialchars($titre); ?>"
                         autocomplete="off"
                     >
                     <div id="err_titre" style="display:none; color:#ff6b6b; font-size:13px; margin-top:8px;"></div>
@@ -192,7 +262,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <?php foreach ($categories as $cat): ?>
                             <option
                                 value="<?php echo (int)$cat['id_categorie']; ?>"
-                                <?php echo (($_POST['categorie'] ?? '') == $cat['id_categorie']) ? 'selected' : ''; ?>
+                                <?php echo ($id_categorie == $cat['id_categorie']) ? 'selected' : ''; ?>
                             >
                                 <?php echo htmlspecialchars($cat['nom']); ?>
                             </option>
@@ -209,8 +279,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         id="prix"
                         name="prix"
                         placeholder="Ex : 50"
+                        value="<?php echo htmlspecialchars($prix); ?>"
                         autocomplete="off"
-                        value="<?php echo htmlspecialchars($_POST['prix'] ?? ''); ?>"
                     >
                     <div id="err_prix" style="display:none; color:#ff6b6b; font-size:13px; margin-top:8px;"></div>
                     <div id="ok_prix" style="display:none; color:#28a745; font-size:13px; margin-top:6px;"></div>
@@ -220,8 +290,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <label for="disponibilite">DISPONIBILITÉ</label>
                     <select id="disponibilite" name="disponibilite">
                         <option value="">-- Choisir --</option>
-                        <option value="Disponible" <?php echo (($_POST['disponibilite'] ?? '') === 'Disponible') ? 'selected' : ''; ?>>Disponible</option>
-                        <option value="Indisponible" <?php echo (($_POST['disponibilite'] ?? '') === 'Indisponible') ? 'selected' : ''; ?>>Indisponible</option>
+                        <option value="Disponible" <?php echo ($disponibilite === 'Disponible') ? 'selected' : ''; ?>>Disponible</option>
+                        <option value="Indisponible" <?php echo ($disponibilite === 'Indisponible') ? 'selected' : ''; ?>>Indisponible</option>
                     </select>
                     <div id="err_disponibilite" style="display:none; color:#ff6b6b; font-size:13px; margin-top:8px;"></div>
                     <div id="ok_disponibilite" style="display:none; color:#28a745; font-size:13px; margin-top:6px;"></div>
@@ -231,9 +301,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <label for="statut">STATUT</label>
                     <select id="statut" name="statut">
                         <option value="">-- Choisir --</option>
-                        <option value="Validé" <?php echo (($_POST['statut'] ?? '') === 'Validé') ? 'selected' : ''; ?>>Validé</option>
-                        <option value="En attente" <?php echo (($_POST['statut'] ?? '') === 'En attente') ? 'selected' : ''; ?>>En attente</option>
-                        <option value="Désactivé" <?php echo (($_POST['statut'] ?? '') === 'Désactivé') ? 'selected' : ''; ?>>Désactivé</option>
+                        <option value="Validé" <?php echo ($statut === 'Validé') ? 'selected' : ''; ?>>Validé</option>
+                        <option value="En attente" <?php echo ($statut === 'En attente') ? 'selected' : ''; ?>>En attente</option>
+                        <option value="Désactivé" <?php echo ($statut === 'Désactivé') ? 'selected' : ''; ?>>Désactivé</option>
                     </select>
                     <div id="err_statut" style="display:none; color:#ff6b6b; font-size:13px; margin-top:8px;"></div>
                     <div id="ok_statut" style="display:none; color:#28a745; font-size:13px; margin-top:6px;"></div>
@@ -247,14 +317,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     name="description"
                     rows="6"
                     placeholder="Décrivez le service en détail..."
-                ><?php echo htmlspecialchars($_POST['description'] ?? ''); ?></textarea>
+                ><?php echo htmlspecialchars($description); ?></textarea>
                 <div class="char-counter"><span id="descCount">0</span> / 500</div>
                 <div id="err_description" style="display:none; color:#ff6b6b; font-size:13px; margin-top:8px;"></div>
                 <div id="ok_description" style="display:none; color:#28a745; font-size:13px; margin-top:6px;"></div>
             </div>
 
             <div class="field-block full-width">
-                <label for="image">IMAGE DU SERVICE</label>
+                <label for="image">IMAGE DU SERVICE (optionnel — laisser vide pour conserver l'actuelle)</label>
 
                 <label class="upload-box preview-mode" for="image" id="uploadBox">
                     <div class="preview-content" id="previewContent">
@@ -266,7 +336,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                         <div class="image-preview-wrapper" id="imagePreviewWrapper" style="display:none;">
                             <div class="preview-file-name" id="fileName">Aucun fichier sélectionné</div>
-                            <img id="imagePreview" src="" alt="Aperçu image du service">
+                            <img id="imagePreview" src="" alt="Nouvelle image sélectionnée">
                         </div>
                     </div>
 
@@ -278,7 +348,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
 
             <div class="add-service-actions">
-                <button type="submit" class="solid-btn">✓ Enregistrer</button>
+                <button type="submit" class="solid-btn">✓ Mettre à jour</button>
                 <a href="index.php?page=services" class="outline-btn">Annuler</a>
             </div>
         </form>
@@ -287,7 +357,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    const form = document.getElementById("addServiceForm");
+    const form = document.getElementById("editServiceForm");
     const titre = document.getElementById("titre");
     const prix = document.getElementById("prix");
     const description = document.getElementById("description");
@@ -301,9 +371,9 @@ document.addEventListener('DOMContentLoaded', function () {
     const uploadPlaceholder = document.getElementById("uploadPlaceholder");
     const descCount = document.getElementById("descCount");
 
-    const goRules = {
+    const rules = {
         titre: {
-            validate: v => /^[A-Za-zÀ-ÿ\s]{3,}$/.test(v.trim()),
+            validate: v => /^[A-Za-zÀ-ÿ\s]{3,}$/u.test(v.trim()),
             errorMsg: "✕ Le titre doit contenir uniquement des lettres et des espaces, avec au moins 3 caractères.",
             successMsg: "✓ Titre valide."
         },
@@ -363,56 +433,56 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function validateTitre() {
-        if (!goRules.titre.validate(titre.value)) {
-            setInvalid(titre, "err_titre", "ok_titre", goRules.titre.errorMsg);
+        if (!rules.titre.validate(titre.value)) {
+            setInvalid(titre, "err_titre", "ok_titre", rules.titre.errorMsg);
             return false;
         }
-        setValid(titre, "err_titre", "ok_titre", goRules.titre.successMsg);
+        setValid(titre, "err_titre", "ok_titre", rules.titre.successMsg);
         return true;
     }
 
     function validateCategorie() {
-        if (!goRules.categorie.validate(categorie.value)) {
-            setInvalid(categorie, "err_categorie", "ok_categorie", goRules.categorie.errorMsg);
+        if (!rules.categorie.validate(categorie.value)) {
+            setInvalid(categorie, "err_categorie", "ok_categorie", rules.categorie.errorMsg);
             return false;
         }
-        setValid(categorie, "err_categorie", "ok_categorie", goRules.categorie.successMsg);
+        setValid(categorie, "err_categorie", "ok_categorie", rules.categorie.successMsg);
         return true;
     }
 
     function validatePrix() {
-        if (!goRules.prix.validate(prix.value)) {
-            setInvalid(prix, "err_prix", "ok_prix", goRules.prix.errorMsg);
+        if (!rules.prix.validate(prix.value)) {
+            setInvalid(prix, "err_prix", "ok_prix", rules.prix.errorMsg);
             return false;
         }
-        setValid(prix, "err_prix", "ok_prix", goRules.prix.successMsg);
+        setValid(prix, "err_prix", "ok_prix", rules.prix.successMsg);
         return true;
     }
 
     function validateDisponibilite() {
-        if (!goRules.disponibilite.validate(disponibilite.value)) {
-            setInvalid(disponibilite, "err_disponibilite", "ok_disponibilite", goRules.disponibilite.errorMsg);
+        if (!rules.disponibilite.validate(disponibilite.value)) {
+            setInvalid(disponibilite, "err_disponibilite", "ok_disponibilite", rules.disponibilite.errorMsg);
             return false;
         }
-        setValid(disponibilite, "err_disponibilite", "ok_disponibilite", goRules.disponibilite.successMsg);
+        setValid(disponibilite, "err_disponibilite", "ok_disponibilite", rules.disponibilite.successMsg);
         return true;
     }
 
     function validateStatut() {
-        if (!goRules.statut.validate(statut.value)) {
-            setInvalid(statut, "err_statut", "ok_statut", goRules.statut.errorMsg);
+        if (!rules.statut.validate(statut.value)) {
+            setInvalid(statut, "err_statut", "ok_statut", rules.statut.errorMsg);
             return false;
         }
-        setValid(statut, "err_statut", "ok_statut", goRules.statut.successMsg);
+        setValid(statut, "err_statut", "ok_statut", rules.statut.successMsg);
         return true;
     }
 
     function validateDescription() {
-        if (!goRules.description.validate(description.value)) {
-            setInvalid(description, "err_description", "ok_description", goRules.description.errorMsg);
+        if (!rules.description.validate(description.value)) {
+            setInvalid(description, "err_description", "ok_description", rules.description.errorMsg);
             return false;
         }
-        setValid(description, "err_description", "ok_description", goRules.description.successMsg);
+        setValid(description, "err_description", "ok_description", rules.description.successMsg);
         return true;
     }
 
@@ -465,13 +535,17 @@ document.addEventListener('DOMContentLoaded', function () {
         return true;
     }
 
-    if (description && descCount) {
-        const updateCount = () => {
-            descCount.textContent = description.value.length;
-        };
-        description.addEventListener('input', updateCount);
-        updateCount();
+    function updateDescCount() {
+        descCount.textContent = description.value.length;
+        if (description.value.length > 450) {
+            descCount.style.color = "#ff6b6b";
+        } else {
+            descCount.style.color = "";
+        }
     }
+
+    description.addEventListener('input', updateDescCount);
+    updateDescCount();
 
     if (image) {
         image.addEventListener('change', function () {
@@ -520,6 +594,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (!(okTitre && okCategorie && okPrix && okDisponibilite && okStatut && okDescription && okImage)) {
             e.preventDefault();
+
+            const firstInvalid = form.querySelector('#titre[style*="ff6b6b"], #categorie[style*="ff6b6b"], #prix[style*="ff6b6b"], #disponibilite[style*="ff6b6b"], #statut[style*="ff6b6b"], #description[style*="ff6b6b"]');
+            if (firstInvalid) {
+                firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
         }
     });
 });

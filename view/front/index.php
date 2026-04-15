@@ -12,6 +12,9 @@ $allowedPages = [
     'register',
     'serviceDetails',
     'addService',
+    'myServices',
+    'editMyService',
+    'saveService',
     
 ];
 

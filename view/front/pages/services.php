@@ -6,6 +6,14 @@ $serviceController = new ServiceController();
 $categorieController = new CategorieController();
 
 $services = $serviceController->listServicesWithCategories();
+
+/* 🔥 AFFICHER SEULEMENT LES SERVICES VALIDÉS */
+$services = array_filter($services, function ($service) {
+    return isset($service['statut']) && trim((string)$service['statut']) === 'Validé';
+});
+
+$services = array_values($services);
+
 $categories = $categorieController->listCategories();
 
 $categorieActive = isset($_GET['categorie']) ? (int)$_GET['categorie'] : 0;
@@ -31,13 +39,15 @@ function srvCategorySlug(string $name): string {
 
 function srvIsAvailable(array $service): bool {
     if (isset($service['disponibilite'])) {
-        return (int)$service['disponibilite'] === 1;
+        return mb_strtolower(trim((string)$service['disponibilite'])) === 'disponible';
     }
+
     if (isset($service['statut'])) {
         $s = mb_strtolower(trim((string)$service['statut']));
         return in_array($s, ['disponible', 'active', 'actif', 'ouvert', 'ouverte'], true);
     }
-    return ((int)($service['id_service'] ?? 0) % 3 !== 0);
+
+    return false;
 }
 
 function srvRating(array $service): array {
@@ -109,9 +119,9 @@ $totalDisponibles = count(array_filter($services, fn($s) => srvIsAvailable($s)))
         </select>
 
         <div class="icon-actions">
-            <a class="solid-btn" href="index.php?page=services">+ Tous les services</a>
-<button class="solid-btn alt-btn">Mes services</button>
-        </div>
+    <a class="solid-btn" href="index.php?page=services">+ Tous les services</a>
+    <a class="solid-btn alt-btn" href="index.php?page=myServices">Mes services</a>
+</div>
     </form>
 </section>
 

@@ -10,6 +10,7 @@ $allowedPages = [
     'reclamation',
     'events',
     'addService',
+    'editService',
 ];
 
 if (!in_array($page, $allowedPages, true)) {
