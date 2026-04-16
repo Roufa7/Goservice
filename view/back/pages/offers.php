@@ -56,8 +56,10 @@ function validateOfferPayload(array $input, array $typeServiceOptions): array {
     $prix = cleanInput($input['prix'] ?? '');
     $description = cleanInput($input['description'] ?? '');
 
-    if ($titre === '') {
-        $errors['titre'] = 'Le titre est obligatoire.';
+   if ($titre === '') {
+    $errors['titre'] = 'Le titre est obligatoire.';
+    } elseif (!preg_match('/^[a-zA-ZÀ-ÿ\s]+$/u', $titre)) {
+        $errors['titre'] = 'Le titre ne doit contenir que des lettres.';
     } elseif (mb_strlen($titre) < 3 || mb_strlen($titre) > 150) {
         $errors['titre'] = 'Le titre doit contenir entre 3 et 150 caracteres.';
     }
@@ -68,12 +70,13 @@ function validateOfferPayload(array $input, array $typeServiceOptions): array {
         $errors['type_service'] = 'Le type de service selectionne est invalide.';
     }
 
-    if ($localisation === '') {
-        $errors['localisation'] = 'La localisation est obligatoire.';
+   if ($localisation === '') {
+    $errors['localisation'] = 'La localisation est obligatoire.';
+    } elseif (!preg_match('/^[a-zA-ZÀ-ÿ\s]+$/u', $localisation)) {
+        $errors['localisation'] = 'La localisation ne doit contenir que des lettres.';
     } elseif (mb_strlen($localisation) > 150) {
         $errors['localisation'] = 'La localisation ne doit pas depasser 150 caracteres.';
     }
-
     if ($dateExpiration !== '') {
         $date = DateTime::createFromFormat('Y-m-d', $dateExpiration);
         $isValidDate = $date instanceof DateTime && $date->format('Y-m-d') === $dateExpiration;
@@ -103,12 +106,13 @@ function validateOfferPayload(array $input, array $typeServiceOptions): array {
         }
     }
 
-    if ($description === '') { 
+    if ($description === '') {
         $errors['description'] = 'La description est obligatoire.';
+    } elseif (!preg_match('/^[a-zA-ZÀ-ÿ\s]+$/u', $description)) {
+        $errors['description'] = 'La description ne doit contenir que des lettres.';
     } elseif (mb_strlen($description) > 2000) {
         $errors['description'] = 'La description ne doit pas depasser 2000 caracteres.';
     }
-
     return $errors;
 }
 
@@ -438,20 +442,25 @@ document.getElementById('form-grid')?.addEventListener('submit', function(event)
 
     const errors = {};
     const allowedServices = [<?php echo implode(',', array_map(fn($v) => '"' . addslashes($v) . '"', $typeServiceOptions)); ?>];
+    const textRegex = /^[a-zA-ZÀ-ÿ\s]+$/;
 
     if (titre.length < 3 || titre.length > 150) {
         errors.titre = 'Le titre doit contenir entre 3 et 150 caracteres.';
+    } else if (!textRegex.test(titre)) {
+        errors.titre = 'Le titre doit contenir uniquement des lettres.';
     }
 
     if (!allowedServices.includes(typeService)) {
         errors.type_service = 'Le type de service est obligatoire.';
     }
 
-    if (localisation.trim() === '') { 
-    errors.localisation = 'La localisation est obligatoire.';
+    if (localisation.trim() === '') {
+        errors.localisation = 'La localisation est obligatoire.';
+    } else if (!textRegex.test(localisation)) {
+        errors.localisation = 'La localisation doit contenir uniquement des lettres.';
     } else if (localisation.length > 150) {
-    errors.localisation = 'La localisation ne doit pas depasser 150 caracteres.';
-    }
+        errors.localisation = 'La localisation ne doit pas depasser 150 caracteres.';
+}
 
     if (dateExpiration) {
         const selected = new Date(dateExpiration + 'T00:00:00');
@@ -475,11 +484,13 @@ document.getElementById('form-grid')?.addEventListener('submit', function(event)
         }
     }
 
-    if (description.trim() === '') { 
-    errors.description = 'La description est obligatoire.';
+    if (description.trim() === '') {
+        errors.description = 'La description est obligatoire.';
+    } else if (!textRegex.test(description)) {
+        errors.description = 'La description doit contenir uniquement des lettres.';
     } else if (description.length > 2000) {
-    errors.description = 'La description ne doit pas depasser 2000 caracteres.';
-    }
+        errors.description = 'La description ne doit pas depasser 2000 caracteres.';
+}
 
     if (Object.keys(errors).length > 0) {
         event.preventDefault();

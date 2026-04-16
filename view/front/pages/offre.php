@@ -1,4 +1,3 @@
-
 <?php
 require_once __DIR__ . '/../../../config.php';
 require_once __DIR__ . '/../../../model/Offer.php';
@@ -12,7 +11,7 @@ $offerController = new OfferController($offerModel);
 $applicationModel = new Application($pdo);
 $applicationController = new ApplicationController($applicationModel);
 
-$activeOffers = $offerModel->findActive();
+$activeOffers = $offerModel->findActive(); //recupere les donnees depuis BD
 $message = '';
 $messageType = '';
 $fieldErrors = [

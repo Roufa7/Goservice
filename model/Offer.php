@@ -127,7 +127,7 @@ class Offer {
         return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
     }
 
-    public function findActive(): array {
+    public function findActive(): array { //récupère uniquement les offres ouvertes
         if ($this->offerTable === 'offers') {
             $stmt = $this->pdo->prepare(
                 'SELECT
