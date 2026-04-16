@@ -6,6 +6,7 @@ class Post
     private string $titre;
     private string $contenu;
     private ?string $image;
+    private ?string $video;
     private string $type_post;
     private string $statut_post;
     private int $id_user;
@@ -15,6 +16,7 @@ class Post
         string $titre,
         string $contenu,
         ?string $image,
+        ?string $video,
         string $type_post,
         string $statut_post,
         int $id_user
@@ -23,6 +25,7 @@ class Post
         $this->titre = $titre;
         $this->contenu = $contenu;
         $this->image = $image;
+        $this->video = $video;
         $this->type_post = $type_post;
         $this->statut_post = $statut_post;
         $this->id_user = $id_user;
@@ -32,6 +35,7 @@ class Post
     public function getTitre(): string { return $this->titre; }
     public function getContenu(): string { return $this->contenu; }
     public function getImage(): ?string { return $this->image; }
+    public function getVideo(): ?string { return $this->video; }
     public function getTypePost(): string { return $this->type_post; }
     public function getStatutPost(): string { return $this->statut_post; }
     public function getIdUser(): int { return $this->id_user; }
