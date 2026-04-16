@@ -16,7 +16,7 @@ switch ($action) {
             $telephone = $_POST['telephone'] ?? '';
             $adresse = $_POST['adresse'] ?? '';
             $role = $_POST['role'] ?? 'user';
-            
+
             // Basic file upload handling for photo
             $photoPath = '';
             if (isset($_FILES['photo']) && $_FILES['photo']['error'] === UPLOAD_ERR_OK) {
@@ -25,10 +25,10 @@ switch ($action) {
                 if (!is_dir($uploadDir)) {
                     mkdir($uploadDir, 0777, true);
                 }
-                
+
                 $fileName = time() . '_' . basename($_FILES['photo']['name']);
                 $targetFilePath = $uploadDir . $fileName;
-                
+
                 if (move_uploaded_file($_FILES['photo']['tmp_name'], $targetFilePath)) {
                     $photoPath = 'assets/uploads/' . $fileName;
                 }
@@ -38,7 +38,7 @@ switch ($action) {
 
             if ($result['success']) {
                 $loginResult = $userModel->login($email, $password);
-                if($loginResult['success']) {
+                if ($loginResult['success']) {
                     $_SESSION['user_id'] = $loginResult['user']['id_user'];
                     $_SESSION['user_role'] = $loginResult['user']['role'];
                     $_SESSION['user_name'] = $loginResult['user']['prenom'] . ' ' . $loginResult['user']['nom'];
@@ -63,7 +63,12 @@ switch ($action) {
                 $_SESSION['user_id'] = $result['user']['id_user'];
                 $_SESSION['user_role'] = $result['user']['role'];
                 $_SESSION['user_name'] = $result['user']['prenom'] . ' ' . $result['user']['nom'];
-                header('Location: ../view/front/index.php?page=home');
+                
+                if ($result['user']['role'] === 'admin') {
+                    header('Location: ../view/back/index.php');
+                } else {
+                    header('Location: ../view/front/index.php?page=home');
+                }
                 exit;
             } else {
                 header('Location: ../view/front/index.php?page=login&error=' . urlencode($result['message']));

@@ -12,7 +12,7 @@
             </div>
         <?php endif; ?>
         
-        <form class="auth-form" action="../../../controller/AuthController.php?action=login" method="POST">
+            <form class="auth-form" action="../../controller/AuthController.php?action=login" method="POST">
             <div class="form-grid">
                 <div class="field-block">
                     <label for="email">Email</label>

@@ -1,4 +1,5 @@
 <?php
+session_start();
 $page = $_GET['page'] ?? 'dashboard';
 
 $allowedPages = [
@@ -9,6 +10,7 @@ $allowedPages = [
     'forum',
     'reclamation',
     'events',
+    'user_edit',
 ];
 
 if (!in_array($page, $allowedPages, true)) {

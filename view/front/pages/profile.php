@@ -1,37 +1,73 @@
+<?php
+if (!isset($_SESSION['user_id'])) {
+    echo "<section class='page-hero reveal'><h2>Veuillez vous connecter pour voir votre profil.</h2></section>";
+    return;
+}
+
+require_once __DIR__ . '/../../../model/User.php';
+$userModel = new User();
+$userData = $userModel->getUserById($_SESSION['user_id']);
+
+if (!$userData) {
+    echo "<section class='page-hero reveal'><h2>Profil introuvable.</h2></section>";
+    return;
+}
+?>
 <section class="page-hero reveal">
     <span class="section-badge">Profil</span>
     <h1 class="page-title">Espace utilisateur</h1>
     <p class="page-intro">
-        Un profil complet, professionnel et vivant pour présenter clairement l’utilisateur,
-        son activité, ses services, ses avis et ses statistiques.
+        Gérez vos informations personnelles et mettez à jour votre compte.
     </p>
 </section>
 
 <section class="profile-wrap reveal">
     <div class="profile-top">
         <article class="profile-card main">
-            <div class="avatar-large">RB</div>
-            <h2>Rym Ben Salah</h2>
-            <p>Provider spécialisé dans les services créatifs et l’accompagnement digital.</p>
+            <?php if (isset($_GET['success'])): ?>
+                <div style="color: green; margin-bottom:15px; font-weight:bold;">Profil mis à jour avec succès !</div>
+            <?php endif; ?>
+            <?php if (isset($_GET['error'])): ?>
+                <div style="color: red; margin-bottom:15px; font-weight:bold;">Une erreur est survenue.</div>
+            <?php endif; ?>
 
-            <div class="skill-tags">
-                <span class="tag">Provider</span>
-                <span class="tag">Design</span>
-                <span class="tag">UI/UX</span>
-                <span class="tag">Branding</span>
-            </div>
+            <div class="avatar-large"><?php echo strtoupper(substr($userData['prenom'], 0, 1) . substr($userData['nom'], 0, 1)); ?></div>
+            <h2><?php echo htmlspecialchars($userData['prenom'] . ' ' . $userData['nom']); ?></h2>
+            <p>Rôle: <?php echo htmlspecialchars(ucfirst($userData['role'])); ?></p>
 
-            <div class="profile-info-list">
-                <div class="info-row"><span>Email</span><strong>rym@email.com</strong></div>
-                <div class="info-row"><span>Téléphone</span><strong>22 111 333</strong></div>
-                <div class="info-row"><span>Adresse</span><strong>Tunis, Tunisie</strong></div>
-                <div class="info-row"><span>Disponibilité</span><strong>Disponible</strong></div>
-            </div>
+            <form class="auth-form" action="../../controller/ProfileController.php?action=update" method="POST" style="margin-top: 20px; text-align: left;">
+                <div class="form-grid">
+                    <div class="field-block">
+                        <label>Nom</label>
+                        <input type="text" name="nom" value="<?php echo htmlspecialchars($userData['nom']); ?>" required>
+                    </div>
+                    <div class="field-block">
+                        <label>Prénom</label>
+                        <input type="text" name="prenom" value="<?php echo htmlspecialchars($userData['prenom']); ?>" required>
+                    </div>
+                    <div class="field-block">
+                        <label>Email</label>
+                        <input type="email" name="email" value="<?php echo htmlspecialchars($userData['email']); ?>" required>
+                    </div>
+                    <div class="field-block">
+                        <label>Téléphone</label>
+                        <input type="text" name="telephone" value="<?php echo htmlspecialchars($userData['telephone'] ?? ''); ?>">
+                    </div>
+                    <div class="field-block" style="grid-column: 1 / -1;">
+                        <label>Adresse</label>
+                        <input type="text" name="adresse" value="<?php echo htmlspecialchars($userData['adresse'] ?? ''); ?>">
+                    </div>
+                </div>
 
-            <div class="icon-actions" style="margin-top:16px;">
-                <button class="solid-btn">Modifier le profil</button>
-                <button class="outline-btn">Voir portfolio</button>
-            </div>
+                <div class="icon-actions" style="margin-top:20px;">
+                    <button type="submit" class="solid-btn">Mettre à jour le profil</button>
+                    
+                </div>
+            </form>
+            
+            <form action="../../controller/ProfileController.php?action=delete" method="POST" onsubmit="return confirm('Attention ! Voulez-vous vraiment supprimer définitivement votre compte ?');" style="margin-top: 15px;">
+                <button type="submit" class="danger-btn">Supprimer mon compte</button>
+            </form>
         </article>
 
         <div>

@@ -160,7 +160,11 @@
         <span class="section-badge">Connexion</span>
         <h3>Accéder à votre espace</h3>
         <p>Un bloc visuel simple pour l’entrée utilisateur, provider ou administrateur.</p>
-        <a class="ghost-btn" href="#" id="openLoginModal2">Ouvrir le profil</a>
+        <?php if (isset($_SESSION['user_id'])): ?>
+            <a class="solid-btn" href="index.php?page=profile">Mon Profil</a>
+        <?php else: ?>
+            <a class="ghost-btn" href="#" id="openLoginModal2">Se Connecter</a>
+        <?php endif; ?>
     </article>
 
     <article class="card auth-card">

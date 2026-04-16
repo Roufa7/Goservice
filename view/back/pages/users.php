@@ -1,3 +1,12 @@
+<?php
+require_once __DIR__ . '/../../../model/User.php';
+$userModel = new User();
+$usersList = $userModel->getAllUsers();
+
+$totalUsers = count($usersList);
+$totalProviders = count(array_filter($usersList, fn($u) => $u['role'] === 'provider'));
+$totalAdmins = count(array_filter($usersList, fn($u) => $u['role'] === 'admin'));
+?>
 <section class="action-bar reveal">
     <div class="search-box">
         <input type="text" placeholder="Rechercher un utilisateur, email ou provider...">
@@ -21,10 +30,10 @@
 </section>
 
 <section class="admin-stats reveal">
-    <article class="admin-stat"><strong>128</strong><span>Utilisateurs</span></article>
-    <article class="admin-stat"><strong>34</strong><span>Providers</span></article>
-    <article class="admin-stat"><strong>05</strong><span>Admins</span></article>
-    <article class="admin-stat"><strong>17</strong><span>Profils incomplets</span></article>
+    <article class="admin-stat"><strong><?php echo $totalUsers; ?></strong><span>Total Inscrits</span></article>
+    <article class="admin-stat"><strong><?php echo $totalUsers - $totalProviders - $totalAdmins; ?></strong><span>Clients</span></article>
+    <article class="admin-stat"><strong><?php echo $totalProviders; ?></strong><span>Providers</span></article>
+    <article class="admin-stat"><strong><?php echo $totalAdmins; ?></strong><span>Admins</span></article>
 </section>
 
 <section class="admin-panel reveal">
@@ -42,44 +51,22 @@
             </tr>
         </thead>
         <tbody>
-            <tr>
-                <td>Ben Salah</td>
-                <td>Ahmed</td>
-                <td>ahmed@email.com</td>
-                <td>Utilisateur</td>
-                <td>22 111 333</td>
-                <td>Tunis</td>
-                <td class="admin-tools">
-                    <button class="small-btn">Voir</button>
-                    <button class="small-btn">Modifier</button>
-                    <button class="danger-btn">Supprimer</button>
-                </td>
-            </tr>
-            <tr>
-                <td>Jaziri</td>
-                <td>Sarra</td>
-                <td>sarra@email.com</td>
-                <td>Provider</td>
-                <td>55 777 121</td>
-                <td>Sousse</td>
-                <td class="admin-tools">
-                    <button class="small-btn">Voir</button>
-                    <button class="small-btn">Modifier</button>
-                    <button class="danger-btn">Supprimer</button>
-                </td>
-            </tr>
-            <tr>
-                <td>Trabelsi</td>
-                <td>Rym</td>
-                <td>rym@email.com</td>
-                <td>Admin</td>
-                <td>20 456 888</td>
-                <td>Nabeul</td>
-                <td class="admin-tools">
-                    <button class="small-btn">Voir</button>
-                    <button class="small-btn">Modifier</button>
-                </td>
-            </tr>
+            <?php foreach ($usersList as $u): ?>
+                <tr>
+                    <td><?php echo htmlspecialchars($u['nom']); ?></td>
+                    <td><?php echo htmlspecialchars($u['prenom']); ?></td>
+                    <td><?php echo htmlspecialchars($u['email']); ?></td>
+                    <td><?php echo htmlspecialchars(ucfirst($u['role'])); ?></td>
+                    <td><?php echo htmlspecialchars($u['telephone'] ?? ''); ?></td>
+                    <td><?php echo htmlspecialchars($u['adresse'] ?? ''); ?></td>
+                    <td class="admin-tools">
+                        <a href="index.php?page=user_edit&id=<?php echo $u['id_user']; ?>" class="small-btn" style="text-decoration:none;">Modifier</a>
+                        <?php if($u['id_user'] !== ($_SESSION['user_id'] ?? null)): ?>
+                        <a href="../../controller/UserController.php?action=delete&id=<?php echo $u['id_user']; ?>" class="danger-btn" style="text-decoration:none;" onclick="return confirm('Êtes-vous sûr ?');">Supprimer</a>
+                        <?php endif; ?>
+                    </td>
+                </tr>
+            <?php endforeach; ?>
         </tbody>
     </table>
 </section>

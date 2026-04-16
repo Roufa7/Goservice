@@ -71,5 +71,53 @@ class User {
         $stmt->execute([$id]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
+    public function getAllUsers() {
+        $stmt = $this->pdo->query("SELECT * FROM users ORDER BY id_user DESC");
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+    
+    public function deleteUser($id) {
+        try {
+            // Because of foreign keys, we should delete from portfolio/provider first 
+            // if we want cascading logic, but usually DB constraints restrict or cascade automatically.
+            // Let's manually clean up provider tables if user is a provider.
+            $stmt = $this->pdo->prepare("SELECT role FROM users WHERE id_user = ?");
+            $stmt->execute([$id]);
+            $user = $stmt->fetch();
+            
+            if ($user && $user['role'] === 'provider') {
+                $pStmt = $this->pdo->prepare("SELECT id_provider FROM provider WHERE id_user = ?");
+                $pStmt->execute([$id]);
+                $provider = $pStmt->fetch();
+                if ($provider) {
+                    $this->pdo->prepare("DELETE FROM portfolio WHERE id_provider = ?")->execute([$provider['id_provider']]);
+                    $this->pdo->prepare("DELETE FROM provider WHERE id_provider = ?")->execute([$provider['id_provider']]);
+                }
+            }
+            
+            $stmt = $this->pdo->prepare("DELETE FROM users WHERE id_user = ?");
+            return $stmt->execute([$id]);
+        } catch (PDOException $e) {
+            return false;
+        }
+    }
+    
+    public function updateUser($id, $nom, $prenom, $email, $role) {
+        try {
+            $stmt = $this->pdo->prepare("UPDATE users SET nom = ?, prenom = ?, email = ?, role = ? WHERE id_user = ?");
+            return $stmt->execute([$nom, $prenom, $email, $role, $id]);
+        } catch (PDOException $e) {
+            return false;
+        }
+    }
+
+    public function updateProfile($id, $nom, $prenom, $email, $telephone, $adresse) {
+        try {
+            $stmt = $this->pdo->prepare("UPDATE users SET nom = ?, prenom = ?, email = ?, telephone = ?, adresse = ? WHERE id_user = ?");
+            return $stmt->execute([$nom, $prenom, $email, $telephone, $adresse, $id]);
+        } catch (PDOException $e) {
+            return false;
+        }
+    }
 }
 ?>
