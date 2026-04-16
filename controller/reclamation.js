@@ -1,4 +1,6 @@
 // reclamation.js
+let globalReclamations = {};
+
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('form-reclamation');
     const sujet = document.getElementById('sujet-reclamation');
@@ -6,18 +8,19 @@ document.addEventListener('DOMContentLoaded', function() {
     const errorMsg = document.getElementById('error-message');
     const successMsg = document.getElementById('success-message');
 
-    // Function to display user's reclamations
-    function loadUserReclamations() {
+    window.loadUserReclamations = function() {
         const container = document.getElementById('reclamations-list');
         if (!container) return;
 
-        fetch('../../controller/get_reclamations.php')
+        fetch('index.php?page=reclamation&action=get_all')
             .then(response => response.json())
             .then(data => {
-                container.innerHTML = ''; // Clear container
+                container.innerHTML = '';
+                globalReclamations = {};
                 
                 if (data.success && data.reclamations.length > 0) {
                     data.reclamations.forEach(rec => {
+                        globalReclamations[rec.id_reclamation] = rec;
                         const statusClass = rec.status === 'pending' ? 'status-pending' : 
                                           (rec.status === 'resolved' ? 'status-resolved' : 'status-rejected');
                         const statusText = rec.status === 'pending' ? 'En attente' :
@@ -46,12 +49,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
                 container.innerHTML = '<p class="page-intro" style="color:red;">Erreur lors du chargement des réclamations.</p>';
             });
     }
 
-    // Escape HTML to prevent XSS
     function escapeHtml(text) {
         const div = document.createElement('div');
         div.textContent = text;
@@ -60,25 +61,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (form) {
         form.addEventListener('submit', function(e) {
-            e.preventDefault(); // Prevent default form submission
-            
+            e.preventDefault();
             let errors = [];
             
-            // Reset styles
-            [sujet, desc].forEach(field => {
-                if (field) field.style.border = "1px solid #ddd";
-            });
-            
-            // Validation
-            if (sujet.value.trim() === '') {
-                errors.push("Le sujet est obligatoire.");
-                sujet.style.border = "1px solid red";
-            }
-            
-            if (desc.value.trim() === '') {
-                errors.push("La description est obligatoire.");
-                desc.style.border = "1px solid red";
-            }
+            [sujet, desc].forEach(field => { if (field) field.style.border = "1px solid #ddd"; });
+            if (sujet.value.trim() === '') { errors.push("Le sujet est obligatoire."); sujet.style.border = "1px solid red"; }
+            if (desc.value.trim() === '') { errors.push("La description est obligatoire."); desc.style.border = "1px solid red"; }
             
             if (errors.length > 0) {
                 errorMsg.innerHTML = "<strong>Erreur :</strong><br>" + errors.join("<br>");
@@ -87,80 +75,58 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            // Hide error message
             errorMsg.style.display = 'none';
-            
-            // Prepare form data
             const formData = new FormData(form);
             formData.append('submit_reclamation', '1');
             
-            // Submit via AJAX
-            fetch('index.php?page=reclamation', {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            })
-            .then(response => response.json())
+            fetch('index.php?page=reclamation', { method: 'POST', body: formData, headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(r => r.json())
             .then(data => {
                 if (data.success) {
                     successMsg.innerHTML = "<strong>Succès :</strong><br>" + data.message;
                     successMsg.style.display = 'block';
                     errorMsg.style.display = 'none';
-                    
-                    // Reset form
                     form.reset();
-                    
-                    // Reload reclamations list
+                    document.getElementById('id-reclamation').value = '';
+                    document.getElementById('btn-cancel-edit').style.display = 'none';
                     loadUserReclamations();
-                    
-                    // Clear success message after 3 seconds
-                    setTimeout(() => {
-                        successMsg.style.display = 'none';
-                    }, 3000);
+                    setTimeout(() => { successMsg.style.display = 'none'; }, 3000);
                 } else {
                     errorMsg.innerHTML = "<strong>Erreur :</strong><br>" + data.message;
                     errorMsg.style.display = 'block';
-                    successMsg.style.display = 'none';
                 }
             })
-            .catch(error => {
-                errorMsg.innerHTML = "<strong>Erreur :</strong><br>Une erreur s'est produite lors de l'envoi.";
-                errorMsg.style.display = 'block';
-                successMsg.style.display = 'none';
-                console.error('Error:', error);
-            });
+            .catch(error => console.error(error));
         });
     }
-    
-    // Load existing reclamations on page load
     loadUserReclamations();
 });
 
-// Global functions for edit and delete
-function editReclamation(id) {
-    // Implement edit functionality
-    console.log('Edit reclamation:', id);
+window.editReclamation = function(id) {
+    const rec = globalReclamations[id];
+    if (rec) {
+        document.getElementById('id-reclamation').value = rec.id_reclamation;
+        document.getElementById('sujet-reclamation').value = rec.subject;
+        document.getElementById('desc-reclamation').value = rec.description;
+        document.getElementById('btn-cancel-edit').style.display = 'inline-block';
+        document.getElementById('form-reclamation').scrollIntoView({ behavior: 'smooth' });
+    }
 }
 
-function deleteReclamation(id) {
+window.cancelEdit = function() {
+    document.getElementById('form-reclamation').reset();
+    document.getElementById('id-reclamation').value = '';
+    document.getElementById('btn-cancel-edit').style.display = 'none';
+}
+
+window.deleteReclamation = function(id) {
     if (confirm('Êtes-vous sûr de vouloir supprimer cette réclamation ?')) {
-        fetch('delete_reclamation.php', {
+        fetch('index.php?page=reclamation&action=delete', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
             body: JSON.stringify({id: id})
         })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                location.reload();
-            } else {
-                alert('Erreur: ' + data.message);
-            }
-        })
-        .catch(error => console.error('Error:', error));
+        .then(r => r.json())
+        .then(data => { if (data.success) { loadUserReclamations(); } else { alert('Erreur: ' + data.message); } });
     }
 }

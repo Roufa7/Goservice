@@ -47,5 +47,84 @@ class Reclamation {
             throw $e;
         }
     }
+
+    public function update() {
+        $query = "UPDATE reclamation SET subject = :subject, description = :description WHERE id_reclamation = :id_reclamation AND id_user = :id_user";
+        
+        try {
+            $stmt = $this->conn->prepare($query);
+
+            $stmt->bindParam(":subject", $this->subject);
+            $stmt->bindParam(":description", $this->description);
+            $stmt->bindParam(":id_reclamation", $this->id_reclamation);
+            $stmt->bindParam(":id_user", $this->id_user);
+
+            if($stmt->execute()) {
+                return true;
+            }
+            return false;
+        } catch(PDOException $e) {
+            throw $e;
+        }
+    }
+
+    public function delete() {
+        $query = "DELETE FROM reclamation WHERE id_reclamation = :id_reclamation AND id_user = :id_user";
+        
+        try {
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindParam(":id_reclamation", $this->id_reclamation);
+            $stmt->bindParam(":id_user", $this->id_user);
+
+            if($stmt->execute()) {
+                return true;
+            }
+            return false;
+        } catch(PDOException $e) {
+            throw $e;
+        }
+    }
+
+    public function readAllAdmin() {
+        $query = "SELECT r.*, u.nom as user_nom, u.prenom as user_prenom 
+                  FROM reclamation r 
+                  JOIN users u ON r.id_user = u.id_user 
+                  ORDER BY r.created_at DESC";
+        try {
+            $stmt = $this->conn->prepare($query);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch(PDOException $e) {
+            throw $e;
+        }
+    }
+
+    public function updateStatus($id_reclamation, $status) {
+        $query = "UPDATE reclamation SET status = :status WHERE id_reclamation = :id_reclamation";
+        try {
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindParam(":status", $status);
+            $stmt->bindParam(":id_reclamation", $id_reclamation);
+            if($stmt->execute()) {
+                return true;
+            }
+            return false;
+        } catch(PDOException $e) {
+            throw $e;
+        }
+    }
+
+    public function readById($id_reclamation) {
+        $query = "SELECT * FROM reclamation WHERE id_reclamation = :id_reclamation AND id_user = :id_user";
+        try {
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindParam(":id_reclamation", $id_reclamation);
+            $stmt->bindParam(":id_user", $this->id_user);
+            $stmt->execute();
+            return $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch(PDOException $e) {
+            throw $e;
+        }
+    }
 }
 ?>
