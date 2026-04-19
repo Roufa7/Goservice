@@ -393,12 +393,6 @@ if ($currentOffer) {
             <small class="field-error" data-error-for="date_expiration"><?php echo htmlspecialchars($fieldErrors['date_expiration'], ENT_QUOTES, 'UTF-8'); ?></small>
         </div>
 
-        <select name="statut" id="statutField" aria-invalid="<?php echo $fieldErrors['statut'] !== '' ? 'true' : 'false'; ?>">
-            <option value="ouverte" <?php echo $formData['statut'] === 'ouverte' ? 'selected' : ''; ?>>Ouverte</option>
-            <option value="fermee" <?php echo $formData['statut'] === 'fermee' ? 'selected' : ''; ?>>Fermée</option>
-        </select>
-        <small class="field-error" data-error-for="statut"><?php echo htmlspecialchars($fieldErrors['statut'], ENT_QUOTES, 'UTF-8'); ?></small>
-
         <input type="number" name="prix" id="prixField" step="0.01" placeholder="Prix" value="<?php echo htmlspecialchars($formData['prix'], ENT_QUOTES, 'UTF-8'); ?>" aria-invalid="<?php echo $fieldErrors['prix'] !== '' ? 'true' : 'false'; ?>">
         <small class="field-error" data-error-for="prix"><?php echo htmlspecialchars($fieldErrors['prix'], ENT_QUOTES, 'UTF-8'); ?></small>
 
