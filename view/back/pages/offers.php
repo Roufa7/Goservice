@@ -381,6 +381,7 @@ if ($currentOffer) {
             <small class="field-error" data-error-for="date_expiration"><?php echo htmlspecialchars($fieldErrors['date_expiration'], ENT_QUOTES, 'UTF-8'); ?></small>
         </div>
 
+<<<<<<< HEAD
         <div class="field-block form-field auto-status-block">
             <label>Statut</label>
             <input type="text" value="Automatique selon date d'expiration" readonly aria-readonly="true" class="readonly-status-input">
@@ -392,6 +393,10 @@ if ($currentOffer) {
             <input type="text" name="prix" id="prixField" inputmode="decimal" pattern="^\d+(?:[\.,]\d{1,2})?$" placeholder="Prix" value="<?php echo htmlspecialchars($formData['prix'], ENT_QUOTES, 'UTF-8'); ?>" aria-invalid="<?php echo $fieldErrors['prix'] !== '' ? 'true' : 'false'; ?>">
             <small class="field-error" data-error-for="prix"><?php echo htmlspecialchars($fieldErrors['prix'], ENT_QUOTES, 'UTF-8'); ?></small>
         </div>
+=======
+        <input type="number" name="prix" id="prixField" step="0.01" placeholder="Prix" value="<?php echo htmlspecialchars($formData['prix'], ENT_QUOTES, 'UTF-8'); ?>" aria-invalid="<?php echo $fieldErrors['prix'] !== '' ? 'true' : 'false'; ?>">
+        <small class="field-error" data-error-for="prix"><?php echo htmlspecialchars($fieldErrors['prix'], ENT_QUOTES, 'UTF-8'); ?></small>
+>>>>>>> c3174bafa76818efbbd7f7c9992ce7b871b339af
 
         <div class="field-block form-field full-span">
             <label for="descriptionField">Description</label>
@@ -408,6 +413,94 @@ if ($currentOffer) {
     </form>
 </section>
 
+<<<<<<< HEAD
+=======
+<script>
+function setAdminFieldError(fieldName, message) {
+    const node = document.querySelector([data-error-for="${fieldName}"]);
+    if (node) {
+        node.textContent = message;
+    }
+}
+
+function clearAdminFieldErrors() {
+    document.querySelectorAll('.field-error').forEach(node => {
+        node.textContent = '';
+    });
+}
+
+//VALIDATION JS FRONTEND
+document.getElementById('form-grid')?.addEventListener('submit', function(event) {
+    clearAdminFieldErrors();
+
+    const titre = document.getElementById('titreField')?.value.trim() ?? '';
+    const typeService = document.getElementById('typeServiceField')?.value.trim() ?? '';
+    const localisation = document.getElementById('localisationField')?.value.trim() ?? '';
+    const dateExpiration = document.getElementById('date_expiration')?.value.trim() ?? '';
+    const statut = document.getElementById('statutField')?.value.trim() ?? '';
+    const prix = document.getElementById('prixField')?.value.trim() ?? '';
+    const description = document.getElementById('descriptionField')?.value.trim() ?? '';
+
+    const errors = {};
+    const allowedServices = [<?php echo implode(',', array_map(fn($v) => '"' . addslashes($v) . '"', $typeServiceOptions)); ?>];
+    const textRegex = /^[a-zA-ZÀ-ÿ\s]+$/;
+
+    if (titre.length < 3 || titre.length > 150) {
+        errors.titre = 'Le titre doit contenir entre 3 et 150 caracteres.';
+    } else if (!textRegex.test(titre)) {
+        errors.titre = 'Le titre doit contenir uniquement des lettres.';
+    }
+
+    if (!allowedServices.includes(typeService)) {
+        errors.type_service = 'Le type de service est obligatoire.';
+    }
+
+    if (localisation.trim() === '') {
+        errors.localisation = 'La localisation est obligatoire.';
+    } else if (!textRegex.test(localisation)) {
+        errors.localisation = 'La localisation doit contenir uniquement des lettres.';
+    } else if (localisation.length > 150) {
+        errors.localisation = 'La localisation ne doit pas depasser 150 caracteres.';
+}
+
+    if (dateExpiration) {
+        const selected = new Date(dateExpiration + 'T00:00:00');
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (selected < today) {
+            errors.date_expiration = 'La date d expiration doit etre aujourd hui ou dans le futur.';
+        }
+    }
+
+    if (!['ouverte', 'fermee'].includes(statut)) {
+        errors.statut = 'Le statut est invalide.';
+    }
+
+    if (prix.trim() === '') { 
+    errors.prix = 'Le prix est obligatoire.';
+    } else {
+        const numericPrice = Number(prix);
+        if (Number.isNaN(numericPrice) || numericPrice <= 0 || numericPrice > 1000000) {
+            errors.prix = 'Le prix doit etre superieur a 0 et inferieur a 1 000 000.';
+        }
+    }
+
+    if (description.trim() === '') {
+        errors.description = 'La description est obligatoire.';
+    } else if (!textRegex.test(description)) {
+        errors.description = 'La description doit contenir uniquement des lettres.';
+    } else if (description.length > 2000) {
+        errors.description = 'La description ne doit pas depasser 2000 caracteres.';
+}
+
+    if (Object.keys(errors).length > 0) {
+        event.preventDefault();
+        Object.entries(errors).forEach(([field, error]) => setAdminFieldError(field, error));
+    }
+});
+</script>
+
+>>>>>>> c3174bafa76818efbbd7f7c9992ce7b871b339af
 <style>
 .offers-alert {
     padding: 12px 14px;
