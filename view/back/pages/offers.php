@@ -381,7 +381,7 @@ if ($currentOffer) {
             <small class="field-error" data-error-for="date_expiration"><?php echo htmlspecialchars($fieldErrors['date_expiration'], ENT_QUOTES, 'UTF-8'); ?></small>
         </div>
 
-<<<<<<< HEAD
+
         <div class="field-block form-field auto-status-block">
             <label>Statut</label>
             <input type="text" value="Automatique selon date d'expiration" readonly aria-readonly="true" class="readonly-status-input">
@@ -392,11 +392,10 @@ if ($currentOffer) {
             <label for="prixField">Prix</label>
             <input type="text" name="prix" id="prixField" inputmode="decimal" pattern="^\d+(?:[\.,]\d{1,2})?$" placeholder="Prix" value="<?php echo htmlspecialchars($formData['prix'], ENT_QUOTES, 'UTF-8'); ?>" aria-invalid="<?php echo $fieldErrors['prix'] !== '' ? 'true' : 'false'; ?>">
             <small class="field-error" data-error-for="prix"><?php echo htmlspecialchars($fieldErrors['prix'], ENT_QUOTES, 'UTF-8'); ?></small>
-        </div>
-=======
+    
         <input type="number" name="prix" id="prixField" step="0.01" placeholder="Prix" value="<?php echo htmlspecialchars($formData['prix'], ENT_QUOTES, 'UTF-8'); ?>" aria-invalid="<?php echo $fieldErrors['prix'] !== '' ? 'true' : 'false'; ?>">
         <small class="field-error" data-error-for="prix"><?php echo htmlspecialchars($fieldErrors['prix'], ENT_QUOTES, 'UTF-8'); ?></small>
->>>>>>> c3174bafa76818efbbd7f7c9992ce7b871b339af
+
 
         <div class="field-block form-field full-span">
             <label for="descriptionField">Description</label>
@@ -413,8 +412,8 @@ if ($currentOffer) {
     </form>
 </section>
 
-<<<<<<< HEAD
-=======
+
+
 <script>
 function setAdminFieldError(fieldName, message) {
     const node = document.querySelector([data-error-for="${fieldName}"]);
@@ -500,7 +499,7 @@ document.getElementById('form-grid')?.addEventListener('submit', function(event)
 });
 </script>
 
->>>>>>> c3174bafa76818efbbd7f7c9992ce7b871b339af
+>>>>>>> c3174bafa76818efbbd7f7c9992ce7b8
 <style>
 .offers-alert {
     padding: 12px 14px;

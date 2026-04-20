@@ -71,10 +71,10 @@ class Offer {
         return $this->id_offre;
     }
 
-<<<<<<< HEAD
+
     public function setIdOffre(?int $id_offre): void {
         $this->id_offre = $id_offre;
-=======
+
     public function findActive(): array { //récupère uniquement les offres ouvertes
         if ($this->offerTable === 'offers') {
             $stmt = $this->pdo->prepare(
@@ -114,7 +114,7 @@ class Offer {
         );
         $stmt->execute(['statut' => 'ouverte']);
         return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
->>>>>>> c3174bafa76818efbbd7f7c9992ce7b871b339af
+
     }
 
     public function getTitre(): ?string {
@@ -188,5 +188,6 @@ class Offer {
     public function setPrix(?float $prix): void {
         $this->prix = $prix;
     }
+}
 }
 }
