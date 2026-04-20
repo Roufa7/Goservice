@@ -91,6 +91,7 @@ $mainNav = [
 
     <script src="../../assets/js/theme.js"></script>
     <script src="../../assets/js/main.js"></script>
+    <script src="../../assets/js/offer-validation.js"></script>
     <div class="auth-modal" id="loginModal">
     <div class="auth-modal-box">
         <button class="auth-close" id="closeLoginModal">&times;</button>

@@ -1,33 +1,296 @@
 <?php
-class OfferController {
-    private $offerModel;
+include_once(__DIR__ . '/../config.php');
+include_once(__DIR__ . '/../model/Offer.php');
 
-    public function __construct(Offer $offerModel) {
-        $this->offerModel = $offerModel;
+if (!class_exists('OfferController')) {
+class OfferController {
+    public function __construct($unused = null) {
+    }
+
+    private function resolveStatusFromExpiration(?DateTime $dateExpiration): string {
+        $today = new DateTime('today');
+        $isExpired = false;
+        if ($dateExpiration !== null) {
+            $expirationDay = (clone $dateExpiration)->setTime(0, 0, 0);
+            $isExpired = $expirationDay < $today;
+        }
+
+        if ($this->useFrenchSchema()) {
+            return $isExpired ? 'fermee' : 'ouverte';
+        }
+
+        return $isExpired ? 'expiree' : 'active';
+    }
+
+    private function syncOfferStatusesByExpiration(): void {
+        $db = config::getConnexion();
+
+        if ($this->useFrenchSchema()) {
+            $db->exec('UPDATE offre SET statut = "fermee" WHERE date_expiration IS NOT NULL AND DATE(date_expiration) < CURDATE()');
+            $db->exec('UPDATE offre SET statut = "ouverte" WHERE date_expiration IS NULL OR DATE(date_expiration) >= CURDATE()');
+            return;
+        }
+
+        $db->exec('UPDATE offers SET statut = "expiree" WHERE date_fin IS NOT NULL AND DATE(date_fin) < CURDATE()');
+        $db->exec('UPDATE offers SET statut = "active" WHERE date_fin IS NULL OR DATE(date_fin) >= CURDATE()');
+    }
+
+    private function tableExists(string $table): bool {
+        $db = config::getConnexion();
+        $stmt = $db->prepare('SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = :table_name');
+        $stmt->execute(['table_name' => $table]);
+        return (int) $stmt->fetchColumn() > 0;
+    }
+
+    private function useFrenchSchema(): bool {
+        return $this->tableExists('offre');
+    }
+
+    private function normalizeStatusForRead(?string $status): string {
+        $value = strtolower(trim((string) $status));
+
+        if (in_array($value, ['ouverte', 'active'], true)) {
+            return 'ouverte';
+        }
+
+        return 'fermee';
+    }
+
+    private function normalizeStatusForWrite(?string $status): string {
+        $value = strtolower(trim((string) $status));
+
+        if ($this->useFrenchSchema()) {
+            return ($value === 'fermee' || $value === 'fermée' || $value === 'inactive' || $value === 'expiree') ? 'fermee' : 'ouverte';
+        }
+
+        return ($value === 'fermee' || $value === 'fermée' || $value === 'inactive' || $value === 'expiree') ? 'inactive' : 'active';
+    }
+
+    private function mapPayloadToEntity(array $data): Offer {
+        $datePublication = null;
+        if (!empty($data['date_publication'])) {
+            $datePublication = new DateTime((string) $data['date_publication']);
+        }
+
+        $dateExpiration = null;
+        if (!empty($data['date_expiration'])) {
+            $dateExpiration = new DateTime((string) $data['date_expiration']);
+        }
+
+        return new Offer(
+            isset($data['id_offre']) && is_numeric($data['id_offre']) ? (int) $data['id_offre'] : null,
+            isset($data['titre']) ? trim((string) $data['titre']) : null,
+            isset($data['description']) ? trim((string) $data['description']) : null,
+            isset($data['localisation']) ? trim((string) $data['localisation']) : null,
+            $datePublication,
+            $dateExpiration,
+            isset($data['statut']) ? $this->normalizeStatusForRead((string) $data['statut']) : 'ouverte',
+            isset($data['type_service']) ? trim((string) $data['type_service']) : null,
+            isset($data['id_admin']) && is_numeric($data['id_admin']) ? (int) $data['id_admin'] : null,
+            isset($data['prix']) && is_numeric($data['prix']) ? (float) $data['prix'] : null
+        );
     }
 
     public function listOffers(): array {
-        return $this->offerModel->findAll(); //appel findAll() du modèle pour obtenir toutes les offres
+        $this->syncOfferStatusesByExpiration();
+
+        if ($this->useFrenchSchema()) {
+            $sql = 'SELECT o.id_offre, o.titre, o.description, o.localisation, o.date_publication, o.date_expiration, o.statut, o.type_service, o.prix, o.id_admin, u.nom AS admin_nom, u.prenom AS admin_prenom FROM offre o LEFT JOIN users u ON o.id_admin = u.id_user ORDER BY o.date_publication DESC, o.id_offre DESC';
+        } else {
+            $sql = 'SELECT o.id AS id_offre, o.titre, o.description, "" AS localisation, o.created_at AS date_publication, o.date_fin AS date_expiration, CASE WHEN o.statut = "active" THEN "ouverte" ELSE "fermee" END AS statut, COALESCE(s.titre, "autre") AS type_service, o.prix, o.creator_id AS id_admin, u.nom AS admin_nom, u.prenom AS admin_prenom FROM offers o LEFT JOIN users u ON o.creator_id = u.id LEFT JOIN services s ON o.service_id = s.id ORDER BY o.created_at DESC, o.id DESC';
+        }
+        $db = config::getConnexion();
+
+        try {
+            return $db->query($sql)->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (Exception $e) {
+            die('Error:' . $e->getMessage());
+        }
+    }
+
+    public function listActiveOffers(): array {
+        $this->syncOfferStatusesByExpiration();
+
+        if ($this->useFrenchSchema()) {
+            $sql = 'SELECT o.id_offre, o.titre, o.description, o.localisation, o.date_publication, o.date_expiration, o.statut, o.type_service, o.prix, o.id_admin, u.nom AS admin_nom, u.prenom AS admin_prenom FROM offre o LEFT JOIN users u ON o.id_admin = u.id_user WHERE o.statut = :statut ORDER BY o.date_publication DESC, o.id_offre DESC';
+            $params = ['statut' => 'ouverte'];
+        } else {
+            $sql = 'SELECT o.id AS id_offre, o.titre, o.description, "" AS localisation, o.created_at AS date_publication, o.date_fin AS date_expiration, CASE WHEN o.statut = "active" THEN "ouverte" ELSE "fermee" END AS statut, COALESCE(s.titre, "autre") AS type_service, o.prix, o.creator_id AS id_admin, u.nom AS admin_nom, u.prenom AS admin_prenom FROM offers o LEFT JOIN users u ON o.creator_id = u.id LEFT JOIN services s ON o.service_id = s.id WHERE o.statut = :statut ORDER BY o.created_at DESC, o.id DESC';
+            $params = ['statut' => 'active'];
+        }
+        $db = config::getConnexion();
+        $req = $db->prepare($sql);
+
+        try {
+            $req->execute($params);
+            return $req->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (Exception $e) {
+            die('Error:' . $e->getMessage());
+        }
     }
 
     public function getStats(): array {
-        return $this->offerModel->getStats();
+        $this->syncOfferStatusesByExpiration();
+
+        if ($this->useFrenchSchema()) {
+            $sql = 'SELECT COUNT(*) AS total, SUM(statut = "ouverte") AS ouverte, SUM(statut = "fermee") AS fermee FROM offre';
+        } else {
+            $sql = 'SELECT COUNT(*) AS total, SUM(statut = "active") AS ouverte, SUM(statut <> "active") AS fermee FROM offers';
+        }
+        $db = config::getConnexion();
+
+        try {
+            $stats = $db->query($sql)->fetch(PDO::FETCH_ASSOC) ?: [];
+            return [
+                'total' => (int) ($stats['total'] ?? 0),
+                'ouverte' => (int) ($stats['ouverte'] ?? 0),
+                'fermee' => (int) ($stats['fermee'] ?? 0),
+            ];
+        } catch (Exception $e) {
+            die('Error:' . $e->getMessage());
+        }
+    }
+
+    public function deleteOffer($id): bool {
+        $sql = $this->useFrenchSchema()
+            ? 'DELETE FROM offre WHERE id_offre = :id'
+            : 'DELETE FROM offers WHERE id = :id';
+        $db = config::getConnexion();
+        $req = $db->prepare($sql);
+        $req->bindValue(':id', (int) $id, PDO::PARAM_INT);
+
+        try {
+            return $req->execute();
+        } catch (Exception $e) {
+            die('Error:' . $e->getMessage());
+        }
+    }
+
+    public function addOffer(Offer $offer): int {
+        $computedStatus = $this->resolveStatusFromExpiration($offer->getDateExpiration());
+
+        if ($this->useFrenchSchema()) {
+            $sql = 'INSERT INTO offre (titre, description, localisation, date_expiration, statut, type_service, prix, id_admin) VALUES (:titre, :description, :localisation, :date_expiration, :statut, :type_service, :prix, :id_admin)';
+            $params = [
+                'titre' => $offer->getTitre(),
+                'description' => $offer->getDescription(),
+                'localisation' => $offer->getLocalisation(),
+                'date_expiration' => $offer->getDateExpiration() ? $offer->getDateExpiration()->format('Y-m-d H:i:s') : null,
+                'statut' => $computedStatus,
+                'type_service' => $offer->getTypeService(),
+                'prix' => $offer->getPrix(),
+                'id_admin' => $offer->getIdAdmin(),
+            ];
+        } else {
+            $sql = 'INSERT INTO offers (titre, description, prix, service_id, creator_id, image, statut, date_debut, date_fin) VALUES (:titre, :description, :prix, :service_id, :creator_id, :image, :statut, :date_debut, :date_fin)';
+            $params = [
+                'titre' => $offer->getTitre(),
+                'description' => $offer->getDescription(),
+                'prix' => $offer->getPrix(),
+                'service_id' => null,
+                'creator_id' => $offer->getIdAdmin() ?: 1,
+                'image' => null,
+                'statut' => $computedStatus,
+                'date_debut' => null,
+                'date_fin' => $offer->getDateExpiration() ? $offer->getDateExpiration()->format('Y-m-d H:i:s') : null,
+            ];
+        }
+        $db = config::getConnexion();
+
+        try {
+            $query = $db->prepare($sql);
+            $query->execute($params);
+
+            return (int) $db->lastInsertId();
+        } catch (Exception $e) {
+            echo 'Error: ' . $e->getMessage();
+            return 0;
+        }
+    }
+
+    public function updateOffer($offerOrId, $idOrData): bool {
+        if ($offerOrId instanceof Offer) {
+            $offer = $offerOrId;
+            $id = (int) $idOrData;
+        } elseif (is_int($offerOrId) && is_array($idOrData)) {
+            $offer = $this->mapPayloadToEntity($idOrData);
+            $id = $offerOrId;
+        } else {
+            return false;
+        }
+
+        $computedStatus = $this->resolveStatusFromExpiration($offer->getDateExpiration());
+
+        try {
+            $db = config::getConnexion();
+            if ($this->useFrenchSchema()) {
+                $query = $db->prepare(
+                    'UPDATE offre SET titre = :titre, description = :description, localisation = :localisation, date_expiration = :date_expiration, statut = :statut, type_service = :type_service, prix = :prix, id_admin = :id_admin WHERE id_offre = :id'
+                );
+
+                return $query->execute([
+                    'id' => $id,
+                    'titre' => $offer->getTitre(),
+                    'description' => $offer->getDescription(),
+                    'localisation' => $offer->getLocalisation(),
+                    'date_expiration' => $offer->getDateExpiration() ? $offer->getDateExpiration()->format('Y-m-d H:i:s') : null,
+                    'statut' => $computedStatus,
+                    'type_service' => $offer->getTypeService(),
+                    'prix' => $offer->getPrix(),
+                    'id_admin' => $offer->getIdAdmin(),
+                ]);
+            }
+
+            $query = $db->prepare(
+                'UPDATE offers SET titre = :titre, description = :description, prix = :prix, date_fin = :date_fin, statut = :statut, creator_id = :creator_id WHERE id = :id'
+            );
+
+            return $query->execute([
+                'id' => $id,
+                'titre' => $offer->getTitre(),
+                'description' => $offer->getDescription(),
+                'prix' => $offer->getPrix(),
+                'date_fin' => $offer->getDateExpiration() ? $offer->getDateExpiration()->format('Y-m-d H:i:s') : null,
+                'statut' => $computedStatus,
+                'creator_id' => $offer->getIdAdmin() ?: 1,
+            ]);
+        } catch (PDOException $e) {
+            echo 'Error: ' . $e->getMessage();
+            return false;
+        }
+    }
+
+    public function showOffer($id): ?array {
+        $this->syncOfferStatusesByExpiration();
+
+        if ($this->useFrenchSchema()) {
+            $sql = 'SELECT o.id_offre, o.titre, o.description, o.localisation, o.date_publication, o.date_expiration, o.statut, o.type_service, o.prix, o.id_admin, u.nom AS admin_nom, u.prenom AS admin_prenom FROM offre o LEFT JOIN users u ON o.id_admin = u.id_user WHERE o.id_offre = :id LIMIT 1';
+        } else {
+            $sql = 'SELECT o.id AS id_offre, o.titre, o.description, "" AS localisation, o.created_at AS date_publication, o.date_fin AS date_expiration, CASE WHEN o.statut = "active" THEN "ouverte" ELSE "fermee" END AS statut, COALESCE(s.titre, "autre") AS type_service, o.prix, o.creator_id AS id_admin, u.nom AS admin_nom, u.prenom AS admin_prenom FROM offers o LEFT JOIN users u ON o.creator_id = u.id LEFT JOIN services s ON o.service_id = s.id WHERE o.id = :id LIMIT 1';
+        }
+        $db = config::getConnexion();
+        $query = $db->prepare($sql);
+
+        try {
+            $query->execute(['id' => (int) $id]);
+            $offer = $query->fetch(PDO::FETCH_ASSOC);
+            return $offer ?: null;
+        } catch (Exception $e) {
+            die('Error: ' . $e->getMessage());
+        }
     }
 
     public function getOffer(int $id): ?array {
-        return $this->offerModel->findById($id);// Appel findById() du modèle avec l'identifiant
+        if ($id <= 0) {
+            return null;
+        }
+
+        return $this->showOffer($id);
     }
 
     public function createOffer(array $data): int {
-        return $this->offerModel->create($data);
+        return $this->addOffer($this->mapPayloadToEntity($data));
     }
-
-    public function updateOffer(int $id, array $data): bool {
-        return $this->offerModel->update($id, $data);
-    }
-
-    public function deleteOffer(int $id): bool {
-        return $this->offerModel->delete($id);
-    }
+}
 }
 

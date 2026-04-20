@@ -5,7 +5,7 @@ class config {
             $pdo = new PDO(
                 'mysql:host=127.0.0.1;port=3306;dbname=goservice;charset=utf8',
                 'root',
-                ''
+                '' 
             );
             $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
             return $pdo;
