@@ -9,14 +9,10 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-
 $offerController = new OfferController();
 $candidatureController = new CandidatureController();
 
 $activeOffers = $offerController->listActiveOffers(); //recupere les donnees depuis BD
-
-$activeOffers = $offerModel->findActive(); //recupere les donnees depuis BD
-
 $message = '';
 $messageType = '';
 $fieldErrors = [

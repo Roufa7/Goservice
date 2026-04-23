@@ -71,50 +71,8 @@ class Offer {
         return $this->id_offre;
     }
 
-
     public function setIdOffre(?int $id_offre): void {
         $this->id_offre = $id_offre;
-
-    public function findActive(): array { //récupère uniquement les offres ouvertes
-        if ($this->offerTable === 'offers') {
-            $stmt = $this->pdo->prepare(
-                'SELECT
-                    o.id AS id_offre,
-                    o.titre,
-                    o.description,
-                    NULL AS localisation,
-                    COALESCE(o.created_at, o.date_debut) AS date_publication,
-                    o.date_fin AS date_expiration,
-                    CASE
-                        WHEN o.statut = "active" THEN "ouverte"
-                        WHEN o.statut = "inactive" THEN "fermee"
-                        ELSE "fermee"
-                    END AS statut,
-                    LOWER(COALESCE(s.categorie, "cuisine")) AS type_service,
-                    o.prix,
-                    o.creator_id AS id_admin,
-                    u.nom AS admin_nom,
-                    u.prenom AS admin_prenom
-                 FROM offers o
-                 LEFT JOIN services s ON o.service_id = s.id
-                 LEFT JOIN users u ON o.creator_id = u.' . $this->userPk . '
-                 WHERE o.statut = :statut
-                 ORDER BY COALESCE(o.created_at, o.date_debut) DESC'
-            );
-            $stmt->execute(['statut' => 'active']);
-            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
-        }
-
-        $stmt = $this->pdo->prepare(
-            'SELECT o.*, u.nom AS admin_nom, u.prenom AS admin_prenom
-             FROM offre o
-             LEFT JOIN users u ON o.id_admin = u.id_user
-             WHERE o.statut = :statut
-             ORDER BY o.date_publication DESC'
-        );
-        $stmt->execute(['statut' => 'ouverte']);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
-
     }
 
     public function getTitre(): ?string {
@@ -188,6 +146,5 @@ class Offer {
     public function setPrix(?float $prix): void {
         $this->prix = $prix;
     }
-}
 }
 }
