@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', () => {
+/*document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('form-grid');
 
     function setAdminFieldError(fieldName, message) {
@@ -231,4 +231,4 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
-});
+});*/
