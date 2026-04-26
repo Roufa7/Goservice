@@ -7,7 +7,7 @@ $categorieController = new CategorieController();
 
 $services = $serviceController->listServicesWithCategories();
 
-/* 🔥 AFFICHER SEULEMENT LES SERVICES VALIDÉS */
+/* afficher seulement les services validés */
 $services = array_filter($services, function ($service) {
     return isset($service['statut']) && trim((string)$service['statut']) === 'Validé';
 });
@@ -33,6 +33,10 @@ function srvCategorySlug(string $name): string {
         'jardinage' => 'jardinage',
         'ménage' => 'menage',
         'menage' => 'menage',
+        'beauté' => 'beaute',
+        'beaute' => 'beaute',
+        'secrétariat' => 'secretariat',
+        'secretariat' => 'secretariat',
     ];
     return $map[$name] ?? 'default';
 }
@@ -86,6 +90,30 @@ $totalCategories = count($categories);
 $totalDisponibles = count(array_filter($services, fn($s) => srvIsAvailable($s)));
 ?>
 
+<style>
+.cat-icon{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    font-size:18px;
+    line-height:1;
+    margin-right:8px;
+    flex-shrink:0;
+}
+
+.srv-category-pill{
+    display:flex;
+    align-items:center;
+    gap:8px;
+}
+
+.srv-card-category{
+    display:flex;
+    align-items:center;
+    gap:8px;
+}
+</style>
+
 <section class="page-hero reveal">
     <span class="section-badge">Services</span>
     <h1 class="page-title">Services & catégories</h1>
@@ -119,9 +147,10 @@ $totalDisponibles = count(array_filter($services, fn($s) => srvIsAvailable($s)))
         </select>
 
         <div class="icon-actions">
-    <a class="solid-btn" href="index.php?page=services">+ Tous les services</a>
-    <a class="solid-btn alt-btn" href="index.php?page=myServices">Mes services</a>
-</div>
+            <a class="solid-btn" href="index.php?page=services">+ Tous les services</a>
+            <a class="solid-btn alt-btn" href="index.php?page=myServices">Mes services</a>
+            <a class="solid-btn" href="index.php?page=myReservations" style="background:var(--orange-dark,#c94c14);">📋 Mes réservations</a>
+        </div>
     </form>
 </section>
 
@@ -137,7 +166,8 @@ $totalDisponibles = count(array_filter($services, fn($s) => srvIsAvailable($s)))
                 <div class="srv-category-list">
                     <a href="index.php?page=services&search=<?php echo urlencode($search); ?>&prix_max=<?php echo (int)$prixMax; ?><?php echo $dispoOnly ? '&dispo=1' : ''; ?>"
                        class="srv-category-pill <?php echo $categorieActive === 0 ? 'active' : ''; ?>">
-                        Toutes
+                        <span class="cat-icon">📂</span>
+                        <span>Toutes</span>
                     </a>
 
                     <?php foreach ($categories as $cat): ?>
@@ -145,7 +175,8 @@ $totalDisponibles = count(array_filter($services, fn($s) => srvIsAvailable($s)))
                             href="index.php?page=services&categorie=<?php echo (int)$cat['id_categorie']; ?>&search=<?php echo urlencode($search); ?>&prix_max=<?php echo (int)$prixMax; ?><?php echo $dispoOnly ? '&dispo=1' : ''; ?>"
                             class="srv-category-pill <?php echo $categorieActive === (int)$cat['id_categorie'] ? 'active' : ''; ?>"
                         >
-                            <?php echo htmlspecialchars($cat['nom']); ?>
+                            <span class="cat-icon"><?php echo htmlspecialchars($cat['icone'] ?? '📂'); ?></span>
+                            <span><?php echo htmlspecialchars($cat['nom']); ?></span>
                         </a>
                     <?php endforeach; ?>
                 </div>
@@ -177,22 +208,22 @@ $totalDisponibles = count(array_filter($services, fn($s) => srvIsAvailable($s)))
                 <div class="srv-price-current" id="srvPrixValue"><?php echo (int)$prixMax; ?> €</div>
             </div>
 
-           <div class="srv-filter-block">
-    <div class="srv-filter-title">DISPONIBILITÉ</div>
+            <div class="srv-filter-block">
+                <div class="srv-filter-title">DISPONIBILITÉ</div>
 
-    <div class="srv-toggle-row">
-        <span>Disponible maintenant</span>
+                <div class="srv-toggle-row">
+                    <span>Disponible maintenant</span>
 
-        <label class="srv-switch">
-            <input type="checkbox" name="dispo" value="1" id="srvDispoToggle" <?php echo $dispoOnly ? 'checked' : ''; ?>>
-            <span class="srv-slider"></span>
-        </label>
-    </div>
+                    <label class="srv-switch">
+                        <input type="checkbox" name="dispo" value="1" id="srvDispoToggle" <?php echo $dispoOnly ? 'checked' : ''; ?>>
+                        <span class="srv-slider"></span>
+                    </label>
+                </div>
 
-    <div class="icon-actions" style="margin-top: 18px;">
-    <a class="solid-btn" href="index.php?page=addService">+ Ajouter service</a>
-</div>
-</div>
+                <div class="icon-actions" style="margin-top: 18px;">
+                    <a class="solid-btn" href="index.php?page=addService">+ Ajouter service</a>
+                </div>
+            </div>
         </form>
     </aside>
 
@@ -237,7 +268,11 @@ $totalDisponibles = count(array_filter($services, fn($s) => srvIsAvailable($s)))
                         </div>
 
                         <div class="srv-card-body">
-                            <div class="srv-card-category"><?php echo htmlspecialchars($service['nom_categorie']); ?></div>
+                            <div class="srv-card-category">
+                                <span class="cat-icon"><?php echo htmlspecialchars($service['icone_categorie'] ?? '📂'); ?></span>
+                                <span><?php echo htmlspecialchars($service['nom_categorie']); ?></span>
+                            </div>
+
                             <h3 class="srv-card-title"><?php echo htmlspecialchars($service['titre']); ?></h3>
 
                             <div class="srv-rating-row">

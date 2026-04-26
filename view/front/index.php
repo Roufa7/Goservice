@@ -15,7 +15,9 @@ $allowedPages = [
     'myServices',
     'editMyService',
     'saveService',
-    
+    'reserver',
+    'confirmation',
+    'myReservations',
 ];
 
 if (!in_array($page, $allowedPages, true)) {

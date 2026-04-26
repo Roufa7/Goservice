@@ -3973,3 +3973,14 @@ body.admin-body.dark .table-container .module-table thead tr {
 body.admin-body.dark .table-container .module-table th {
     color: rgba(255,255,255,0.72) !important;
 }
+/* Bouton Modifier visible en dark mode */
+body.admin-body.dark .btn-edit-sm {
+    background: rgba(76,138,255,0.18);
+    color: #8ab7ff !important;
+    border: 1px solid rgba(138,183,255,0.35);
+}
+
+body.admin-body.dark .btn-edit-sm:hover {
+    background: rgba(76,138,255,0.28);
+    color: #cfe2ff !important;
+}

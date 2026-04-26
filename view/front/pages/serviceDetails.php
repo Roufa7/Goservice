@@ -369,7 +369,7 @@ $prix = isset($service['prix']) ? number_format((float)$service['prix'], 2, ',',
             <p class="svc-description"><?php echo htmlspecialchars($description); ?></p>
 
             <div class="svc-actions">
-                <a href="#" class="svc-btn-primary">Réserver ce service</a>
+                <a href="index.php?page=reserver&id=<?php echo $id; ?>" class="svc-btn-primary">Réserver ce service</a>
                 <a href="index.php?page=services" class="svc-btn-secondary">← Retour services</a>
 
             </div>

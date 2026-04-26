@@ -5,6 +5,8 @@ $allowedPages = [
     'dashboard',
     'users',
     'services',
+    'categories',
+    'reservations',
     'offers',
     'forum',
     'reclamation',

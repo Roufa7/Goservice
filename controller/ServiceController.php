@@ -9,7 +9,9 @@ class ServiceController
     public function listServices()
     {
         $db = config::getConnexion();
-        $sql = "SELECT service.*, categorie.nom AS nom_categorie
+        $sql = "SELECT service.*, 
+                       categorie.nom AS nom_categorie,
+                       categorie.icone AS icone_categorie
                 FROM service
                 JOIN categorie ON service.id_categorie = categorie.id_categorie";
         $query = $db->query($sql);
@@ -19,7 +21,9 @@ class ServiceController
     public function listServicesWithCategories()
     {
         $db = config::getConnexion();
-        $sql = "SELECT service.*, categorie.nom AS nom_categorie
+        $sql = "SELECT service.*, 
+                       categorie.nom AS nom_categorie,
+                       categorie.icone AS icone_categorie
                 FROM service
                 JOIN categorie ON service.id_categorie = categorie.id_categorie";
         $query = $db->query($sql);
@@ -31,7 +35,9 @@ class ServiceController
     {
         $db = config::getConnexion();
 
-        $sql = "SELECT service.*, categorie.nom AS nom_categorie
+        $sql = "SELECT service.*, 
+                       categorie.nom AS nom_categorie,
+                       categorie.icone AS icone_categorie
                 FROM service
                 JOIN categorie ON service.id_categorie = categorie.id_categorie
                 WHERE service.id_provider = :id_provider
@@ -106,7 +112,9 @@ class ServiceController
     public function getServiceWithCategory($id)
     {
         $db = config::getConnexion();
-        $sql = "SELECT service.*, categorie.nom AS nom_categorie
+        $sql = "SELECT service.*, 
+                       categorie.nom AS nom_categorie,
+                       categorie.icone AS icone_categorie
                 FROM service
                 JOIN categorie ON service.id_categorie = categorie.id_categorie
                 WHERE service.id_service = :id";
@@ -120,7 +128,9 @@ class ServiceController
     {
         $db = config::getConnexion();
 
-        $sql = "SELECT service.*, categorie.nom AS nom_categorie
+        $sql = "SELECT service.*, 
+                       categorie.nom AS nom_categorie,
+                       categorie.icone AS icone_categorie
                 FROM service
                 JOIN categorie ON service.id_categorie = categorie.id_categorie
                 WHERE service.id_service = :id_service
