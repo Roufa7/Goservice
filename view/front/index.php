@@ -10,6 +10,7 @@ $allowedPages = [
     'events',
     'profile',
     'register',
+    'savedPosts',
 ];
 
 if (!in_array($page, $allowedPages, true)) {

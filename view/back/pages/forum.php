@@ -18,10 +18,10 @@ function invalidClass($error)
     return !empty($error) ? 'field-invalid' : '';
 }
 
-function getLettersAndSpacesCount($text): int
+function getLettersCount($text): int
 {
-    $cleaned = preg_replace('/[^a-zA-ZÀ-ÿ\s]/u', '', $text);
-    return mb_strlen(trim($cleaned));
+    $cleaned = preg_replace('/[^a-zA-ZÀ-ÿ]/u', '', $text);
+    return mb_strlen($cleaned);
 }
 
 function forumBackUrl(array $extra = []): string
@@ -122,7 +122,7 @@ $old = [
     'titre' => '',
     'contenu' => '',
     'type_post' => '',
-    'statut_post' => 'Visible'
+    'statut_post' => 'En attente'
 ];
 
 $isEditMode = false;
@@ -144,13 +144,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    if (isset($_POST['toggle_visibility'])) {
+    if (isset($_POST['approve_post'])) {
         $id = (int)($_POST['post_id'] ?? 0);
         if ($id > 0) {
             $post = $postController->getPostById($id);
             if ($post) {
-                $newStatus = (($post['statut_post'] ?? 'Visible') === 'Masqué') ? 'Visible' : 'Masqué';
-
                 $updatedPost = new Post(
                     $id,
                     $post['titre'] ?? '',
@@ -158,13 +156,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $post['image'] ?? null,
                     $post['video'] ?? null,
                     $post['type_post'] ?? 'Discussion',
-                    $newStatus,
+                    'Approuvé',
                     $post['id_user'] ?? 1
                 );
                 $postController->updatePost($updatedPost);
             }
         }
-        header('Location: ' . forumBackUrl(['updated' => 1]));
+        header('Location: ' . forumBackUrl(['approved' => 1]));
+        exit;
+    }
+
+    if (isset($_POST['reject_post'])) {
+        $id = (int)($_POST['post_id'] ?? 0);
+        if ($id > 0) {
+            $post = $postController->getPostById($id);
+            if ($post) {
+                $updatedPost = new Post(
+                    $id,
+                    $post['titre'] ?? '',
+                    $post['contenu'] ?? '',
+                    $post['image'] ?? null,
+                    $post['video'] ?? null,
+                    $post['type_post'] ?? 'Discussion',
+                    'Rejeté',
+                    $post['id_user'] ?? 1
+                );
+                $postController->updatePost($updatedPost);
+            }
+        }
+        header('Location: ' . forumBackUrl(['rejected' => 1]));
         exit;
     }
 
@@ -176,8 +196,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($old['titre'] === '') {
             $errors['titre'] = 'Le titre est obligatoire.';
-        } elseif (getLettersAndSpacesCount($old['titre']) < 3) {
-            $errors['titre'] = 'Le titre doit contenir au moins 3 caractères.';
+        } elseif (getLettersCount($old['titre']) < 3) {
+            $errors['titre'] = 'Le titre doit contenir au moins 3 lettres.';
         }
 
         if ($old['type_post'] === '') {
@@ -190,8 +210,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($old['contenu'] === '') {
             $errors['contenu'] = 'La description est obligatoire.';
-        } elseif (getLettersAndSpacesCount($old['contenu']) < 5) {
-            $errors['contenu'] = 'La description doit contenir au moins 5 caractères.';
+        } elseif (getLettersCount($old['contenu']) < 5) {
+            $errors['contenu'] = 'La description doit contenir au moins 5 lettres.';
         }
 
         $hasErrors = false;
@@ -290,7 +310,7 @@ if (isset($_GET['edit']) && ctype_digit($_GET['edit'])) {
         $old['titre'] = $editPost['titre'] ?? '';
         $old['contenu'] = $editPost['contenu'] ?? '';
         $old['type_post'] = $editPost['type_post'] ?? '';
-        $old['statut_post'] = $editPost['statut_post'] ?? 'Visible';
+        $old['statut_post'] = $editPost['statut_post'] ?? 'En attente';
     }
 }
 
@@ -315,7 +335,7 @@ unset($post);
 $totalPosts = count($posts);
 $totalComments = array_sum(array_column($posts, 'comments_count'));
 $totalReports = array_sum(array_column($posts, 'reports_count'));
-$totalHidden = count(array_filter($posts, fn($p) => (($p['statut_post'] ?? '') === 'Masqué')));
+$totalRejected = count(array_filter($posts, fn($p) => (($p['statut_post'] ?? '') === 'Rejeté')));
 
 $reportedPosts = array_values(array_filter($posts, fn($p) => (($p['reports_count'] ?? 0) > 0)));
 
@@ -345,10 +365,12 @@ $filteredPosts = array_values(array_filter($posts, function ($post) use ($search
     if ($filter !== 'Tous') {
         if ($filter === 'Signalés') {
             $ok = $ok && (($post['reports_count'] ?? 0) > 0);
-        } elseif ($filter === 'Visibles') {
-            $ok = $ok && (($post['statut_post'] ?? '') === 'Visible');
-        } elseif ($filter === 'Masqués') {
-            $ok = $ok && (($post['statut_post'] ?? '') === 'Masqué');
+        } elseif ($filter === 'Approuvés') {
+            $ok = $ok && (($post['statut_post'] ?? '') === 'Approuvé');
+        } elseif ($filter === 'Rejetés') {
+            $ok = $ok && (($post['statut_post'] ?? '') === 'Rejeté');
+        } elseif ($filter === 'En attente') {
+            $ok = $ok && (($post['statut_post'] ?? '') === 'En attente');
         }
     }
 
@@ -480,6 +502,8 @@ usort($filteredPosts, function ($a, $b) use ($sort) {
     <?php if (isset($_GET['created'])): ?><div class="forum-admin-success reveal">Post ajouté avec succès.</div><?php endif; ?>
     <?php if (isset($_GET['updated'])): ?><div class="forum-admin-success reveal">Post mis à jour avec succès.</div><?php endif; ?>
     <?php if (isset($_GET['deleted'])): ?><div class="forum-admin-success reveal">Post supprimé avec succès.</div><?php endif; ?>
+    <?php if (isset($_GET['approved'])): ?><div class="forum-admin-success reveal">Post approuvé avec succès.</div><?php endif; ?>
+    <?php if (isset($_GET['rejected'])): ?><div class="forum-admin-success reveal">Post rejeté avec succès.</div><?php endif; ?>
 
     <section class="action-bar reveal">
         <form method="GET" action="/GoService/view/back/index.php" class="forum-admin-filter-line">
@@ -507,7 +531,7 @@ usort($filteredPosts, function ($a, $b) use ($sort) {
         <article class="admin-stat forum-admin-stat-card"><strong><?php echo $totalPosts; ?></strong><span>Posts</span></article>
         <article class="admin-stat forum-admin-stat-card"><strong><?php echo $totalComments; ?></strong><span>Commentaires</span></article>
         <article class="admin-stat forum-admin-stat-card"><strong><?php echo $totalReports; ?></strong><span>Signalements</span></article>
-        <article class="admin-stat forum-admin-stat-card"><strong><?php echo $totalHidden; ?></strong><span>Masqués</span></article>
+        <article class="admin-stat forum-admin-stat-card"><strong><?php echo $totalRejected; ?></strong><span>Rejetés</span></article>
     </section>
 
     <section class="admin-panel reveal">
@@ -517,8 +541,9 @@ usort($filteredPosts, function ($a, $b) use ($sort) {
             <div class="forum-mini-filters">
                 <a href="<?php echo e(forumBackUrl(['filter' => 'Tous', 'search' => $search, 'sort' => $sort])); ?>" class="forum-mini-filter <?php echo $filter === 'Tous' ? 'active' : ''; ?>">Tous</a>
                 <a href="<?php echo e(forumBackUrl(['filter' => 'Signalés', 'search' => $search, 'sort' => $sort])); ?>" class="forum-mini-filter <?php echo $filter === 'Signalés' ? 'active' : ''; ?>">Signalés</a>
-                <a href="<?php echo e(forumBackUrl(['filter' => 'Visibles', 'search' => $search, 'sort' => $sort])); ?>" class="forum-mini-filter <?php echo $filter === 'Visibles' ? 'active' : ''; ?>">Visibles</a>
-                <a href="<?php echo e(forumBackUrl(['filter' => 'Masqués', 'search' => $search, 'sort' => $sort])); ?>" class="forum-mini-filter <?php echo $filter === 'Masqués' ? 'active' : ''; ?>">Masqués</a>
+                <a href="<?php echo e(forumBackUrl(['filter' => 'Approuvés', 'search' => $search, 'sort' => $sort])); ?>" class="forum-mini-filter <?php echo $filter === 'Approuvés' ? 'active' : ''; ?>">Approuvés</a>
+                <a href="<?php echo e(forumBackUrl(['filter' => 'Rejetés', 'search' => $search, 'sort' => $sort])); ?>" class="forum-mini-filter <?php echo $filter === 'Rejetés' ? 'active' : ''; ?>">Rejetés</a>
+                <a href="<?php echo e(forumBackUrl(['filter' => 'En attente', 'search' => $search, 'sort' => $sort])); ?>" class="forum-mini-filter <?php echo $filter === 'En attente' ? 'active' : ''; ?>">En attente</a>
             </div>
         </div>
 
@@ -558,10 +583,12 @@ usort($filteredPosts, function ($a, $b) use ($sort) {
                                 <td><?php echo e($author); ?></td>
                                 <td><span class="forum-admin-badge forum-admin-type"><?php echo e($type); ?></span></td>
                                 <td>
-                                    <?php if ($status === 'Masqué'): ?>
-                                        <span class="forum-admin-badge forum-admin-hidden">Masqué</span>
+                                    <?php if ($status === 'Rejeté'): ?>
+                                        <span class="forum-admin-badge forum-admin-hidden">Rejeté</span>
+                                    <?php elseif ($status === 'Approuvé'): ?>
+                                        <span class="forum-admin-badge forum-admin-visible">Approuvé</span>
                                     <?php else: ?>
-                                        <span class="forum-admin-badge forum-admin-visible"><?php echo e($status); ?></span>
+                                        <span class="forum-admin-badge forum-admin-reported">En attente</span>
                                     <?php endif; ?>
                                 </td>
                                 <td>
@@ -586,8 +613,8 @@ usort($filteredPosts, function ($a, $b) use ($sort) {
 
                                     <form method="POST" style="display:inline;">
                                         <input type="hidden" name="post_id" value="<?php echo $postId; ?>">
-                                        <button type="submit" name="toggle_visibility" class="outline-btn">
-                                            <?php echo $status === 'Masqué' ? 'Afficher' : 'Masquer'; ?>
+                                        <button type="submit" name="<?php echo $status === 'Approuvé' ? 'reject_post' : 'approve_post'; ?>" class="outline-btn">
+                                            <?php echo $status === 'Approuvé' ? 'Rejeter' : 'Approuver'; ?>
                                         </button>
                                     </form>
 
@@ -745,8 +772,9 @@ usort($filteredPosts, function ($a, $b) use ($sort) {
                     <div class="forum-field">
                         <select name="statut_post" id="back_statut_post" class="<?php echo invalidClass($errors['statut_post']); ?>">
                             <option value="">Statut</option>
-                            <option value="Visible" <?php echo $old['statut_post'] === 'Visible' ? 'selected' : ''; ?>>Visible</option>
-                            <option value="Brouillon" <?php echo $old['statut_post'] === 'Brouillon' ? 'selected' : ''; ?>>Brouillon</option>
+                            <option value="En attente" <?php echo $old['statut_post'] === 'En attente' ? 'selected' : ''; ?>>En attente</option>
+                            <option value="Approuvé" <?php echo $old['statut_post'] === 'Approuvé' ? 'selected' : ''; ?>>Approuvé</option>
+                            <option value="Rejeté" <?php echo $old['statut_post'] === 'Rejeté' ? 'selected' : ''; ?>>Rejeté</option>
                         </select>
                         <div class="forum-error"><?php echo e($errors['statut_post']); ?></div>
                     </div>

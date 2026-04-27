@@ -7,7 +7,11 @@ class PostController
 {
     public function listPosts()
     {
-        $sql = "SELECT p.*, u.nom, u.prenom
+        $sql = "SELECT p.*, u.nom, u.prenom,
+                (SELECT COUNT(*) FROM commentaire c WHERE c.id_post = p.id_post) as comments_count,
+                (SELECT COUNT(*) FROM like_post l WHERE l.id_post = p.id_post) as likes_count,
+                (SELECT COUNT(*) FROM share_post s WHERE s.id_post = p.id_post) as shares_count,
+                (SELECT COUNT(*) FROM report_post r WHERE r.id_post = p.id_post) as reports_count
                 FROM post p
                 LEFT JOIN users u ON p.id_user = u.id_user
                 ORDER BY p.id_post DESC";
@@ -79,30 +83,17 @@ class PostController
         return $query->fetch();
     }
 
-    public function deletePost($id)
+    public function listCommentsForAdmin()
     {
-        $post = $this->getPostById($id);
+        $sql = "SELECT c.*, p.titre as post_title, u.nom, u.prenom
+                FROM commentaire c
+                LEFT JOIN post p ON c.id_post = p.id_post
+                LEFT JOIN users u ON c.id_user = u.id_user
+                ORDER BY c.date_commentaire DESC";
 
-        if ($post) {
-            if (!empty($post['image'])) {
-                $imgPath = __DIR__ . '/../' . $post['image'];
-                if (file_exists($imgPath)) {
-                    @unlink($imgPath);
-                }
-            }
-
-            if (!empty($post['video'])) {
-                $videoPath = __DIR__ . '/../' . $post['video'];
-                if (file_exists($videoPath)) {
-                    @unlink($videoPath);
-                }
-            }
-        }
-
-        $sql = "DELETE FROM post WHERE id_post = :id";
         $db = config::getConnexion();
-        $query = $db->prepare($sql);
-        $query->execute(['id' => $id]);
+        $query = $db->query($sql);
+        return $query->fetchAll();
     }
 
     public function getTopContributors($limit = 5)

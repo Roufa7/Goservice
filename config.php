@@ -3,7 +3,7 @@ class config {
     public static function getConnexion() {
         try {
             $pdo = new PDO(
-                'mysql:host=localhost;dbname=goservice;charset=utf8',
+                'mysql:host=localhost;dbname=goservice;charset=utf8mb4',
                 'root',
                 ''
             );

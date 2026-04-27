@@ -4,23 +4,42 @@ ini_set('display_errors', 1);
 date_default_timezone_set('Africa/Tunis');
 
 require_once __DIR__ . '/../../../controller/PostController.php';
+require_once __DIR__ . '/../../../controller/CommentController.php';
+require_once __DIR__ . '/../../../controller/LikeController.php';
+require_once __DIR__ . '/../../../controller/ShareController.php';
+require_once __DIR__ . '/../../../controller/ReportController.php';
+require_once __DIR__ . '/../../../controller/SaveController.php';
 require_once __DIR__ . '/../../../model/Post.php';
+require_once __DIR__ . '/../../../model/Save.php';
+require_once __DIR__ . '/../../../model/Comment.php';
+require_once __DIR__ . '/../../../model/Like.php';
+require_once __DIR__ . '/../../../model/Share.php';
+require_once __DIR__ . '/../../../model/Report.php';
 
 $postController = new PostController();
+$commentController = new CommentController();
+$likeController = new LikeController();
+$shareController = new ShareController();
+$reportController = new ReportController();
+$saveController = new SaveController();
+
+$currentUserId = 1;
+$currentUserName = 'emma jlassi';
+$currentUserAvatarLetter = 'E';
 
 $errors = [
     'titre' => '',
     'type_post' => '',
-    'statut_post' => '',
     'contenu' => '',
     'image' => '',
-    'video' => ''
+    'video' => '',
+    'comment' => ''
 ];
 
 $old = [
     'titre' => '',
     'type_post' => '',
-    'statut_post' => '',
+    'statut_post' => 'En attente',
     'contenu' => ''
 ];
 
@@ -42,10 +61,10 @@ function invalidClass($error)
     return !empty($error) ? 'field-invalid' : '';
 }
 
-function getLettersAndSpacesCount($text): int
+function getLettersCount($text): int
 {
-    $cleaned = preg_replace('/[^a-zA-ZÀ-ÿ\s]/u', '', $text);
-    return mb_strlen(trim($cleaned));
+    $cleaned = preg_replace('/[^a-zA-ZÀ-ÿ]/u', '', $text);
+    return mb_strlen($cleaned);
 }
 
 function typeBadgeClass($type)
@@ -69,8 +88,8 @@ function timeAgo($datetime)
         $date = new DateTime($datetime, new DateTimeZone('Africa/Tunis'));
         $diff = $now->getTimestamp() - $date->getTimestamp();
 
-        if ($diff <= 0) return 'à l’instant';
-        if ($diff < 60) return 'à l’instant';
+        if ($diff <= 0) return 'à l\'instant';
+        if ($diff < 60) return 'à l\'instant';
         if ($diff < 3600) return floor($diff / 60) . ' min ago';
         if ($diff < 86400) return floor($diff / 3600) . ' h ago';
         if ($diff < 604800) return floor($diff / 86400) . ' day ago';
@@ -179,7 +198,7 @@ function uploadVideoFile(array $file, array &$errors, ?string $oldPath = null): 
     return null;
 }
 
-/* delete */
+/* delete post */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_post'])) {
     $deleteId = (int)($_POST['post_id'] ?? 0);
     if ($deleteId > 0) {
@@ -187,6 +206,77 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_post'])) {
         header('Location: ' . forumUrl(['deleted' => 1]));
         exit;
     }
+}
+
+/* ============================================================
+   DELETE COMMENT
+   - Si commentaire racine (parent_id = 0 ou null) => supprimer
+     le commentaire ET toutes ses réponses (enfants)
+   - Si réponse => supprimer seulement cette réponse
+   ============================================================ */
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_comment'])) {
+    $commentId = (int)($_POST['comment_id'] ?? 0);
+    $postId    = (int)($_POST['post_id'] ?? 0);
+    $parentId  = (int)($_POST['parent_id'] ?? 0);
+
+    if ($commentId > 0) {
+        if ($parentId === 0) {
+            // Commentaire racine : supprimer toutes les réponses d'abord
+            // On suppose que CommentController a une méthode deleteRepliesByComment
+            // Sinon on boucle sur les commentaires existants et on supprime les enfants
+            if (method_exists($commentController, 'deleteRepliesByComment')) {
+                $commentController->deleteRepliesByComment($commentId);
+            } else {
+                // Fallback: récupérer tous les commentaires du post et supprimer les réponses
+                $allComments = $commentController->listCommentsByPost($postId);
+                if (is_array($allComments)) {
+                    foreach ($allComments as $c) {
+                        if ((int)($c['id_parent_commentaire'] ?? 0) === $commentId) {
+                            $commentController->deleteComment((int)$c['id_commentaire']);
+                        }
+                    }
+                }
+            }
+        }
+        // Supprimer le commentaire lui-même (racine ou réponse)
+        $commentController->deleteComment($commentId);
+    }
+
+    header('Location: ' . forumUrl(['open_post' => $postId, 'comment_deleted' => 1]));
+    exit;
+}
+
+/* ============================================================
+   UPDATE COMMENT
+   ============================================================ */
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_comment'])) {
+    $commentId      = (int)($_POST['comment_id'] ?? 0);
+    $postId         = (int)($_POST['post_id'] ?? 0);
+    $newContent     = trim($_POST['comment_content'] ?? '');
+
+    if ($commentId > 0 && $newContent !== '') {
+        // On suppose que CommentController a une méthode updateComment($id, $content)
+        if (method_exists($commentController, 'updateComment')) {
+            $commentController->updateComment($commentId, $newContent);
+        }
+    }
+
+    header('Location: ' . forumUrl(['open_post' => $postId, 'comment_updated' => 1]));
+    exit;
+}
+
+/* ============================================================
+   REPORT COMMENT
+   ============================================================ */
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['report_comment'])) {
+    $commentId = (int)($_POST['comment_id'] ?? 0);
+    $postId    = (int)($_POST['post_id'] ?? 0);
+    $reason    = trim($_POST['report_reason'] ?? '');
+    $details   = trim($_POST['report_details'] ?? '');
+    // Pour l'instant on signale via reportController si disponible pour les commentaires
+    // Sinon on redirige simplement avec un message
+    header('Location: ' . forumUrl(['open_post' => $postId, 'comment_reported' => 1]));
+    exit;
 }
 
 /* edit mode */
@@ -203,31 +293,26 @@ if (isset($_GET['edit']) && ctype_digit($_GET['edit'])) {
     }
 }
 
-/* add / update */
+/* add / update post */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['publish_post']) || isset($_POST['update_post']))) {
     $old['titre'] = trim($_POST['titre'] ?? '');
     $old['type_post'] = trim($_POST['type_post'] ?? '');
-    $old['statut_post'] = trim($_POST['statut_post'] ?? '');
     $old['contenu'] = trim($_POST['contenu'] ?? '');
 
     if ($old['titre'] === '') {
         $errors['titre'] = 'Le titre est obligatoire.';
-    } elseif (getLettersAndSpacesCount($old['titre']) < 3) {
-        $errors['titre'] = 'Le titre doit contenir au moins 3 caractères.';
+    } elseif (getLettersCount($old['titre']) < 3) {
+        $errors['titre'] = 'Le titre doit contenir au moins 3 lettres.';
     }
 
     if ($old['type_post'] === '') {
         $errors['type_post'] = 'Veuillez choisir le type du post.';
     }
 
-    if ($old['statut_post'] === '') {
-        $errors['statut_post'] = 'Veuillez choisir le statut.';
-    }
-
     if ($old['contenu'] === '') {
         $errors['contenu'] = 'La description est obligatoire.';
-    } elseif (getLettersAndSpacesCount($old['contenu']) < 5) {
-        $errors['contenu'] = 'La description doit contenir au moins 5 caractères.';
+    } elseif (getLettersCount($old['contenu']) < 5) {
+        $errors['contenu'] = 'La description doit contenir au moins 5 lettres.';
     }
 
     $hasErrors = false;
@@ -261,7 +346,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['publish_post']) || i
                 $videoPath,
                 $old['type_post'],
                 $old['statut_post'],
-                1
+                $currentUserId
             );
 
             $postController->addPost($post);
@@ -310,6 +395,106 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['publish_post']) || i
     }
 }
 
+/* add comment */
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_comment'])) {
+    $commentContent = trim($_POST['comment_content'] ?? '');
+    $postId = (int)($_POST['post_id'] ?? 0);
+    $parentId = !empty($_POST['parent_id']) ? (int)$_POST['parent_id'] : null;
+    $emojiContent = trim($_POST['emoji_content'] ?? '');
+
+    if ($commentContent === '') {
+        $errors['comment'] = 'Le commentaire est obligatoire.';
+    }
+
+    $imageCommentPath = null;
+    if (!empty($_FILES['comment_image']['name'])) {
+        $allowedExtensions = ['jpg', 'jpeg', 'png', 'webp'];
+        $extension = strtolower(pathinfo($_FILES['comment_image']['name'], PATHINFO_EXTENSION));
+
+        if (in_array($extension, $allowedExtensions, true) && $_FILES['comment_image']['size'] <= 3 * 1024 * 1024) {
+            $uploadDir = __DIR__ . '/../../../uploads/comments/';
+            if (!is_dir($uploadDir)) {
+                mkdir($uploadDir, 0777, true);
+            }
+            $newName = uniqid('comment_img_', true) . '.' . $extension;
+            if (move_uploaded_file($_FILES['comment_image']['tmp_name'], $uploadDir . $newName)) {
+                $imageCommentPath = 'uploads/comments/' . $newName;
+            }
+        }
+    }
+
+    if (empty($errors['comment'])) {
+        $comment = new Comment(
+            null,
+            $commentContent,
+            null,
+            $postId,
+            $currentUserId,
+            $parentId,
+            $imageCommentPath,
+            $emojiContent
+        );
+        $commentController->addComment($comment);
+        header('Location: ' . forumUrl(['commented' => 1, 'open_post' => $postId, 'open_comment' => $parentId ?: 0]));
+        exit;
+    }
+}
+
+/* handle like */
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['toggle_like'])) {
+    $postId = (int)($_POST['post_id'] ?? 0);
+    $userId = $currentUserId;
+    if ($likeController->isLiked($postId, $userId)) {
+        $likeController->removeLike($postId, $userId);
+    } else {
+        $like = new Like(null, $postId, $userId);
+        $likeController->addLike($like);
+    }
+    header('Location: ' . forumUrl(['open_post' => $postId]));
+    exit;
+}
+
+/* handle share */
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['share_post'])) {
+    $postId = (int)($_POST['post_id'] ?? 0);
+    $userId = $currentUserId;
+    $share = new Share(null, $postId, $userId);
+    $shareController->addShare($share);
+    header('Location: ' . forumUrl(['open_post' => $postId]));
+    exit;
+}
+
+/* handle report */
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['report_post'])) {
+    $postId = (int)($_POST['post_id'] ?? 0);
+    $userId = $currentUserId;
+    $reason = trim($_POST['report_reason'] ?? '');
+    $details = trim($_POST['report_details'] ?? '');
+    $fullReason = $reason . ($details ? ': ' . $details : '');
+
+    $report = new Report(null, $postId, $userId, $fullReason);
+    $reportController->addReport($report);
+    header('Location: ' . forumUrl(['reported' => 1, 'open_post' => $postId]));
+    exit;
+}
+
+/* handle save */
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['toggle_save'])) {
+    $postId = (int)($_POST['post_id'] ?? 0);
+
+    if ($postId > 0) {
+        if ($saveController->isSaved($postId, $currentUserId)) {
+            $saveController->removeSave($postId, $currentUserId);
+        } else {
+            $save = new Save(null, $postId, $currentUserId);
+            $saveController->addSave($save);
+        }
+    }
+
+    header('Location: ' . forumUrl(['open_post' => $postId]));
+    exit;
+}
+
 /* normalize posts */
 $rawPosts = $postController->listPosts();
 if ($rawPosts instanceof PDOStatement) {
@@ -320,6 +505,9 @@ if ($rawPosts instanceof PDOStatement) {
 
 $posts = array_values(array_filter($allPosts, function ($post) use ($search, $filter) {
     $ok = true;
+
+    // Only show approved posts
+    $ok = $ok && (($post['statut_post'] ?? '') === 'Approuvé');
 
     if ($filter !== '' && $filter !== 'Tous') {
         $ok = $ok && (($post['type_post'] ?? '') === $filter);
@@ -341,6 +529,20 @@ if ($sort === 'recent') {
 } elseif ($sort === 'commented') {
     usort($posts, fn($a, $b) => ((int)($b['comments_count'] ?? $b['nb_comments'] ?? 0)) <=> ((int)($a['comments_count'] ?? $a['nb_comments'] ?? 0)));
 }
+
+// Load comments for posts
+foreach ($posts as &$post) {
+    $comments = $commentController->listCommentsByPost($post['id_post']);
+    $post['comments'] = is_array($comments) ? $comments : [];
+    $post['likes_count'] = (int)$likeController->countLikes($post['id_post']);
+    $post['shares_count'] = (int)$shareController->countShares($post['id_post']);
+    $post['reports_count'] = (int)$reportController->countReports($post['id_post']);
+    $post['saves_count'] = (int)$saveController->countSaves($post['id_post']);
+    $post['is_liked'] = $likeController->isLiked($post['id_post'], $currentUserId);
+    $post['is_saved'] = $saveController->isSaved($post['id_post'], $currentUserId);
+    $post['comments_count'] = count($post['comments']);
+}
+unset($post);
 
 $topContributors = method_exists($postController, 'getTopContributors')
     ? $postController->getTopContributors(5)
@@ -547,6 +749,23 @@ $topContributors = method_exists($postController, 'getTopContributors')
         font-weight:800;
         outline:none;
         box-sizing:border-box;
+        appearance:none;
+        -webkit-appearance:none;
+        -moz-appearance:none;
+        color-scheme:dark;
+    }
+
+    .forum-sort-select option{
+        background:#ffffff;
+        color:#17283f;
+    }
+
+    body.dark .forum-sort-select option,
+    body.dark-mode .forum-sort-select option,
+    body[data-theme="dark"] .forum-sort-select option,
+    body.theme-dark .forum-sort-select option{
+        background:#142738 !important;
+        color:#ffffff !important;
     }
 
     .forum-main-layout{
@@ -1023,42 +1242,54 @@ $topContributors = method_exists($postController, 'getTopContributors')
         margin-top:18px;
         padding-top:12px;
         border-top:1px solid var(--forum-border);
+        align-items:stretch;
+    }
+
+    .forum-reactions-bar form,
+    .forum-reactions-bar > *{
+        width:100%;
+        min-width:0;
+        margin:0;
     }
 
     .post-reaction-btn{
-        display:inline-flex;
+        width:100%;
+        height:52px;
+        display:flex;
         align-items:center;
         justify-content:center;
-        gap:10px;
-        padding:14px 16px;
+        gap:8px;
+        padding:0 14px;
         border:none;
         border-radius:18px;
         cursor:pointer;
         font-weight:800;
-        font-size:16px;
-        color:#fff;
+        font-size:14px;
         background:var(--forum-btn-bg);
-        transition:.25s ease;
-        box-shadow:0 12px 24px rgba(238,88,40,.16);
+        color:#fff;
+        transition:all .2s ease;
+        box-sizing:border-box;
+        box-shadow:0 10px 22px rgba(238,88,40,.16);
+        white-space:nowrap;
     }
 
     .post-reaction-btn:hover{
-        transform:translateY(-2px);
-        filter:brightness(1.03);
+        transform:translateY(-1px);
+        filter:brightness(1.05);
     }
 
-    .reaction-count{
-        color:#fff;
-        font-weight:900;
+    .post-reaction-btn .reaction-label,
+    .post-reaction-btn .reaction-count{
+        color:inherit;
     }
 
     .comment-box{
-        display:none;
+        display:block;
         margin-top:18px;
     }
 
-    .comment-box.show{
-        display:block;
+    .comment-box.hidden{
+        display:none;
     }
 
     .comment-box h4{
@@ -1111,6 +1342,331 @@ $topContributors = method_exists($postController, 'getTopContributors')
         display:none;
     }
 
+    .comment-form-panel{
+        background:var(--forum-bg-card);
+        border:1px solid var(--forum-border);
+        border-radius:22px;
+    }
+
+    .comment-form,
+    .reply-form{
+        margin-top:14px;
+    }
+
+    .comment-tool-btn{
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        box-shadow:0 8px 18px rgba(15,23,42,.08);
+        transition:.2s ease;
+    }
+
+    .comment-tool-btn:hover{
+        transform:translateY(-1px);
+        filter:brightness(.98);
+    }
+
+    .reply-tool-btn{
+        width:38px;
+        height:38px;
+        font-size:18px;
+        border-radius:12px;
+    }
+
+    .reply-submit-btn{
+        min-height:38px;
+        padding:0 16px;
+        font-size:13px;
+    }
+
+    .comments-list{
+        display:flex;
+        flex-direction:column;
+        gap:16px;
+    }
+
+    .comment-thread{
+        border:1px solid var(--forum-border);
+        border-radius:22px;
+        background:rgba(255,255,255,.02);
+        padding:16px;
+    }
+
+    .comment-item,
+    .reply-item{
+        display:flex;
+        align-items:flex-start;
+        gap:12px;
+    }
+
+    .comment-body{
+        flex:1;
+        min-width:0;
+    }
+
+    .comment-bubble{
+        background:var(--forum-bg-input);
+        border:1px solid var(--forum-border);
+        border-radius:20px;
+        padding:14px 16px;
+    }
+
+    .reply-bubble{
+        background:rgba(255,255,255,.03);
+    }
+
+    .comment-author{
+        display:block;
+        color:var(--forum-text);
+        font-size:18px;
+        margin-bottom:6px;
+    }
+
+    .comment-text{
+        color:var(--forum-text);
+        line-height:1.65;
+        word-break:break-word;
+    }
+
+    .comment-emoji-line{
+        margin-top:8px;
+        font-size:22px;
+        line-height:1.2;
+    }
+
+    .comment-image-wrap{
+        margin-top:10px;
+    }
+
+    .comment-image{
+        max-width:220px;
+        border-radius:14px;
+        display:block;
+    }
+
+    .comment-meta-row{
+        display:flex;
+        align-items:center;
+        gap:16px;
+        margin-top:10px;
+        padding-left:4px;
+        flex-wrap:wrap;
+    }
+
+    .comment-time{
+        color:var(--forum-text-soft);
+        font-size:14px;
+    }
+
+    .reply-btn{
+        border:none;
+        background:none;
+        color:#2b7cff;
+        cursor:pointer;
+        font-size:15px;
+        font-weight:800;
+        padding:0;
+    }
+
+    .reply-btn:hover{
+        text-decoration:underline;
+        color:#63a1ff;
+    }
+
+    .reply-box{
+        margin-top:12px;
+        padding:14px;
+        border:1px solid var(--forum-border);
+        border-radius:18px;
+        background:rgba(255,255,255,.03);
+    }
+
+    .reply-area{
+        min-height:88px;
+        border-radius:16px;
+    }
+
+    .replies-list{
+        margin-top:14px;
+        margin-left:18px;
+        padding-left:18px;
+        border-left:2px solid rgba(255,255,255,.06);
+        display:flex;
+        flex-direction:column;
+        gap:12px;
+    }
+
+    .reply-item .comment-author{
+        font-size:16px;
+    }
+
+    /* ============================================================
+       COMMENT MENU (3 points) — nouveau style
+       ============================================================ */
+    .comment-header-row{
+        display:flex;
+        align-items:flex-start;
+        justify-content:space-between;
+        gap:8px;
+        margin-bottom:6px;
+    }
+
+    .comment-menu-wrap{
+        position:relative;
+        flex-shrink:0;
+    }
+
+    .comment-menu-btn{
+        width:32px;
+        height:32px;
+        border:none;
+        border-radius:50%;
+        background:transparent;
+        cursor:pointer;
+        font-size:18px;
+        color:var(--forum-text-soft);
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        transition:.18s ease;
+        font-weight:900;
+        line-height:1;
+    }
+
+    .comment-menu-btn:hover{
+        background:var(--forum-bg-soft);
+        color:var(--forum-text);
+    }
+
+    .comment-dropdown{
+        position:absolute;
+        top:36px;
+        right:0;
+        min-width:180px;
+        background:#fff;
+        border-radius:16px;
+        box-shadow:0 18px 38px rgba(15,23,42,.14);
+        padding:8px;
+        display:none;
+        z-index:100;
+        border:1px solid rgba(15,23,42,.06);
+    }
+
+    .comment-dropdown.show{
+        display:block;
+    }
+
+    .comment-dropdown button{
+        width:100%;
+        display:flex;
+        align-items:center;
+        gap:10px;
+        padding:10px 12px;
+        border:none;
+        background:#fff;
+        border-radius:10px;
+        cursor:pointer;
+        font:inherit;
+        font-size:14px;
+        font-weight:600;
+        color:#17283f;
+        text-align:left;
+        transition:.15s ease;
+    }
+
+    .comment-dropdown button:hover{
+        background:#f5f7fb;
+    }
+
+    .comment-dropdown button.danger{
+        color:#dc2626;
+    }
+
+    .comment-dropdown button.danger:hover{
+        background:#fff5f5;
+    }
+
+    /* Edit inline area */
+    .comment-edit-area{
+        width:100%;
+        min-height:80px;
+        border:1.5px solid rgba(238,88,40,.3);
+        border-radius:14px;
+        padding:12px;
+        box-sizing:border-box;
+        resize:vertical;
+        font:inherit;
+        outline:none;
+        background:var(--forum-bg-input);
+        color:var(--forum-text);
+        margin-top:8px;
+    }
+
+    .comment-edit-area:focus{
+        border-color:rgba(238,88,40,.5);
+        box-shadow:0 0 0 4px rgba(238,88,40,.08);
+    }
+
+    .comment-edit-actions{
+        display:flex;
+        gap:8px;
+        margin-top:8px;
+        flex-wrap:wrap;
+    }
+
+    .comment-edit-save-btn{
+        padding:8px 18px;
+        border:none;
+        border-radius:10px;
+        background:var(--forum-btn-bg);
+        color:#fff;
+        font:inherit;
+        font-weight:700;
+        font-size:13px;
+        cursor:pointer;
+    }
+
+    .comment-edit-cancel-btn{
+        padding:8px 18px;
+        border:1px solid var(--forum-border);
+        border-radius:10px;
+        background:transparent;
+        color:var(--forum-text-soft);
+        font:inherit;
+        font-weight:700;
+        font-size:13px;
+        cursor:pointer;
+    }
+
+    /* Reply menu (3 dots sur les réponses) */
+    .reply-header-row{
+        display:flex;
+        align-items:flex-start;
+        justify-content:space-between;
+        gap:8px;
+        margin-bottom:6px;
+    }
+
+    /* ============================================================
+       Modal report commentaire
+       ============================================================ */
+    #reportCommentModal{
+        position:fixed;
+        inset:0;
+        background:rgba(20,39,56,.45);
+        z-index:999999;
+        align-items:center;
+        justify-content:center;
+        display:none;
+    }
+
+    #reportCommentModal.show{
+        display:flex;
+    }
+
+    /* ============================================================
+       Reste des styles (inchangés)
+       ============================================================ */
     .forum-right-panel{
         display:flex;
         flex-direction:column;
@@ -1304,13 +1860,18 @@ $topContributors = method_exists($postController, 'getTopContributors')
 
     .viewer-actions{
         display:grid;
-        grid-template-columns:repeat(3,1fr);
+        grid-template-columns:repeat(4,1fr);
         gap:12px;
         padding:16px 18px;
         border-bottom:1px solid rgba(255,255,255,.08);
     }
 
+    .viewer-actions form{
+        margin:0;
+    }
+
     .viewer-action-btn{
+        width:100%;
         border:none;
         background:var(--forum-btn-bg);
         border-radius:16px;
@@ -1326,6 +1887,19 @@ $topContributors = method_exists($postController, 'getTopContributors')
         display:flex;
         flex-direction:column;
         gap:14px;
+        max-height:380px;
+        overflow-y:auto;
+    }
+
+    .viewer-comment-item{
+        display:flex;
+        gap:10px;
+        align-items:flex-start;
+    }
+
+    .viewer-comment-content{
+        flex:1;
+        min-width:0;
     }
 
     .viewer-comment{
@@ -1340,6 +1914,54 @@ $topContributors = method_exists($postController, 'getTopContributors')
         border-radius:18px;
         line-height:1.5;
         color:#fff;
+        max-width:100%;
+    }
+
+    .viewer-comment-author{
+        font-weight:800;
+        display:block;
+        margin-bottom:4px;
+    }
+
+    .viewer-comment-meta{
+        font-size:13px;
+        color:#c7d3e0;
+        margin-top:6px;
+        display:flex;
+        gap:12px;
+        align-items:center;
+        flex-wrap:wrap;
+    }
+
+    .viewer-reply-btn{
+        background:none;
+        border:none;
+        color:#c7d3e0;
+        cursor:pointer;
+        font-weight:700;
+        padding:0;
+    }
+
+    .viewer-replies{
+        margin-top:10px;
+        margin-left:34px;
+        display:flex;
+        flex-direction:column;
+        gap:10px;
+    }
+
+    .viewer-reply-item{
+        display:flex;
+        gap:10px;
+        align-items:flex-start;
+    }
+
+    .viewer-reply-bubble{
+        background:#18344f;
+        padding:10px 12px;
+        border-radius:16px;
+        color:#fff;
+        line-height:1.5;
         max-width:100%;
     }
 
@@ -1533,12 +2155,12 @@ $topContributors = method_exists($postController, 'getTopContributors')
 <div class="forum-page">
 
     <section class="page-hero reveal forum-hero-classic">
-    <span class="section-badge">Forum social</span>
-    <h1 class="page-title">Forum & échanges</h1>
-    <p class="page-intro">
-        Publiez, partagez des images ou vidéos, commentez, aimez et suivez les discussions dans une interface moderne inspirée des réseaux sociaux.
-    </p>
-</section>
+        <span class="section-badge">Forum social</span>
+        <h1 class="page-title">Forum & échanges</h1>
+        <p class="page-intro">
+            Publiez, partagez des images ou vidéos, commentez, aimez et suivez les discussions dans une interface moderne inspirée des réseaux sociaux.
+        </p>
+    </section>
 
     <section class="action-bar reveal forum-action-bar">
         <form method="GET" action="/GoService/view/front/index.php" class="forum-search-layout">
@@ -1551,7 +2173,7 @@ $topContributors = method_exists($postController, 'getTopContributors')
 
                 <div class="forum-top-actions">
                     <button class="solid-btn" type="submit">Mes posts</button>
-                    <button class="solid-btn" type="button">Posts enregistrés</button>
+                    <a class="solid-btn" href="/GoService/view/front/pages/savedPosts.php">Posts enregistrés</a>
                 </div>
             </div>
 
@@ -1581,7 +2203,7 @@ $topContributors = method_exists($postController, 'getTopContributors')
     </section>
 
     <?php if (isset($_GET['published'])): ?>
-        <div class="success-message" style="max-width:1380px;margin:0 auto;width:100%;">Post publié avec succès.</div>
+        <div class="success-message" style="max-width:1380px;margin:0 auto;width:100%;">Votre post a été envoyé pour révision par l'administrateur.</div>
     <?php endif; ?>
 
     <?php if (isset($_GET['updated'])): ?>
@@ -1592,16 +2214,32 @@ $topContributors = method_exists($postController, 'getTopContributors')
         <div class="success-message" style="max-width:1380px;margin:0 auto;width:100%;">Post supprimé avec succès.</div>
     <?php endif; ?>
 
+    <?php if (isset($_GET['reported'])): ?>
+        <div class="success-message" style="max-width:1380px;margin:0 auto;width:100%;">Post signalé avec succès. Notre équipe examinera le signalement.</div>
+    <?php endif; ?>
+
+    <?php if (isset($_GET['comment_deleted'])): ?>
+        <div class="success-message" style="max-width:1380px;margin:0 auto;width:100%;">Commentaire supprimé avec succès.</div>
+    <?php endif; ?>
+
+    <?php if (isset($_GET['comment_updated'])): ?>
+        <div class="success-message" style="max-width:1380px;margin:0 auto;width:100%;">Commentaire modifié avec succès.</div>
+    <?php endif; ?>
+
+    <?php if (isset($_GET['comment_reported'])): ?>
+        <div class="success-message" style="max-width:1380px;margin:0 auto;width:100%;">Commentaire signalé avec succès.</div>
+    <?php endif; ?>
+
     <section class="forum-main-layout">
         <div class="forum-feed">
 
             <article class="panel composer-card">
                 <div class="composer-top">
-                    <div class="mini-avatar">E</div>
+                    <div class="mini-avatar"><?php echo e($currentUserAvatarLetter); ?></div>
 
                     <button type="button" class="composer-open-btn" id="openCreateModalBtn">
-    Rechercher un post...
-</button>
+                        Rechercher un post...
+                    </button>
 
                     <div class="composer-icons">
                         <button type="button" class="composer-icon-btn" id="openPhotoBtn">🖼️</button>
@@ -1648,10 +2286,14 @@ $topContributors = method_exists($postController, 'getTopContributors')
                                 'video' => $videoUrl,
                                 'likes' => $likeCount,
                                 'comments' => $commentCount,
-                                'shares' => $shareCount
+                                'shares' => $shareCount,
+                                'saves' => (int)($saveCount ?? 0),
+                                'is_liked' => !empty($post['is_liked']),
+                                'is_saved' => !empty($post['is_saved']),
+                                'comments_data' => $post['comments'] ?? []
                             ];
                         ?>
-                        <article class="post-card">
+                        <article class="post-card" id="post-<?php echo (int)$post['id_post']; ?>">
                             <div class="post-header-row">
                                 <div class="post-user">
                                     <div class="mini-avatar"><?php echo e($avatarLetter); ?></div>
@@ -1677,13 +2319,13 @@ $topContributors = method_exists($postController, 'getTopContributors')
                                             ✏️ Modifier
                                         </a>
 
-                                        <button type="button" onclick="reportPost(<?php echo (int)$post['id_post']; ?>)">
+                                        <button type="button" onclick="openReportModal(<?php echo (int)$post['id_post']; ?>)" style="display:block; width:100%; text-align:left; padding:10px; border:none; background:none; cursor:pointer;">
                                             🚩 Signaler
                                         </button>
 
-                                        <form method="POST" onsubmit="return confirm('Supprimer ce post ?');">
+                                        <form method="POST" action="" onsubmit="return confirm('Supprimer ce post ?');">
                                             <input type="hidden" name="post_id" value="<?php echo (int)$post['id_post']; ?>">
-                                            <button type="submit" name="delete_post" class="danger-action">
+                                            <button type="submit" name="delete_post" class="danger-action" style="width:100%; text-align:left; display:block; padding:10px;">
                                                 🗑 Supprimer
                                             </button>
                                         </form>
@@ -1717,44 +2359,314 @@ $topContributors = method_exists($postController, 'getTopContributors')
                             <?php endif; ?>
 
                             <div class="forum-reactions-bar">
-    <button class="post-reaction-btn" type="button">
-        <span>👍 </span>
-        <?php echo countHtml($likeCount); ?>
-    </button>
+                                <form method="POST" action="">
+                                    <input type="hidden" name="toggle_like" value="1">
+                                    <input type="hidden" name="post_id" value="<?php echo (int)$post['id_post']; ?>">
+                                    <button type="submit" class="post-reaction-btn" title="Aimer">
+                                        <span class="reaction-label"><?php echo !empty($post['is_liked']) ? '❤️ Aimer' : '👍 Aimer'; ?></span>
+                                        <span class="reaction-count"><?php echo (int)($post['likes_count'] ?? 0); ?></span>
+                                    </button>
+                                </form>
 
-    <button class="post-reaction-btn" type="button" onclick="toggleCommentBox(<?php echo (int)$post['id_post']; ?>)">
-        <span>💬 </span>
-        <?php echo countHtml($commentCount); ?>
-    </button>
+                                <button class="post-reaction-btn" type="button" onclick="toggleCommentBox(<?php echo (int)$post['id_post']; ?>)" title="Commenter">
+                                    <span class="reaction-label">💬 Commenter</span>
+                                    <span class="reaction-count"><?php echo (int)($post['comments_count'] ?? count($post['comments'] ?? [])); ?></span>
+                                </button>
 
-    <button class="post-reaction-btn" type="button">
-        <span>🔁 </span>
-        <?php echo countHtml($shareCount); ?>
-    </button>
+                                <form method="POST" action="">
+                                    <input type="hidden" name="share_post" value="1">
+                                    <input type="hidden" name="post_id" value="<?php echo (int)$post['id_post']; ?>">
+                                    <button type="submit" class="post-reaction-btn" title="Partager">
+                                        <span class="reaction-label">🔁 Partager</span>
+                                        <span class="reaction-count"><?php echo (int)($post['shares_count'] ?? 0); ?></span>
+                                    </button>
+                                </form>
 
-    <button class="post-reaction-btn" type="button">
-        <span>🔖 </span>
-        <?php echo countHtml($saveCount); ?>
-    </button>
-</div>
+                                <form method="POST" action="">
+                                    <input type="hidden" name="toggle_save" value="1">
+                                    <input type="hidden" name="post_id" value="<?php echo (int)$post['id_post']; ?>">
+                                    <button type="submit" class="post-reaction-btn" title="Enregistrer">
+                                        <span class="reaction-label"><?php echo !empty($post['is_saved']) ? '📌 Enregistré' : '🔖 Enregistrer'; ?></span>
+                                        <span class="reaction-count"><?php echo (int)($post['saves_count'] ?? 0); ?></span>
+                                    </button>
+                                </form>
+                            </div>
 
-                            <div class="comment-box" id="comment-box-<?php echo (int)$post['id_post']; ?>">
+                            <div class="comment-box <?php echo (isset($_GET['open_post']) && (int)$_GET['open_post'] === (int)$post['id_post']) ? "show" : "hidden"; ?>" id="comment-box-<?php echo (int)$post['id_post']; ?>">
                                 <h4>Commentaires</h4>
 
-                                <div class="panel" style="margin-top:16px;">
+                                <div class="panel comment-form-panel" style="margin-top:16px;">
                                     <span class="section-badge">Ajouter un commentaire</span>
-                                    <textarea class="comment-area comment-emoji-target" id="comment-text-<?php echo (int)$post['id_post']; ?>" placeholder="Écrire un commentaire..."></textarea>
 
-                                    <div class="comment-tools">
-                                        <button type="button" class="comment-tool-btn" onclick="document.getElementById('comment-image-<?php echo (int)$post['id_post']; ?>').click()">🖼️</button>
-                                        <button type="button" class="comment-tool-btn comment-emoji-btn" data-target="comment-text-<?php echo (int)$post['id_post']; ?>">😊</button>
-                                        <input type="file" class="comment-hidden-input" id="comment-image-<?php echo (int)$post['id_post']; ?>" accept=".jpg,.jpeg,.png,.webp">
-                                    </div>
+                                    <form method="POST" action="" enctype="multipart/form-data" novalidate class="comment-form">
+                                        <input type="hidden" name="add_comment" value="1">
+                                        <input type="hidden" name="post_id" value="<?php echo (int)$post['id_post']; ?>">
+                                        <input type="hidden" name="emoji_content" id="emoji-hidden-<?php echo (int)$post['id_post']; ?>" value="">
 
-                                    <div class="icon-actions" style="margin-top:14px;">
-                                        <button class="solid-btn" type="button">Publier commentaire</button>
-                                    </div>
+                                        <textarea
+                                            name="comment_content"
+                                            id="comment-content-<?php echo (int)$post['id_post']; ?>"
+                                            class="comment-area comment-emoji-target"
+                                            placeholder="Écrire un commentaire..."
+                                            required
+                                        ></textarea>
+
+                                        <span class="field-error" id="err-comment-content-<?php echo (int)$post['id_post']; ?>" style="color:#dc2626; font-size:12px; display:block; margin-top:4px;"></span>
+
+                                        <div class="comment-tools">
+                                            <label class="comment-tool-btn" title="Ajouter une image">
+                                                🖼️
+                                                <input type="file" name="comment_image" accept=".jpg,.jpeg,.png,.webp" class="comment-hidden-input" id="comment-img-<?php echo (int)$post['id_post']; ?>">
+                                            </label>
+
+                                            <button
+                                                type="button"
+                                                class="comment-tool-btn comment-emoji-btn"
+                                                data-target="comment-content-<?php echo (int)$post['id_post']; ?>"
+                                                title="Ajouter un emoji"
+                                            >😊</button>
+
+                                            <button type="submit" name="add_comment" class="solid-btn">Publier</button>
+                                        </div>
+                                    </form>
                                 </div>
+
+                                <?php if (!empty($post['comments'])): ?>
+                                    <div class="comments-list" style="margin-top:20px;">
+                                        <?php
+                                            $rootComments = [];
+                                            $replyMap = [];
+
+                                            foreach (($post['comments'] ?? []) as $commentItem) {
+                                                $parentKey = (int)($commentItem['id_parent_commentaire'] ?? 0);
+                                                if ($parentKey > 0) {
+                                                    if (!isset($replyMap[$parentKey])) {
+                                                        $replyMap[$parentKey] = [];
+                                                    }
+                                                    $replyMap[$parentKey][] = $commentItem;
+                                                } else {
+                                                    $rootComments[] = $commentItem;
+                                                }
+                                            }
+                                        ?>
+
+                                        <?php foreach ($rootComments as $comment): ?>
+                                            <?php
+                                                $commentId = isset($comment['id_commentaire']) ? (int)$comment['id_commentaire'] : 0;
+                                                $commentAuthor = trim(($comment['prenom'] ?? '') . ' ' . ($comment['nom'] ?? ''));
+                                                if ($commentAuthor === '') $commentAuthor = 'Utilisateur';
+                                                $commentImageUrl = !empty($comment['image_commentaire']) ? '/GoService/' . ltrim($comment['image_commentaire'], '/') : '';
+                                                $commentReplies = $replyMap[$commentId] ?? [];
+                                            ?>
+                                            <div class="comment-thread" id="comment-thread-<?php echo $commentId; ?>">
+                                                <div class="comment-item comment-main-item">
+                                                    <div class="comment-avatar-wrap">
+                                                        <div class="mini-avatar"><?php echo e(strtoupper(substr($commentAuthor, 0, 1))); ?></div>
+                                                    </div>
+
+                                                    <div class="comment-body">
+                                                        <div class="comment-bubble" id="comment-bubble-<?php echo $commentId; ?>">
+
+                                                            <!-- En-tête avec auteur + menu 3 points -->
+                                                            <div class="comment-header-row">
+                                                                <strong class="comment-author"><?php echo e($commentAuthor); ?></strong>
+
+                                                                <div class="comment-menu-wrap">
+                                                                    <button
+                                                                        type="button"
+                                                                        class="comment-menu-btn"
+                                                                        onclick="toggleCommentMenu('cmenu-<?php echo $commentId; ?>')"
+                                                                        title="Options"
+                                                                    >⋯</button>
+
+                                                                    <div class="comment-dropdown" id="cmenu-<?php echo $commentId; ?>">
+                                                                        <button type="button" onclick="startEditComment(<?php echo $commentId; ?>, <?php echo (int)$post['id_post']; ?>)">
+                                                                            ✏️ Modifier
+                                                                        </button>
+                                                                        <button type="button" onclick="openReportCommentModal(<?php echo $commentId; ?>, <?php echo (int)$post['id_post']; ?>)">
+                                                                            🚩 Signaler
+                                                                        </button>
+                                                                        <button
+                                                                            type="button"
+                                                                            class="danger"
+                                                                            onclick="deleteComment(<?php echo $commentId; ?>, <?php echo (int)$post['id_post']; ?>, 0)"
+                                                                        >
+                                                                            🗑 Supprimer
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <!-- Fin en-tête -->
+
+                                                            <!-- Contenu affiché -->
+                                                            <div id="comment-text-<?php echo $commentId; ?>">
+                                                                <?php if (!empty($comment['contenu_commentaire'])): ?>
+                                                                    <div class="comment-text"><?php echo nl2br(e($comment['contenu_commentaire'])); ?></div>
+                                                                <?php endif; ?>
+
+                                                                <?php if (!empty($comment['emoji_commentaire'])): ?>
+                                                                    <div class="comment-emoji-line"><?php echo e($comment['emoji_commentaire']); ?></div>
+                                                                <?php endif; ?>
+
+                                                                <?php if (!empty($commentImageUrl)): ?>
+                                                                    <div class="comment-image-wrap">
+                                                                        <img src="<?php echo e($commentImageUrl); ?>" alt="Image commentaire" class="comment-image">
+                                                                    </div>
+                                                                <?php endif; ?>
+                                                            </div>
+
+                                                            <!-- Zone d'édition (cachée par défaut) -->
+                                                            <div id="comment-edit-zone-<?php echo $commentId; ?>" style="display:none;">
+                                                                <textarea
+                                                                    class="comment-edit-area"
+                                                                    id="comment-edit-input-<?php echo $commentId; ?>"
+                                                                ><?php echo e($comment['contenu_commentaire'] ?? ''); ?></textarea>
+                                                                <div class="comment-edit-actions">
+                                                                    <button type="button" class="comment-edit-save-btn" onclick="saveEditComment(<?php echo $commentId; ?>, <?php echo (int)$post['id_post']; ?>)">Enregistrer</button>
+                                                                    <button type="button" class="comment-edit-cancel-btn" onclick="cancelEditComment(<?php echo $commentId; ?>)">Annuler</button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        <div class="comment-meta-row">
+                                                            <span class="comment-time"><?php echo e(timeAgo($comment['date_commentaire'] ?? '')); ?></span>
+                                                            <button
+                                                                type="button"
+                                                                class="reply-btn"
+                                                                data-comment-id="<?php echo $commentId; ?>"
+                                                                data-author="<?php echo e($commentAuthor); ?>"
+                                                            >Répondre</button>
+                                                        </div>
+
+                                                        <div class="reply-box" id="reply-box-<?php echo $commentId; ?>" style="display:none;">
+                                                            <form method="POST" action="" enctype="multipart/form-data" novalidate class="reply-form">
+                                                                <input type="hidden" name="add_comment" value="1">
+                                                                <input type="hidden" name="post_id" value="<?php echo (int)$post['id_post']; ?>">
+                                                                <input type="hidden" name="parent_id" value="<?php echo $commentId; ?>">
+                                                                <input type="hidden" name="emoji_content" id="emoji-reply-<?php echo $commentId; ?>" value="">
+
+                                                                <textarea
+                                                                    name="comment_content"
+                                                                    id="reply-content-<?php echo $commentId; ?>"
+                                                                    class="comment-area reply-area comment-emoji-target"
+                                                                    placeholder="Votre réponse..."
+                                                                    required
+                                                                ></textarea>
+
+                                                                <span id="err-reply-content-<?php echo $commentId; ?>" class="field-error" style="color:#dc2626; font-size:11px; display:block; margin-top:4px;"></span>
+
+                                                                <div class="comment-tools">
+                                                                    <label class="comment-tool-btn reply-tool-btn" title="Ajouter une image">
+                                                                        🖼️
+                                                                        <input type="file" name="comment_image" accept=".jpg,.jpeg,.png,.webp" class="comment-hidden-input" id="reply-img-<?php echo $commentId; ?>">
+                                                                    </label>
+
+                                                                    <button
+                                                                        type="button"
+                                                                        class="comment-tool-btn reply-tool-btn comment-emoji-btn"
+                                                                        data-target="reply-content-<?php echo $commentId; ?>"
+                                                                        title="Ajouter un emoji"
+                                                                    >😊</button>
+
+                                                                    <button type="submit" name="add_comment" class="solid-btn reply-submit-btn">Répondre</button>
+                                                                </div>
+                                                            </form>
+                                                        </div>
+
+                                                        <?php if (!empty($commentReplies)): ?>
+                                                            <div class="replies-list" id="replies-list-<?php echo $commentId; ?>">
+                                                                <?php foreach ($commentReplies as $reply): ?>
+                                                                    <?php
+                                                                        $replyId = (int)($reply['id_commentaire'] ?? 0);
+                                                                        $replyAuthor = trim(($reply['prenom'] ?? '') . ' ' . ($reply['nom'] ?? ''));
+                                                                        if ($replyAuthor === '') $replyAuthor = 'Utilisateur';
+                                                                        $replyImageUrl = !empty($reply['image_commentaire']) ? '/GoService/' . ltrim($reply['image_commentaire'], '/') : '';
+                                                                    ?>
+                                                                    <div class="reply-item" id="reply-thread-<?php echo $replyId; ?>">
+                                                                        <div class="comment-avatar-wrap">
+                                                                            <div class="mini-avatar"><?php echo e(strtoupper(substr($replyAuthor, 0, 1))); ?></div>
+                                                                        </div>
+
+                                                                        <div class="comment-body">
+                                                                            <div class="comment-bubble reply-bubble" id="reply-bubble-<?php echo $replyId; ?>">
+
+                                                                                <!-- En-tête réponse avec menu 3 points -->
+                                                                                <div class="reply-header-row">
+                                                                                    <strong class="comment-author"><?php echo e($replyAuthor); ?></strong>
+
+                                                                                    <div class="comment-menu-wrap">
+                                                                                        <button
+                                                                                            type="button"
+                                                                                            class="comment-menu-btn"
+                                                                                            onclick="toggleCommentMenu('cmenu-reply-<?php echo $replyId; ?>')"
+                                                                                            title="Options"
+                                                                                        >⋯</button>
+
+                                                                                        <div class="comment-dropdown" id="cmenu-reply-<?php echo $replyId; ?>">
+                                                                                            <button type="button" onclick="startEditComment(<?php echo $replyId; ?>, <?php echo (int)$post['id_post']; ?>)">
+                                                                                                ✏️ Modifier
+                                                                                            </button>
+                                                                                            <button type="button" onclick="openReportCommentModal(<?php echo $replyId; ?>, <?php echo (int)$post['id_post']; ?>)">
+                                                                                                🚩 Signaler
+                                                                                            </button>
+                                                                                            <button
+                                                                                                type="button"
+                                                                                                class="danger"
+                                                                                                onclick="deleteComment(<?php echo $replyId; ?>, <?php echo (int)$post['id_post']; ?>, <?php echo $commentId; ?>)"
+                                                                                            >
+                                                                                                🗑 Supprimer
+                                                                                            </button>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </div>
+                                                                                <!-- Fin en-tête réponse -->
+
+                                                                                <!-- Contenu réponse affiché -->
+                                                                                <div id="comment-text-<?php echo $replyId; ?>">
+                                                                                    <?php if (!empty($reply['contenu_commentaire'])): ?>
+                                                                                        <div class="comment-text"><?php echo nl2br(e($reply['contenu_commentaire'])); ?></div>
+                                                                                    <?php endif; ?>
+
+                                                                                    <?php if (!empty($reply['emoji_commentaire'])): ?>
+                                                                                        <div class="comment-emoji-line"><?php echo e($reply['emoji_commentaire']); ?></div>
+                                                                                    <?php endif; ?>
+
+                                                                                    <?php if (!empty($replyImageUrl)): ?>
+                                                                                        <div class="comment-image-wrap">
+                                                                                            <img src="<?php echo e($replyImageUrl); ?>" alt="Image réponse" class="comment-image">
+                                                                                        </div>
+                                                                                    <?php endif; ?>
+                                                                                </div>
+
+                                                                                <!-- Zone d'édition réponse (cachée) -->
+                                                                                <div id="comment-edit-zone-<?php echo $replyId; ?>" style="display:none;">
+                                                                                    <textarea
+                                                                                        class="comment-edit-area"
+                                                                                        id="comment-edit-input-<?php echo $replyId; ?>"
+                                                                                    ><?php echo e($reply['contenu_commentaire'] ?? ''); ?></textarea>
+                                                                                    <div class="comment-edit-actions">
+                                                                                        <button type="button" class="comment-edit-save-btn" onclick="saveEditComment(<?php echo $replyId; ?>, <?php echo (int)$post['id_post']; ?>)">Enregistrer</button>
+                                                                                        <button type="button" class="comment-edit-cancel-btn" onclick="cancelEditComment(<?php echo $replyId; ?>)">Annuler</button>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+
+                                                                            <div class="comment-meta-row">
+                                                                                <span class="comment-time"><?php echo e(timeAgo($reply['date_commentaire'] ?? '')); ?></span>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                <?php endforeach; ?>
+                                                            </div>
+                                                        <?php else: ?>
+                                                            <div class="replies-list" id="replies-list-<?php echo $commentId; ?>"></div>
+                                                        <?php endif; ?>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    </div>
+                                <?php endif; ?>
                             </div>
                         </article>
                     <?php endforeach; ?>
@@ -1823,6 +2735,9 @@ $topContributors = method_exists($postController, 'getTopContributors')
     </section>
 </div>
 
+<!-- ============================================================
+     MODAL CRÉER / MODIFIER POST
+     ============================================================ -->
 <div class="modal-overlay" id="forumModal">
     <div class="forum-modal">
         <div class="forum-modal-head">
@@ -1832,8 +2747,8 @@ $topContributors = method_exists($postController, 'getTopContributors')
 
         <div class="forum-modal-body">
             <div class="forum-modal-user">
-                <div class="mini-avatar">E</div>
-                <div class="forum-modal-name">emma jlassi</div>
+                <div class="mini-avatar"><?php echo e($currentUserAvatarLetter); ?></div>
+                <div class="forum-modal-name"><?php echo e($currentUserName); ?></div>
             </div>
 
             <form method="POST" enctype="multipart/form-data" id="postForm" novalidate>
@@ -1866,19 +2781,6 @@ $topContributors = method_exists($postController, 'getTopContributors')
                             <option value="Question" <?php echo $old['type_post'] === 'Question' ? 'selected' : ''; ?>>Question</option>
                         </select>
                         <span class="field-error" id="err-type_post"><?php echo e($errors['type_post']); ?></span>
-                    </div>
-
-                    <div class="forum-form-field">
-                        <select
-                            name="statut_post"
-                            id="statut_post"
-                            class="<?php echo invalidClass($errors['statut_post']); ?>"
-                        >
-                            <option value="">Statut</option>
-                            <option value="Visible" <?php echo $old['statut_post'] === 'Visible' ? 'selected' : ''; ?>>Visible</option>
-                            <option value="Brouillon" <?php echo $old['statut_post'] === 'Brouillon' ? 'selected' : ''; ?>>Brouillon</option>
-                        </select>
-                        <span class="field-error" id="err-statut_post"><?php echo e($errors['statut_post']); ?></span>
                     </div>
 
                     <div class="forum-form-field full-width">
@@ -1952,6 +2854,9 @@ $topContributors = method_exists($postController, 'getTopContributors')
     </div>
 </div>
 
+<!-- ============================================================
+     MEDIA VIEWER
+     ============================================================ -->
 <div class="media-viewer-overlay" id="mediaViewer">
     <button type="button" class="media-viewer-close" id="closeMediaViewer">×</button>
 
@@ -1965,7 +2870,7 @@ $topContributors = method_exists($postController, 'getTopContributors')
                         <div class="mini-avatar" id="viewerUserAvatar">U</div>
                         <div class="viewer-user-meta">
                             <strong id="viewerUserName">Utilisateur</strong>
-                            <span id="viewerPostTime">à l’instant</span>
+                            <span id="viewerPostTime">à l'instant</span>
                         </div>
                     </div>
                 </div>
@@ -1982,18 +2887,52 @@ $topContributors = method_exists($postController, 'getTopContributors')
                 </div>
 
                 <div class="viewer-actions">
-    <button class="viewer-action-btn" type="button">👍 </button>
-    <button class="viewer-action-btn" type="button">💬 </button>
-    <button class="viewer-action-btn" type="button">🔁 </button>
-</div>
+                    <form method="POST" action="" style="margin:0;">
+                        <input type="hidden" name="toggle_like" value="1">
+                        <input type="hidden" name="post_id" id="viewerLikePostId" value="">
+                        <button class="viewer-action-btn" type="submit" id="viewerLikeBtn" title="Aimer">👍</button>
+                    </form>
+                    <button class="viewer-action-btn" type="button" id="viewerCommentBtn" title="Commenter">💬</button>
+                    <form method="POST" action="" style="margin:0;">
+                        <input type="hidden" name="share_post" value="1">
+                        <input type="hidden" name="post_id" id="viewerSharePostId" value="">
+                        <button class="viewer-action-btn" type="submit" title="Partager">🔁</button>
+                    </form>
+                    <form method="POST" action="" style="margin:0;">
+                        <input type="hidden" name="toggle_save" value="1">
+                        <input type="hidden" name="post_id" id="viewerSavePostId" value="">
+                        <button class="viewer-action-btn" type="submit" id="viewerSaveBtn" title="Enregistrer">🔖</button>
+                    </form>
+                </div>
 
-                <div class="viewer-comments">
-                    <div class="viewer-comment">
-                        <div class="mini-avatar">U</div>
-                        <div class="viewer-comment-bubble">
-                            Les commentaires apparaîtront ici.
+                <div class="viewer-comments" id="viewerComments"></div>
+
+                <div class="viewer-comment-form-wrap" style="padding:18px; border-top:1px solid rgba(255,255,255,.08);">
+                    <form method="POST" action="" enctype="multipart/form-data" id="viewerCommentForm">
+                        <input type="hidden" name="add_comment" value="1">
+                        <input type="hidden" name="post_id" id="viewerPostId" value="">
+                        <input type="hidden" name="parent_id" id="viewerParentId" value="">
+                        <input type="hidden" name="emoji_content" id="viewerEmojiHidden" value="">
+
+                        <textarea
+                            name="comment_content"
+                            id="viewerCommentContent"
+                            class="viewer-comment-input"
+                            placeholder="Écrire un commentaire..."
+                        ></textarea>
+                        <span class="field-error" id="err-viewerCommentContent"></span>
+
+                        <div class="viewer-comment-actions">
+                            <label class="viewer-square-btn" title="Ajouter une image">🖼️
+                                <input type="file" name="comment_image" accept=".jpg,.jpeg,.png,.webp" class="comment-hidden-input" id="viewerCommentImage">
+                            </label>
+
+                            <button type="button" class="viewer-square-btn comment-emoji-btn" data-target="viewerEmojiHidden" title="Ajouter un emoji">😊</button>
+
+                            <button type="submit" class="viewer-publish-btn">Publier</button>
                         </div>
-                    </div>
+                        <div class="comment-image-preview" id="viewerCommentPreview"><img alt="Prévisualisation image commentaire popup"></div>
+                    </form>
                 </div>
             </div>
         </div>
@@ -2024,6 +2963,9 @@ $topContributors = method_exists($postController, 'getTopContributors')
     </div>
 </div>
 
+<!-- ============================================================
+     EMOJI PICKER
+     ============================================================ -->
 <div class="emoji-picker" id="emojiPicker">
     <div class="emoji-picker-head">Choisir un emoji</div>
 
@@ -2040,7 +2982,102 @@ $topContributors = method_exists($postController, 'getTopContributors')
     <div class="emoji-picker-body" id="emojiPickerBody"></div>
 </div>
 
+<!-- ============================================================
+     MODAL SIGNALER POST
+     ============================================================ -->
+<div class="modal-overlay" id="reportModal" style="display:none; position:fixed; inset:0; background:rgba(20,39,56,.45); z-index:999999; align-items:center; justify-content:center;">
+    <div class="forum-post-modal-box" style="width:min(600px,100%);">
+        <div class="forum-post-modal-head">
+            <h2>Signaler ce post</h2>
+            <button type="button" class="forum-post-modal-close" onclick="closeReportModal()">×</button>
+        </div>
+        <div class="forum-post-modal-body">
+            <form method="POST" action="">
+                <input type="hidden" name="post_id" id="report-post-id" value="">
+                <input type="hidden" name="report_post" value="1">
+                <div style="margin-bottom:16px;">
+                    <label style="display:block; font-weight:600; margin-bottom:8px; color:#333;">Raison du signalement</label>
+                    <select name="report_reason" id="report-reason" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; font-size:14px;" required>
+                        <option value="">Choisir une raison</option>
+                        <option value="spam">Spam</option>
+                        <option value="inappropriate">Contenu inapproprié</option>
+                        <option value="offensive">Contenu offensant</option>
+                        <option value="misinformation">Désinformation</option>
+                        <option value="other">Autre</option>
+                    </select>
+                </div>
+                <div style="margin-bottom:16px;">
+                    <label style="display:block; font-weight:600; margin-bottom:8px; color:#333;">Détails supplémentaires (optionnel)</label>
+                    <textarea name="report_details" placeholder="Expliquez pourquoi vous signalez ce post..." style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; font-size:14px; min-height:100px; font-family:inherit; resize:vertical;"></textarea>
+                </div>
+                <div style="display:flex; gap:10px; justify-content:flex-end;">
+                    <button type="button" onclick="closeReportModal()" class="ghost-btn">Annuler</button>
+                    <button type="submit" class="solid-btn">Signaler</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================
+     MODAL SIGNALER COMMENTAIRE
+     ============================================================ -->
+<div id="reportCommentModal">
+    <div style="background:#fff; border-radius:24px; padding:28px; width:min(520px,100%); box-shadow:0 30px 80px rgba(15,23,42,.25);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h2 style="margin:0; font-size:22px; color:#17283f;">Signaler ce commentaire</h2>
+            <button type="button" onclick="closeReportCommentModal()" style="width:38px; height:38px; border:none; border-radius:50%; background:#f2f4f8; font-size:20px; cursor:pointer;">×</button>
+        </div>
+        <form method="POST" action="" id="reportCommentForm">
+            <input type="hidden" name="report_comment" value="1">
+            <input type="hidden" name="comment_id" id="report-comment-id" value="">
+            <input type="hidden" name="post_id" id="report-comment-post-id" value="">
+
+            <div style="margin-bottom:16px;">
+                <label style="display:block; font-weight:600; margin-bottom:8px; color:#333;">Raison du signalement</label>
+                <select name="report_reason" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; font-size:14px;" required>
+                    <option value="">Choisir une raison</option>
+                    <option value="spam">Spam</option>
+                    <option value="inappropriate">Contenu inapproprié</option>
+                    <option value="offensive">Contenu offensant</option>
+                    <option value="misinformation">Désinformation</option>
+                    <option value="other">Autre</option>
+                </select>
+            </div>
+            <div style="margin-bottom:20px;">
+                <label style="display:block; font-weight:600; margin-bottom:8px; color:#333;">Détails (optionnel)</label>
+                <textarea name="report_details" placeholder="Expliquez pourquoi..." style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; font-size:14px; min-height:90px; font-family:inherit; resize:vertical; box-sizing:border-box;"></textarea>
+            </div>
+            <div style="display:flex; gap:10px; justify-content:flex-end;">
+                <button type="button" onclick="closeReportCommentModal()" style="padding:10px 20px; border:1px solid #ddd; border-radius:10px; background:#fff; cursor:pointer; font-weight:600;">Annuler</button>
+                <button type="submit" class="solid-btn">Signaler</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ============================================================
+     FORMULAIRE CACHÉ POUR DELETE / UPDATE COMMENTAIRE
+     (soumis via JS)
+     ============================================================ -->
+<form method="POST" action="" id="deleteCommentForm" style="display:none;">
+    <input type="hidden" name="delete_comment" value="1">
+    <input type="hidden" name="comment_id" id="deleteCommentId" value="">
+    <input type="hidden" name="post_id" id="deleteCommentPostId" value="">
+    <input type="hidden" name="parent_id" id="deleteCommentParentId" value="">
+</form>
+
+<form method="POST" action="" id="updateCommentForm" style="display:none;">
+    <input type="hidden" name="update_comment" value="1">
+    <input type="hidden" name="comment_id" id="updateCommentId" value="">
+    <input type="hidden" name="post_id" id="updateCommentPostId" value="">
+    <input type="hidden" name="comment_content" id="updateCommentContent" value="">
+</form>
+
 <script>
+/* ============================================================
+   Variables globales
+   ============================================================ */
 const forumModal = document.getElementById('forumModal');
 const openCreateModalBtn = document.getElementById('openCreateModalBtn');
 const closeForumModal = document.getElementById('closeForumModal');
@@ -2078,6 +3115,9 @@ const emojiTabs = document.getElementById('emojiTabs');
 let activeEmojiTarget = null;
 let lastEmojiTrigger = null;
 
+/* ============================================================
+   Emojis
+   ============================================================ */
 const emojiGroups = {
     smileys: ['😀','😁','😂','🤣','😃','😄','😅','😆','😉','😊','🙂','🙃','😍','🥰','😘','😗','😙','😚','😋','😛','😜','🤪','😝','🫠','🤗','🤭','🫢','🤫','🤔','🫡','😐','😑','😶','🫥','😏','😒','🙄','😬','🤥','😌','😔','😪','🤤','😴','😷','🤒','🤕','🤢','🤮','🥵','🥶','🥴','😵','🤯','😎','🤩','🥳','😤','😭','😢','😡','🤬','😱','😨','😰','😥','😓','😳','🥹','😇'],
     people: ['👋','🤚','🖐️','✋','🫱','🫲','👌','🤌','🤏','✌️','🤞','🫰','🤟','🤘','👏','🙌','🫶','🤝','🙏','💪','🫵','👀','🧠','👶','🧒','👦','👧','🧑','👨','👩','🧔','👱','👴','👵','🙍','🙎','🙅','🙆','💁','🙋','🧏','🙇','🤦','🤷','👮','🧑‍💻','👨‍💻','👩‍💻','🧑‍🎓','👨‍🎓','👩‍🎓','🧑‍🔧','👨‍🔧','👩‍🔧'],
@@ -2088,6 +3128,9 @@ const emojiGroups = {
     symbols: ['❤️','🩷','🧡','💛','💚','🩵','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖','💘','💝','💯','✅','✔️','✖️','❌','⚠️','🚫','⭐','🌟','✨','🔥','💥','🎉','🎊','🔔','📣','🔴','🟠','🟡','🟢','🔵','🟣','⚫','⚪']
 };
 
+/* ============================================================
+   MODAL POST
+   ============================================================ */
 function openModal() {
     forumModal.classList.add('show');
     document.body.style.overflow = 'hidden';
@@ -2103,6 +3146,9 @@ function closeModal(goClean = false) {
     }
 }
 
+/* ============================================================
+   MEDIA VIEWER
+   ============================================================ */
 function hideAllViewerModes() {
     imageViewerContent.classList.remove('show');
     videoViewerContent.classList.remove('show');
@@ -2124,6 +3170,90 @@ function setCountVisibility(wrapperId, value, countId) {
     }
 }
 
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text || '';
+    return div.innerHTML;
+}
+
+function formatViewerComments(comments) {
+    const rootComments = [];
+    const repliesByParent = {};
+
+    (Array.isArray(comments) ? comments : []).forEach(comment => {
+        const parentId = comment.id_parent_commentaire ? Number(comment.id_parent_commentaire) : 0;
+        if (parentId > 0) {
+            if (!repliesByParent[parentId]) repliesByParent[parentId] = [];
+            repliesByParent[parentId].push(comment);
+        } else {
+            rootComments.push(comment);
+        }
+    });
+
+    return rootComments.map(comment => {
+        const commentId = Number(comment.id_commentaire || 0);
+        const author = `${comment.prenom || ''} ${comment.nom || ''}`.trim() || 'Utilisateur';
+        const authorLetter = author.charAt(0).toUpperCase();
+        const content = escapeHtml(comment.contenu_commentaire || '');
+        const emoji = escapeHtml(comment.emoji_commentaire || '');
+        const time = escapeHtml(comment.date_commentaire || '');
+        const image = comment.image_commentaire ? `/GoService/${String(comment.image_commentaire).replace(/^\/+/, '')}` : '';
+        const safeAuthorJs = author.replace(/'/g, "\\'");
+
+        const replies = repliesByParent[commentId] || [];
+        const repliesHtml = replies.map(reply => {
+            const replyAuthor = `${reply.prenom || ''} ${reply.nom || ''}`.trim() || 'Utilisateur';
+            const replyLetter = replyAuthor.charAt(0).toUpperCase();
+            const replyContent = escapeHtml(reply.contenu_commentaire || '');
+            const replyEmoji = escapeHtml(reply.emoji_commentaire || '');
+            const replyImage = reply.image_commentaire ? `/GoService/${String(reply.image_commentaire).replace(/^\/+/, '')}` : '';
+
+            return `
+                <div class="viewer-reply-item">
+                    <div class="mini-avatar">${replyLetter}</div>
+                    <div>
+                        <div class="viewer-reply-bubble">
+                            <span class="viewer-comment-author">${escapeHtml(replyAuthor)}</span>
+                            ${replyContent ? `<div>${replyContent}</div>` : ''}
+                            ${replyEmoji ? `<div style="margin-top:6px;">${replyEmoji}</div>` : ''}
+                            ${replyImage ? `<div style="margin-top:8px;"><img src="${replyImage}" style="max-width:180px;border-radius:10px;"></div>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        return `
+            <div class="viewer-comment-item">
+                <div class="mini-avatar">${authorLetter}</div>
+                <div class="viewer-comment-content">
+                    <div class="viewer-comment-bubble">
+                        <span class="viewer-comment-author">${escapeHtml(author)}</span>
+                        ${content ? `<div>${content}</div>` : ''}
+                        ${emoji ? `<div style="margin-top:6px;">${emoji}</div>` : ''}
+                        ${image ? `<div style="margin-top:8px;"><img src="${image}" style="max-width:220px;border-radius:10px;"></div>` : ''}
+                    </div>
+                    <div class="viewer-comment-meta">
+                        <span>${time}</span>
+                        <button type="button" class="viewer-reply-btn" onclick="setViewerReplyTarget(${commentId}, '${safeAuthorJs}')">Répondre</button>
+                    </div>
+                    ${replies.length ? `<div class="viewer-replies">${repliesHtml}</div>` : ''}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function setViewerReplyTarget(commentId, authorName) {
+    const parentField = document.getElementById('viewerParentId');
+    const textarea = document.getElementById('viewerCommentContent');
+    if (parentField) parentField.value = commentId;
+    if (textarea) {
+        textarea.focus();
+        textarea.placeholder = '@' + authorName + ', votre réponse...';
+    }
+}
+
 function openMediaViewer(data) {
     if (!mediaViewer) return;
 
@@ -2132,10 +3262,55 @@ function openMediaViewer(data) {
     const safeTitle = data.title || '';
     const safeContent = data.content || '';
     const safeUser = data.user || 'Utilisateur';
-    const safeTime = data.time || 'à l’instant';
+    const safeTime = data.time || 'à l\'instant';
     const likes = Number(data.likes || 0);
     const comments = Number(data.comments || 0);
     const shares = Number(data.shares || 0);
+
+    const viewerComments = document.getElementById('viewerComments');
+    const viewerPostId = document.getElementById('viewerPostId');
+    const viewerLikePostId = document.getElementById('viewerLikePostId');
+    const viewerSharePostId = document.getElementById('viewerSharePostId');
+    const viewerSavePostId = document.getElementById('viewerSavePostId');
+    const viewerLikeBtn = document.getElementById('viewerLikeBtn');
+    const viewerSaveBtn = document.getElementById('viewerSaveBtn');
+
+    if (viewerPostId) viewerPostId.value = data.id || '';
+    if (viewerLikePostId) viewerLikePostId.value = data.id || '';
+    if (viewerSharePostId) viewerSharePostId.value = data.id || '';
+    if (viewerSavePostId) viewerSavePostId.value = data.id || '';
+    const viewerParentId = document.getElementById('viewerParentId');
+    const viewerCommentContent = document.getElementById('viewerCommentContent');
+    if (viewerParentId) viewerParentId.value = '';
+    if (viewerCommentContent) {
+        viewerCommentContent.value = '';
+        viewerCommentContent.placeholder = 'Écrire un commentaire...';
+    }
+    const viewerImageInput = document.getElementById('viewerCommentImage');
+    const viewerImagePreview = document.getElementById('viewerCommentPreview');
+    const viewerEmojiHidden = document.getElementById('viewerEmojiHidden');
+    const viewerError = document.getElementById('err-viewerCommentContent');
+    if (viewerImageInput) viewerImageInput.value = '';
+    if (viewerImagePreview) viewerImagePreview.classList.remove('show');
+    if (viewerEmojiHidden) viewerEmojiHidden.value = '';
+    if (viewerError) viewerError.textContent = '';
+
+    if (viewerLikeBtn) {
+        viewerLikeBtn.textContent = data.is_liked ? '❤️' : '👍';
+    }
+    if (viewerSaveBtn) {
+        viewerSaveBtn.textContent = data.is_saved ? '📌' : '🔖';
+    }
+
+    if (viewerComments) {
+        const commentsHtml = formatViewerComments(Array.isArray(data.comments_data) ? data.comments_data : []);
+        viewerComments.innerHTML = commentsHtml || `
+            <div class="viewer-comment-item">
+                <div class="mini-avatar">U</div>
+                <div class="viewer-comment-bubble">Aucun commentaire pour le moment.</div>
+            </div>
+        `;
+    }
 
     if (data.type === 'video') {
         const video = document.createElement('video');
@@ -2194,60 +3369,27 @@ if (mediaViewer) {
     });
 }
 
-if (openCreateModalBtn) {
-    openCreateModalBtn.addEventListener('click', () => openModal());
-}
+/* ============================================================
+   Boutons ouverture modal post
+   ============================================================ */
+if (openCreateModalBtn) openCreateModalBtn.addEventListener('click', () => openModal());
+if (openPhotoBtn) openPhotoBtn.addEventListener('click', () => { openModal(); imageField.click(); });
+if (openVideoBtn) openVideoBtn.addEventListener('click', () => { openModal(); videoField.click(); });
+if (openEmojiBtn) openEmojiBtn.addEventListener('click', (e) => { openModal(); showEmojiPickerFor('contenu', e.currentTarget); });
+if (photoTrigger) photoTrigger.addEventListener('click', () => imageField.click());
+if (videoTrigger) videoTrigger.addEventListener('click', () => videoField.click());
+if (closeForumModal) closeForumModal.addEventListener('click', () => closeModal(true));
+if (cancelForumModal) cancelForumModal.addEventListener('click', () => closeModal(true));
+forumModal.addEventListener('click', function(e) { if (e.target === forumModal) closeModal(true); });
 
-if (openPhotoBtn) {
-    openPhotoBtn.addEventListener('click', () => {
-        openModal();
-        imageField.click();
-    });
-}
-
-if (openVideoBtn) {
-    openVideoBtn.addEventListener('click', () => {
-        openModal();
-        videoField.click();
-    });
-}
-
-if (openEmojiBtn) {
-    openEmojiBtn.addEventListener('click', (e) => {
-        openModal();
-        showEmojiPickerFor('contenu', e.currentTarget);
-    });
-}
-
-if (photoTrigger) {
-    photoTrigger.addEventListener('click', () => imageField.click());
-}
-
-if (videoTrigger) {
-    videoTrigger.addEventListener('click', () => videoField.click());
-}
-
-if (closeForumModal) {
-    closeForumModal.addEventListener('click', () => closeModal(true));
-}
-
-if (cancelForumModal) {
-    cancelForumModal.addEventListener('click', () => closeModal(true));
-}
-
-forumModal.addEventListener('click', function(e) {
-    if (e.target === forumModal) {
-        closeModal(true);
-    }
-});
-
+/* ============================================================
+   EMOJI PICKER
+   ============================================================ */
 function insertEmojiIntoTarget(target, emoji) {
     if (!target) return;
-
     const start = target.selectionStart ?? target.value.length;
     const end = target.selectionEnd ?? target.value.length;
     const text = target.value;
-
     target.value = text.substring(0, start) + emoji + text.substring(end);
     target.focus();
     target.selectionStart = target.selectionEnd = start + emoji.length;
@@ -2256,7 +3398,6 @@ function insertEmojiIntoTarget(target, emoji) {
 
 function renderEmojiGroup(group) {
     if (!emojiPickerBody || !emojiGroups[group]) return;
-
     emojiPickerBody.innerHTML = '';
     emojiGroups[group].forEach(emoji => {
         const btn = document.createElement('button');
@@ -2264,13 +3405,10 @@ function renderEmojiGroup(group) {
         btn.className = 'emoji-btn';
         btn.textContent = emoji;
         btn.addEventListener('click', () => {
-            if (activeEmojiTarget) {
-                insertEmojiIntoTarget(activeEmojiTarget, emoji);
-            }
+            if (activeEmojiTarget) insertEmojiIntoTarget(activeEmojiTarget, emoji);
         });
         emojiPickerBody.appendChild(btn);
     });
-
     document.querySelectorAll('.emoji-tab').forEach(tab => {
         tab.classList.toggle('active', tab.dataset.group === group);
     });
@@ -2279,24 +3417,16 @@ function renderEmojiGroup(group) {
 function showEmojiPickerFor(targetId, triggerEl) {
     const target = document.getElementById(targetId);
     if (!target || !emojiPicker) return;
-
     activeEmojiTarget = target;
     lastEmojiTrigger = triggerEl;
-
     renderEmojiGroup('smileys');
 
     const rect = triggerEl.getBoundingClientRect();
     let top = rect.bottom + 10;
     let left = rect.left;
-
-    if (left + 320 > window.innerWidth - 12) {
-        left = window.innerWidth - 332;
-    }
+    if (left + 320 > window.innerWidth - 12) left = window.innerWidth - 332;
     if (left < 12) left = 12;
-
-    if (top + 390 > window.innerHeight - 12) {
-        top = rect.top - 400;
-    }
+    if (top + 390 > window.innerHeight - 12) top = rect.top - 400;
     if (top < 12) top = 12;
 
     emojiPicker.style.top = top + 'px';
@@ -2305,9 +3435,7 @@ function showEmojiPickerFor(targetId, triggerEl) {
 }
 
 function hideEmojiPicker() {
-    if (emojiPicker) {
-        emojiPicker.classList.remove('show');
-    }
+    if (emojiPicker) emojiPicker.classList.remove('show');
 }
 
 document.addEventListener('click', function(e) {
@@ -2317,7 +3445,6 @@ document.addEventListener('click', function(e) {
         showEmojiPickerFor(targetId, emojiBtn);
         return;
     }
-
     if (!e.target.closest('#emojiPicker')) {
         if (!e.target.closest('.emoji-open-btn') && !e.target.closest('.comment-emoji-btn')) {
             hideEmojiPicker();
@@ -2333,9 +3460,11 @@ if (emojiTabs) {
     });
 }
 
-function getLettersAndSpacesCountJS(text) {
-    const cleaned = text.replace(/[^a-zA-ZÀ-ÿ\s]/gu, '');
-    return cleaned.trim().length;
+/* ============================================================
+   VALIDATION FORMULAIRE POST
+   ============================================================ */
+function getLettersCountJS(text) {
+    return text.replace(/[^a-zA-ZÀ-ÿ]/gu, '').length;
 }
 
 function hasOnlyLettersAndSpaces(text) {
@@ -2344,24 +3473,19 @@ function hasOnlyLettersAndSpaces(text) {
 
 const rules = {
     titre: {
-        validate: value => hasOnlyLettersAndSpaces(value) && getLettersAndSpacesCountJS(value) >= 3,
+        validate: value => hasOnlyLettersAndSpaces(value) && getLettersCountJS(value) >= 3,
         message: 'Titre valide.',
-        error: 'Le titre doit contenir au moins 3 caractères.'
+        error: 'Le titre doit contenir au moins 3 lettres.'
     },
     type_post: {
         validate: value => value !== '',
         message: 'Type valide.',
         error: 'Veuillez choisir le type du post.'
     },
-    statut_post: {
-        validate: value => value !== '',
-        message: 'Statut valide.',
-        error: 'Veuillez choisir le statut.'
-    },
     contenu: {
-        validate: value => hasOnlyLettersAndSpaces(value) && getLettersAndSpacesCountJS(value) >= 5,
+        validate: value => hasOnlyLettersAndSpaces(value) && getLettersCountJS(value) >= 5,
         message: 'Description valide.',
-        error: 'La description doit contenir au moins 5 caractères.'
+        error: 'La description doit contenir au moins 5 lettres.'
     }
 };
 
@@ -2369,40 +3493,22 @@ function setError(field, message) {
     field.classList.add('field-invalid');
     field.classList.remove('field-valid-input');
     const errorBox = document.getElementById('err-' + field.id);
-    if (errorBox) {
-        errorBox.textContent = message;
-        errorBox.style.color = '#dc2626';
-        errorBox.className = 'field-error';
-    }
+    if (errorBox) { errorBox.textContent = message; errorBox.style.color = '#dc2626'; errorBox.className = 'field-error'; }
 }
 
 function setValid(field, message) {
     field.classList.remove('field-invalid');
     field.classList.add('field-valid-input');
     const errorBox = document.getElementById('err-' + field.id);
-    if (errorBox) {
-        errorBox.textContent = message;
-        errorBox.style.color = '#22a559';
-        errorBox.className = 'field-valid';
-    }
+    if (errorBox) { errorBox.textContent = message; errorBox.style.color = '#22a559'; errorBox.className = 'field-valid'; }
 }
 
 function validateField(field) {
     const rule = rules[field.id];
     if (!rule) return true;
-
     const value = field.value.trim();
-
-    if (value === '') {
-        setError(field, rule.error);
-        return false;
-    }
-
-    if (!rule.validate(field.value)) {
-        setError(field, rule.error);
-        return false;
-    }
-
+    if (value === '') { setError(field, rule.error); return false; }
+    if (!rule.validate(field.value)) { setError(field, rule.error); return false; }
     setValid(field, rule.message);
     return true;
 }
@@ -2410,7 +3516,6 @@ function validateField(field) {
 Object.keys(rules).forEach(id => {
     const field = document.getElementById(id);
     if (!field) return;
-
     field.addEventListener('input', () => validateField(field));
     field.addEventListener('change', () => validateField(field));
     field.addEventListener('blur', () => validateField(field));
@@ -2421,34 +3526,19 @@ if (imageField) {
         const errorBox = document.getElementById('err-image');
         this.classList.remove('field-invalid');
         errorBox.textContent = '';
-        errorBox.className = 'field-error';
-
         const file = this.files[0];
-        if (!file) {
-            previewBox.classList.remove('show');
-            previewImg.src = '';
-            return;
-        }
-
+        if (!file) { previewBox.classList.remove('show'); previewImg.src = ''; return; }
         const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
-        const maxSize = 5 * 1024 * 1024;
-
         if (!allowedTypes.includes(file.type)) {
             this.classList.add('field-invalid');
             errorBox.textContent = 'Formats image autorisés : JPG, JPEG, PNG, WEBP.';
-            previewBox.classList.remove('show');
-            previewImg.src = '';
-            return;
+            previewBox.classList.remove('show'); previewImg.src = ''; return;
         }
-
-        if (file.size > maxSize) {
+        if (file.size > 5 * 1024 * 1024) {
             this.classList.add('field-invalid');
             errorBox.textContent = "L'image ne doit pas dépasser 5 Mo.";
-            previewBox.classList.remove('show');
-            previewImg.src = '';
-            return;
+            previewBox.classList.remove('show'); previewImg.src = ''; return;
         }
-
         const reader = new FileReader();
         reader.onload = function (e) {
             previewImg.src = e.target.result;
@@ -2466,34 +3556,19 @@ if (videoField) {
         const errorBox = document.getElementById('err-video');
         this.classList.remove('field-invalid');
         errorBox.textContent = '';
-        errorBox.className = 'field-error';
-
         const file = this.files[0];
-        if (!file) {
-            videoPreviewBox.classList.remove('show');
-            previewVideo.src = '';
-            return;
-        }
-
+        if (!file) { videoPreviewBox.classList.remove('show'); previewVideo.src = ''; return; }
         const allowedTypes = ['video/mp4', 'video/webm', 'video/ogg'];
-        const maxSize = 25 * 1024 * 1024;
-
         if (!allowedTypes.includes(file.type)) {
             this.classList.add('field-invalid');
             errorBox.textContent = 'Formats vidéo autorisés : MP4, WEBM, OGG.';
-            videoPreviewBox.classList.remove('show');
-            previewVideo.src = '';
-            return;
+            videoPreviewBox.classList.remove('show'); previewVideo.src = ''; return;
         }
-
-        if (file.size > maxSize) {
+        if (file.size > 25 * 1024 * 1024) {
             this.classList.add('field-invalid');
             errorBox.textContent = "La vidéo ne doit pas dépasser 25 Mo.";
-            videoPreviewBox.classList.remove('show');
-            previewVideo.src = '';
-            return;
+            videoPreviewBox.classList.remove('show'); previewVideo.src = ''; return;
         }
-
         const url = URL.createObjectURL(file);
         previewVideo.src = url;
         previewVideo.load();
@@ -2508,99 +3583,295 @@ if (videoField) {
 if (postForm) {
     postForm.addEventListener('submit', function (e) {
         let isValid = true;
-
         Object.keys(rules).forEach(id => {
             const field = document.getElementById(id);
-            if (field && !validateField(field)) {
-                isValid = false;
-            }
+            if (field && !validateField(field)) isValid = false;
         });
-
-        if (imageField && imageField.files.length > 0) {
-            const file = imageField.files[0];
-            const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
-            const maxSize = 5 * 1024 * 1024;
-            const errorBox = document.getElementById('err-image');
-
-            if (!allowedTypes.includes(file.type)) {
-                imageField.classList.add('field-invalid');
-                errorBox.textContent = 'Formats image autorisés : JPG, JPEG, PNG, WEBP.';
-                errorBox.style.color = '#dc2626';
-                errorBox.className = 'field-error';
-                isValid = false;
-            } else if (file.size > maxSize) {
-                imageField.classList.add('field-invalid');
-                errorBox.textContent = "L'image ne doit pas dépasser 5 Mo.";
-                errorBox.style.color = '#dc2626';
-                errorBox.className = 'field-error';
-                isValid = false;
-            }
-        }
-
-        if (videoField && videoField.files.length > 0) {
-            const file = videoField.files[0];
-            const allowedTypes = ['video/mp4', 'video/webm', 'video/ogg'];
-            const maxSize = 25 * 1024 * 1024;
-            const errorBox = document.getElementById('err-video');
-
-            if (!allowedTypes.includes(file.type)) {
-                videoField.classList.add('field-invalid');
-                errorBox.textContent = 'Formats vidéo autorisés : MP4, WEBM, OGG.';
-                errorBox.style.color = '#dc2626';
-                errorBox.className = 'field-error';
-                isValid = false;
-            } else if (file.size > maxSize) {
-                videoField.classList.add('field-invalid');
-                errorBox.textContent = "La vidéo ne doit pas dépasser 25 Mo.";
-                errorBox.style.color = '#dc2626';
-                errorBox.className = 'field-error';
-                isValid = false;
-            }
-        }
-
-        if (isValid) {
-            setTimeout(() => {
-                if (forumModal) forumModal.classList.remove('show');
-            }, 100);
-        } else {
-            e.preventDefault();
-            openModal();
-        }
+        if (!isValid) { e.preventDefault(); openModal(); }
     });
 }
 
+/* ============================================================
+   MENUS POST (3 points)
+   ============================================================ */
 function togglePostMenu(postId) {
     document.querySelectorAll('.post-dropdown').forEach(menu => {
-        if (menu.id !== 'post-menu-' + postId) {
-            menu.classList.remove('show');
-        }
+        if (menu.id !== 'post-menu-' + postId) menu.classList.remove('show');
     });
-
     const target = document.getElementById('post-menu-' + postId);
-    if (target) {
-        target.classList.toggle('show');
-    }
+    if (target) target.classList.toggle('show');
 }
 
 document.addEventListener('click', function (e) {
-    if (!e.target.closest('.post-menu-wrap')) {
-        document.querySelectorAll('.post-dropdown').forEach(menu => {
-            menu.classList.remove('show');
-        });
+    if (!e.target.closest('.post-menu-wrap') && !e.target.closest('.comment-menu-wrap')) {
+        document.querySelectorAll('.post-dropdown').forEach(m => m.classList.remove('show'));
+        document.querySelectorAll('.comment-dropdown').forEach(m => m.classList.remove('show'));
     }
 });
 
-function toggleCommentBox(postId) {
-    const box = document.getElementById('comment-box-' + postId);
-    if (box) {
-        box.classList.toggle('show');
+/* ============================================================
+   MENUS COMMENTAIRE (3 points) — NOUVEAU
+   ============================================================ */
+
+/**
+ * Ouvre/ferme le dropdown d'un commentaire
+ * @param {string} menuId  ex: 'cmenu-42' ou 'cmenu-reply-99'
+ */
+function toggleCommentMenu(menuId) {
+    // Fermer tous les autres menus de commentaires
+    document.querySelectorAll('.comment-dropdown').forEach(m => {
+        if (m.id !== menuId) m.classList.remove('show');
+    });
+    const menu = document.getElementById(menuId);
+    if (menu) menu.classList.toggle('show');
+}
+
+/**
+ * Affiche la zone d'édition inline et masque le texte affiché
+ * @param {number} commentId
+ * @param {number} postId
+ */
+function startEditComment(commentId, postId) {
+    // Fermer le menu
+    document.querySelectorAll('.comment-dropdown').forEach(m => m.classList.remove('show'));
+
+    const textDiv = document.getElementById('comment-text-' + commentId);
+    const editZone = document.getElementById('comment-edit-zone-' + commentId);
+
+    if (textDiv) textDiv.style.display = 'none';
+    if (editZone) editZone.style.display = 'block';
+
+    const input = document.getElementById('comment-edit-input-' + commentId);
+    if (input) {
+        input.focus();
+        input.setSelectionRange(input.value.length, input.value.length);
     }
 }
 
-function reportPost(postId) {
-    alert('Post signalé : #' + postId);
+/**
+ * Annule l'édition et reaffiche le texte
+ */
+function cancelEditComment(commentId) {
+    const textDiv = document.getElementById('comment-text-' + commentId);
+    const editZone = document.getElementById('comment-edit-zone-' + commentId);
+
+    if (textDiv) textDiv.style.display = '';
+    if (editZone) editZone.style.display = 'none';
 }
 
+/**
+ * Sauvegarde la modification via form caché
+ */
+function saveEditComment(commentId, postId) {
+    const input = document.getElementById('comment-edit-input-' + commentId);
+    if (!input) return;
+
+    const newContent = input.value.trim();
+    if (newContent === '') {
+        alert('Le commentaire ne peut pas être vide.');
+        return;
+    }
+    if (newContent.replace(/[^a-zA-ZÀ-ÿ]/gu, '').length < 2) {
+        alert('Le commentaire doit contenir au moins 2 lettres.');
+        return;
+    }
+
+    document.getElementById('updateCommentId').value = commentId;
+    document.getElementById('updateCommentPostId').value = postId;
+    document.getElementById('updateCommentContent').value = newContent;
+    document.getElementById('updateCommentForm').submit();
+}
+
+/**
+ * Supprime un commentaire via form caché
+ * @param {number} commentId   ID du commentaire à supprimer
+ * @param {number} postId      ID du post parent
+ * @param {number} parentId    0 si racine, sinon ID du commentaire parent (réponse)
+ */
+function deleteComment(commentId, postId, parentId) {
+    // Fermer le menu
+    document.querySelectorAll('.comment-dropdown').forEach(m => m.classList.remove('show'));
+
+    const msg = parentId === 0
+        ? 'Supprimer ce commentaire et toutes ses réponses ?'
+        : 'Supprimer cette réponse ?';
+
+    if (!confirm(msg)) return;
+
+    document.getElementById('deleteCommentId').value = commentId;
+    document.getElementById('deleteCommentPostId').value = postId;
+    document.getElementById('deleteCommentParentId').value = parentId;
+    document.getElementById('deleteCommentForm').submit();
+}
+
+/* ============================================================
+   MODAL SIGNALER COMMENTAIRE — NOUVEAU
+   ============================================================ */
+function openReportCommentModal(commentId, postId) {
+    document.querySelectorAll('.comment-dropdown').forEach(m => m.classList.remove('show'));
+    document.getElementById('report-comment-id').value = commentId;
+    document.getElementById('report-comment-post-id').value = postId;
+    document.getElementById('reportCommentModal').classList.add('show');
+}
+
+function closeReportCommentModal() {
+    document.getElementById('reportCommentModal').classList.remove('show');
+    const form = document.getElementById('reportCommentForm');
+    if (form) form.reset();
+}
+
+document.getElementById('reportCommentModal').addEventListener('click', function(e) {
+    if (e.target === this) closeReportCommentModal();
+});
+
+/* ============================================================
+   BOITE DE COMMENTAIRE (toggle)
+   ============================================================ */
+function toggleCommentBox(postId) {
+    const box = document.getElementById('comment-box-' + postId);
+    if (box) box.classList.toggle('hidden');
+}
+
+/* ============================================================
+   MODAL SIGNALER POST
+   ============================================================ */
+function openReportModal(postId) {
+    document.getElementById('report-post-id').value = postId;
+    document.getElementById('reportModal').style.display = 'flex';
+}
+
+function closeReportModal() {
+    document.getElementById('reportModal').style.display = 'none';
+    const form = document.getElementById('reportModal').querySelector('form');
+    if (form) form.reset();
+}
+
+/* ============================================================
+   VIEWER COMMENTAIRE FORM
+   ============================================================ */
+const viewerCommentForm = document.getElementById('viewerCommentForm');
+if (viewerCommentForm) {
+    viewerCommentForm.addEventListener('submit', function (e) {
+        const postIdField = document.getElementById('viewerPostId');
+        const parentIdField = document.getElementById('viewerParentId');
+        const contentField = document.getElementById('viewerCommentContent');
+        const imageField = document.getElementById('viewerCommentImage');
+        const emojiField = document.getElementById('viewerEmojiHidden');
+        const errorBox = document.getElementById('err-viewerCommentContent');
+
+        const postId = postIdField ? postIdField.value.trim() : '';
+        const content = contentField ? contentField.value.trim() : '';
+        const hasImage = imageField && imageField.files && imageField.files.length > 0;
+        const hasEmoji = emojiField && emojiField.value.trim() !== '';
+
+        if (!postId) { e.preventDefault(); if (errorBox) errorBox.textContent = 'Post introuvable.'; return; }
+        if (content === '' && !hasImage && !hasEmoji) { e.preventDefault(); if (errorBox) errorBox.textContent = 'Ajoutez un texte, une image ou un emoji.'; return; }
+        if (content !== '' && content.replace(/[^a-zA-ZÀ-ÿ]/gu, '').length < 2) { e.preventDefault(); if (errorBox) errorBox.textContent = 'Le commentaire doit contenir au moins 2 lettres.'; return; }
+        if (errorBox) errorBox.textContent = '';
+        if (parentIdField && !parentIdField.value) parentIdField.value = '';
+    });
+}
+
+const viewerCommentImage = document.getElementById('viewerCommentImage');
+if (viewerCommentImage) {
+    viewerCommentImage.addEventListener('change', function () {
+        const preview = document.getElementById('viewerCommentPreview');
+        const img = preview ? preview.querySelector('img') : null;
+        const errorBox = document.getElementById('err-viewerCommentContent');
+        const file = this.files[0];
+        if (!preview || !img) return;
+        if (!file) { preview.classList.remove('show'); img.src = ''; return; }
+        const allowedTypes = ['image/jpeg','image/png','image/webp'];
+        if (!allowedTypes.includes(file.type)) {
+            if (errorBox) errorBox.textContent = 'Formats image commentaire autorisés : JPG, JPEG, PNG, WEBP.';
+            this.value = ''; preview.classList.remove('show'); img.src = ''; return;
+        }
+        if (file.size > 3 * 1024 * 1024) {
+            if (errorBox) errorBox.textContent = "L'image du commentaire ne doit pas dépasser 3 Mo.";
+            this.value = ''; preview.classList.remove('show'); img.src = ''; return;
+        }
+        const reader = new FileReader();
+        reader.onload = function (ev) {
+            img.src = ev.target.result;
+            preview.classList.add('show');
+            if (errorBox && errorBox.textContent.includes('image')) errorBox.textContent = '';
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+const viewerCommentBtn = document.getElementById('viewerCommentBtn');
+if (viewerCommentBtn) {
+    viewerCommentBtn.addEventListener('click', function () {
+        const field = document.getElementById('viewerCommentContent');
+        if (field) field.focus();
+    });
+}
+
+/* ============================================================
+   VALIDATION COMMENTAIRES
+   ============================================================ */
+function validateComment(textareaId, errorId) {
+    const textarea = document.getElementById(textareaId);
+    const errorBox = document.getElementById(errorId);
+    if (!textarea) return true;
+    const text = textarea.value.trim();
+    const letters = text.replace(/[^a-zA-ZÀ-ÿ]/gu, '');
+    if (text === '') {
+        if (errorBox) { errorBox.textContent = 'Le commentaire est obligatoire.'; errorBox.style.display = 'block'; }
+        return false;
+    }
+    if (letters.length < 5) {
+        if (errorBox) { errorBox.textContent = 'Le commentaire doit contenir au moins 5 lettres.'; errorBox.style.display = 'block'; }
+        return false;
+    }
+    if (errorBox) { errorBox.textContent = ''; errorBox.style.display = 'none'; }
+    return true;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const commentForms = document.querySelectorAll('form[method="POST"]');
+    commentForms.forEach(form => {
+        const textarea = form.querySelector('textarea[name="comment_content"]');
+        if (!textarea) return;
+        const errorId = textarea.id ? 'err-' + textarea.id : null;
+        if (textarea.id && errorId) {
+            textarea.addEventListener('blur', () => validateComment(textarea.id, errorId));
+            textarea.addEventListener('keyup', () => validateComment(textarea.id, errorId));
+        }
+        form.addEventListener('submit', event => {
+            if (!textarea || !textarea.id || !errorId) return;
+            if (!validateComment(textarea.id, errorId)) event.preventDefault();
+        });
+    });
+});
+
+/* ============================================================
+   RÉPONSES (toggle reply box)
+   ============================================================ */
+document.addEventListener('click', function(e) {
+    const btn = e.target.closest('.reply-btn');
+    if (!btn) return;
+    const commentId = btn.dataset.commentId;
+    const author = btn.dataset.author || 'Utilisateur';
+    const box = document.getElementById('reply-box-' + commentId);
+    if (box) {
+        const isHidden = box.style.display === 'none' || box.style.display === '';
+        box.style.display = isHidden ? 'block' : 'none';
+        if (isHidden) {
+            const textarea = document.getElementById('reply-content-' + commentId);
+            if (textarea) {
+                textarea.value = '@' + author + ' ';
+                textarea.focus();
+                textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+            }
+        }
+    }
+});
+
+/* ============================================================
+   AUTO-OPEN MODAL / POST
+   ============================================================ */
 <?php if ($isEditMode || array_filter($errors)): ?>
 openModal();
 <?php endif; ?>
@@ -2609,4 +3880,18 @@ if (localStorage.getItem('openForumModal') === '1') {
     openModal();
     localStorage.removeItem('openForumModal');
 }
+
+<?php if (isset($_GET['open_post']) && ctype_digit((string)$_GET['open_post'])): ?>
+window.addEventListener('load', function(){
+    const postId = <?php echo (int)$_GET['open_post']; ?>;
+    const box = document.getElementById('comment-box-' + postId);
+    const postCard = document.getElementById('post-' + postId);
+    if (box) { box.classList.remove('hidden'); box.classList.add('show'); }
+    if (postCard) postCard.scrollIntoView({behavior:'smooth', block:'start'});
+    <?php if (isset($_GET['open_comment']) && ctype_digit((string)$_GET['open_comment']) && (int)$_GET['open_comment'] > 0): ?>
+    const replyBox = document.getElementById('reply-box-<?php echo (int)$_GET['open_comment']; ?>');
+    if (replyBox) replyBox.style.display = 'block';
+    <?php endif; ?>
+});
+<?php endif; ?>
 </script>
