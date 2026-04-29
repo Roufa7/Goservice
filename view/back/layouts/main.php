@@ -4,6 +4,7 @@ $pageTitles = [
     'users' => 'Gestion des utilisateurs',
     'services' => 'Gestion des services',
     'offers' => 'Gestion des offres',
+    'offer_applications' => 'Candidatures de l\'offre',
     'forum' => 'Modération du forum',
     'reclamation' => 'Gestion des réclamations',
     'events' => 'Gestion des événements',

@@ -6,6 +6,7 @@ $allowedPages = [
     'users',
     'services',
     'offers',
+    'offer_applications',
     'forum',
     'reclamation',
     'events',

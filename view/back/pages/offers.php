@@ -186,21 +186,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') { //exécute uniquement si formulaire
 
                 if ($_POST['action'] === 'create') {
                     $payload['id_admin'] = session_status() === PHP_SESSION_ACTIVE && !empty($_SESSION['user_id']) ? intval($_SESSION['user_id']) : null;
-                    $offerController->createOffer($payload);
-                    $message = 'Offre créée avec succès !';
-                    $messageType = 'success';
-                    $formData = [
-                        'titre' => '',
-                        'type_service' => '',
-                        'localisation' => '',
-                        'date_expiration' => '',
-                        'prix' => '',
-                        'description' => '',
-                    ];
+                    $createResult = $offerController->createOffer($payload);
+                    
+                    if ($createResult === 0) {
+                        $message = 'Une offre avec ce titre existe déjà. Veuillez utiliser un titre différent.';
+                        $messageType = 'error';
+                    } else {
+                        $message = 'Offre créée avec succès !';
+                        $messageType = 'success';
+                        $formData = [
+                            'titre' => '',
+                            'type_service' => '',
+                            'localisation' => '',
+                            'date_expiration' => '',
+                            'prix' => '',
+                            'description' => '',
+                        ];
+                    }
                 } else {
-                    $offerController->updateOffer(intval($_POST['offer_id']), $payload);
-                    header('Location: ?page=offers');
-                    exit;
+                    $updateResult = $offerController->updateOffer(intval($_POST['offer_id']), $payload);
+                    
+                    if ($updateResult === false) {
+                        $message = 'Une offre avec ce titre existe déjà. Veuillez utiliser un titre différent.';
+                        $messageType = 'error';
+                        $currentOffer = array_merge(
+                            $offerController->getOffer(intval($_POST['offer_id'])) ?? [],
+                            [
+                                'id_offre' => intval($_POST['offer_id']),
+                                'titre' => $formData['titre'],
+                                'description' => $formData['description'],
+                                'localisation' => $formData['localisation'],
+                                'date_expiration' => $formData['date_expiration'],
+                                'type_service' => $formData['type_service'],
+                                'prix' => $formData['prix'],
+                            ]
+                        );
+                    } else {
+                        $sendJsonResponse(true, 'Offre mise à jour avec succès !');
+                        header('Location: ?page=offers');
+                        exit;
+                    }
                 }
             }
         //DELETE OFFER
@@ -326,7 +351,8 @@ if ($currentOffer) {
                             <td><?php echo htmlspecialchars(formatDate($offer['date_expiration']), ENT_QUOTES, 'UTF-8'); ?></td>
                             <td><?php echo htmlspecialchars(ucfirst($offer['statut']), ENT_QUOTES, 'UTF-8'); ?></td>
                             <td class="admin-tools">
-                                <a href="?page=offers&edit=<?php echo htmlspecialchars($offer['id_offre'], ENT_QUOTES, 'UTF-8'); ?>" class="small-btn">Voir</a>
+                                <a href="?page=offer_applications&offer_id=<?php echo urlencode((string) ($offer['id_offre'] ?? '')); ?>" class="small-btn">Voir candidatures</a>
+                                <a href="?page=offers&edit=<?php echo htmlspecialchars($offer['id_offre'], ENT_QUOTES, 'UTF-8'); ?>" class="small-btn">Modifier</a>
                                 <form method="POST" style="display:inline;">
                                     <input type="hidden" name="action" value="delete">
                                     <input type="hidden" name="offer_id" value="<?php echo htmlspecialchars($offer['id_offre'], ENT_QUOTES, 'UTF-8'); ?>">
@@ -341,6 +367,60 @@ if ($currentOffer) {
     </div>
 </section>
 
+<?php if (!empty($_GET['type'])):
+    $filterType = trim((string) ($_GET['type'] ?? ''));
+    $filteredOffers = array_filter($offers, function($o) use ($filterType) {
+        return isset($o['type_service']) && strcasecmp(trim((string)$o['type_service']), $filterType) === 0;
+    });
+?>
+<section class="admin-panel reveal offers-table-panel">
+    <span class="section-badge">Offres similaires — Type: <?php echo htmlspecialchars($filterType, ENT_QUOTES, 'UTF-8'); ?></span>
+
+    <div class="table-wrap">
+        <table class="module-table">
+            <thead>
+                <tr>
+                    <th>Titre</th>
+                    <th>Localisation</th>
+                    <th>Publication</th>
+                    <th>Expiration</th>
+                    <th>Statut</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php if (empty($filteredOffers)): ?>
+                    <tr>
+                        <td colspan="6">Aucune offre trouvée pour ce type de service.</td>
+                    </tr>
+                <?php else: ?>
+                    <?php foreach ($filteredOffers as $fo): ?>
+                        <tr>
+                            <td><?php echo htmlspecialchars($fo['titre'] ?? '', ENT_QUOTES, 'UTF-8'); ?></td>
+                            <td><?php echo htmlspecialchars($fo['localisation'] ?? '', ENT_QUOTES, 'UTF-8'); ?></td>
+                            <td><?php echo htmlspecialchars(formatDate($fo['date_publication'] ?? null), ENT_QUOTES, 'UTF-8'); ?></td>
+                            <td><?php echo htmlspecialchars(formatDate($fo['date_expiration'] ?? null), ENT_QUOTES, 'UTF-8'); ?></td>
+                            <td><?php echo htmlspecialchars(ucfirst($fo['statut'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
+                            <td>
+                                <a href="?page=offers&edit=<?php echo htmlspecialchars($fo['id_offre'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" class="small-btn">Voir</a>
+                                <a href="?page=offers&edit=<?php echo htmlspecialchars($fo['id_offre'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" class="small-btn">Editer</a>
+                            </td>
+                        </tr>
+                        <tr class="offer-details-row">
+                            <td colspan="6">
+                                <div class="offer-details">
+                                    <strong>Description:</strong>
+                                    <p><?php echo nl2br(htmlspecialchars($fo['description'] ?? '', ENT_QUOTES, 'UTF-8')); ?></p>
+                                </div>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </tbody>
+        </table>
+    </div>
+</section>
+<?php endif; ?>
 <section class="admin-panel reveal offers-form-panel">
     <span class="section-badge"><?php echo $currentOffer ? 'Modifier l\'offre' : 'Publier une offre'; ?></span>
 
@@ -407,6 +487,32 @@ if ($currentOffer) {
         </div>
     </form>
 </section>
+<script>
+(function(){
+    try{
+        var params = new URLSearchParams(window.location.search);
+        if (params.has('edit')) {
+            var el = document.getElementById('form-grid');
+            if (el) {
+                try {
+                    var rect = el.getBoundingClientRect();
+                    var offset = 100; // fixed 100px offset so the full form and update button are visible
+                    var target = window.scrollY + rect.top - (window.innerHeight / 2) + offset;
+                    window.scrollTo({ top: Math.max(0, target), behavior: 'smooth' });
+                } catch(e) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+                var first = el.querySelector('input, textarea, select');
+                if (first) try { first.focus({preventScroll: true}); } catch(e){ first.focus(); }
+                var url = new URL(window.location);
+                url.searchParams.delete('edit');
+                window.history.replaceState({}, document.title, url.pathname + url.search + url.hash);
+            }
+        }
+    } catch(e){}
+})();
+</script>
+
 
 <style>
 .offers-alert {
@@ -604,20 +710,20 @@ if ($currentOffer) {
                     <?php foreach ($recentApplications as $application): ?> 
                         <?php $normalizedStatus = normalizeApplicationStatus((string) ($application['statut'] ?? '')); ?>
                         <tr>
-                            <td><?php echo htmlspecialchars($application['nom'], ENT_QUOTES, 'UTF-8'); ?></td>
-                            <td><?php echo htmlspecialchars($application['offer_titre'] ?: 'Offre supprimée', ENT_QUOTES, 'UTF-8'); ?></td>
-                            <td><?php echo htmlspecialchars(formatDate($application['created_at']), ENT_QUOTES, 'UTF-8'); ?></td>
+                            <td><?php echo htmlspecialchars((string) ($application['id'] ?? 'N/A'), ENT_QUOTES, 'UTF-8'); ?></td>
+                            <td><?php echo htmlspecialchars((string) ($application['offer_titre'] ?? 'Offre supprimée'), ENT_QUOTES, 'UTF-8'); ?></td>
+                            <td><?php echo htmlspecialchars(formatDate((string) ($application['created_at'] ?? null)), ENT_QUOTES, 'UTF-8'); ?></td>
                             <td>
                                 <span class="status-chip status-<?php echo htmlspecialchars($normalizedStatus, ENT_QUOTES, 'UTF-8'); ?>" data-status-chip>
-                                    <?php echo htmlspecialchars(formatApplicationStatus($application['statut']), ENT_QUOTES, 'UTF-8'); ?>
+                                    <?php echo htmlspecialchars(formatApplicationStatus((string) ($application['statut'] ?? 'en attente')), ENT_QUOTES, 'UTF-8'); ?>
                                 </span>
                             </td>
-                            <td><?php echo htmlspecialchars($application['experience'] ?: 'N/A', ENT_QUOTES, 'UTF-8'); ?></td>
-                            <td><?php echo htmlspecialchars($application['competences'] ?: 'N/A', ENT_QUOTES, 'UTF-8'); ?></td>
+                            <td><?php echo htmlspecialchars((string) ($application['experience'] ?? 'N/A'), ENT_QUOTES, 'UTF-8'); ?></td>
+                            <td><?php echo htmlspecialchars((string) ($application['competences'] ?? 'N/A'), ENT_QUOTES, 'UTF-8'); ?></td>
                             <td class="admin-tools">
                                 <form method="POST" class="js-status-form inline-form" data-target-status="acceptee">
                                     <input type="hidden" name="action" value="update_application_status">
-                                    <input type="hidden" name="application_id" value="<?php echo htmlspecialchars($application['id'], ENT_QUOTES, 'UTF-8'); ?>">
+                                    <input type="hidden" name="application_id" value="<?php echo htmlspecialchars((string) ($application['id'] ?? 0), ENT_QUOTES, 'UTF-8'); ?>">
                                     <input type="hidden" name="status" value="acceptee">
                                     <button
                                         type="submit"
@@ -630,7 +736,7 @@ if ($currentOffer) {
                                 </form>
                                 <form method="POST" class="js-status-form inline-form" data-target-status="refusee">
                                     <input type="hidden" name="action" value="update_application_status">
-                                    <input type="hidden" name="application_id" value="<?php echo htmlspecialchars($application['id'], ENT_QUOTES, 'UTF-8'); ?>">
+                                    <input type="hidden" name="application_id" value="<?php echo htmlspecialchars((string) ($application['id'] ?? 0), ENT_QUOTES, 'UTF-8'); ?>">
                                     <input type="hidden" name="status" value="refusee">
                                     <button
                                         type="submit"
