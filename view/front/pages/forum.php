@@ -31,6 +31,7 @@ $errors = [
     'titre' => '',
     'type_post' => '',
     'contenu' => '',
+    'emoji_post' => '',
     'image' => '',
     'video' => '',
     'comment' => ''
@@ -40,7 +41,8 @@ $old = [
     'titre' => '',
     'type_post' => '',
     'statut_post' => 'En attente',
-    'contenu' => ''
+    'contenu' => '',
+    'emoji_post' => ''
 ];
 
 $isEditMode = false;
@@ -198,6 +200,232 @@ function uploadVideoFile(array $file, array &$errors, ?string $oldPath = null): 
     return null;
 }
 
+
+function uploadCommentImageFile(array $file, array &$errors, ?string $oldPath = null): ?string
+{
+    if (empty($file['name'])) return null;
+
+    $allowedExtensions = ['jpg', 'jpeg', 'png', 'webp'];
+    $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+
+    if (!in_array($extension, $allowedExtensions, true)) {
+        $errors['comment'] = 'Formats image autorisés : JPG, JPEG, PNG, WEBP.';
+        return null;
+    }
+
+    if ($file['size'] > 3 * 1024 * 1024) {
+        $errors['comment'] = "L'image du commentaire ne doit pas dépasser 3 Mo.";
+        return null;
+    }
+
+    $uploadDir = __DIR__ . '/../../../uploads/comments/';
+    if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
+
+    $newName = uniqid('comment_img_', true) . '.' . $extension;
+    $destination = $uploadDir . $newName;
+
+    if (move_uploaded_file($file['tmp_name'], $destination)) {
+        if (!empty($oldPath)) {
+            $oldFile = __DIR__ . '/../../../' . ltrim($oldPath, '/');
+            if (file_exists($oldFile)) @unlink($oldFile);
+        }
+        return 'uploads/comments/' . $newName;
+    }
+
+    $errors['comment'] = "Erreur lors de l'upload de l'image du commentaire.";
+    return null;
+}
+
+function getCommentByIdForum(int $commentId): ?array
+{
+    if (!class_exists('config')) return null;
+    $db = config::getConnexion();
+    $sql = "SELECT * FROM commentaire WHERE id_commentaire = :id";
+    $query = $db->prepare($sql);
+    $query->execute(['id' => $commentId]);
+    $row = $query->fetch(PDO::FETCH_ASSOC);
+    return $row ?: null;
+}
+
+function updateCommentForum(int $commentId, string $content, ?string $imagePath, string $emojiContent): bool
+{
+    if (!class_exists('config')) return false;
+    $db = config::getConnexion();
+    $sql = "UPDATE commentaire
+            SET contenu_commentaire = :contenu,
+                image_commentaire = :image,
+                emoji_commentaire = :emoji
+            WHERE id_commentaire = :id";
+    $query = $db->prepare($sql);
+    return $query->execute([
+        'contenu' => $content,
+        'image' => $imagePath,
+        'emoji' => $emojiContent,
+        'id' => $commentId
+    ]);
+}
+
+
+function forumFrontColumnExists(PDO $db, string $table, string $column): bool
+{
+    try {
+        $stmt = $db->prepare("SHOW COLUMNS FROM `$table` LIKE :col");
+        $stmt->execute(["col" => $column]);
+        return (bool)$stmt->fetch(PDO::FETCH_ASSOC);
+    } catch (Throwable $e) { return false; }
+}
+
+function ensureReportCommentTableFront(): bool
+{
+    if (!class_exists("config")) return false;
+    $db = config::getConnexion();
+    try {
+        $db->exec("CREATE TABLE IF NOT EXISTS report_comment (
+            id_report_comment INT AUTO_INCREMENT PRIMARY KEY,
+            id_commentaire INT NOT NULL,
+            id_user INT NOT NULL,
+            reason VARCHAR(255) NOT NULL,
+            date_report DATETIME DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        return true;
+    } catch (Throwable $e) { return false; }
+}
+
+function insertCommentReportForumFront(int $commentId, int $postId, int $userId, string $reason, string $details): bool
+{
+    if ($commentId <= 0 || $reason === "" || !ensureReportCommentTableFront()) return false;
+    $db = config::getConnexion();
+    try {
+        $hasDetails = forumFrontColumnExists($db, "report_comment", "details");
+        $hasPostId  = forumFrontColumnExists($db, "report_comment", "id_post");
+        if (!$hasDetails && $details !== "") { $reason = $reason . ": " . $details; }
+        $columns = ["id_commentaire", "id_user", "reason"];
+        $values  = [":id_commentaire", ":id_user", ":reason"];
+        $params  = ["id_commentaire" => $commentId, "id_user" => $userId, "reason" => $reason];
+        if ($hasPostId) { $columns[] = "id_post"; $values[] = ":id_post"; $params["id_post"] = $postId; }
+        if ($hasDetails) { $columns[] = "details"; $values[] = ":details"; $params["details"] = $details; }
+        $sql = "INSERT INTO report_comment (`" . implode("`,`", $columns) . "`) VALUES (" . implode(",", $values) . ")";
+        $stmt = $db->prepare($sql);
+        return $stmt->execute($params);
+    } catch (Throwable $e) { return false; }
+}
+
+function signalCommentForumFront(int $commentId): bool
+{
+    if (!class_exists('config') || $commentId <= 0) return false;
+    $db = config::getConnexion();
+    try {
+        $db->exec("ALTER TABLE commentaire ADD COLUMN IF NOT EXISTS signale_commentaire TINYINT(1) NOT NULL DEFAULT 0");
+    } catch (Throwable $e) {
+        try {
+            $check = $db->prepare("SHOW COLUMNS FROM commentaire LIKE 'signale_commentaire'");
+            $check->execute();
+            if (!$check->fetch(PDO::FETCH_ASSOC)) {
+                $db->exec("ALTER TABLE commentaire ADD signale_commentaire TINYINT(1) NOT NULL DEFAULT 0");
+            }
+        } catch (Throwable $e2) {}
+    }
+    try {
+        $query = $db->prepare("UPDATE commentaire SET signale_commentaire = 1 WHERE id_commentaire = :id");
+        return $query->execute(['id' => $commentId]);
+    } catch (Throwable $e) { return false; }
+}
+
+
+function forumFindLastPostId(int $userId, string $titre, string $contenu): int
+{
+    if (!class_exists('config')) return 0;
+    $db = config::getConnexion();
+    $sql = "SELECT id_post FROM post WHERE id_user = :user_id AND titre = :titre AND contenu = :contenu ORDER BY id_post DESC LIMIT 1";
+    $query = $db->prepare($sql);
+    $query->execute(['user_id' => $userId, 'titre' => $titre, 'contenu' => $contenu]);
+    $id = $query->fetchColumn();
+    return $id ? (int)$id : 0;
+}
+
+function updatePostEmojiForum(int $postId, string $emojiPost): bool
+{
+    if (!class_exists('config') || $postId <= 0) return false;
+    $db = config::getConnexion();
+    $sql = "UPDATE post SET emoji_post = :emoji_post WHERE id_post = :id";
+    $query = $db->prepare($sql);
+    return $query->execute(['emoji_post' => $emojiPost, 'id' => $postId]);
+}
+
+
+function forumEnsureCommentStatusColumnFront(): bool
+{
+    if (!class_exists('config')) return false;
+    try {
+        $db = config::getConnexion();
+        $check = $db->prepare("SHOW COLUMNS FROM commentaire LIKE 'statut_commentaire'");
+        $check->execute();
+        if (!$check->fetch(PDO::FETCH_ASSOC)) {
+            $db->exec("ALTER TABLE commentaire ADD statut_commentaire VARCHAR(30) NOT NULL DEFAULT 'En attente'");
+        }
+        return true;
+    } catch (Throwable $e) {
+        return false;
+    }
+}
+
+function forumFindLastCommentIdFront(int $postId, int $userId, string $content, ?int $parentId): int
+{
+    if (!class_exists('config')) return 0;
+    try {
+        $db = config::getConnexion();
+        if ($parentId === null) {
+            $sql = "SELECT id_commentaire
+                    FROM commentaire
+                    WHERE id_post = :post_id
+                      AND id_user = :user_id
+                      AND contenu_commentaire = :content
+                      AND (id_parent_commentaire IS NULL OR id_parent_commentaire = 0)
+                    ORDER BY id_commentaire DESC
+                    LIMIT 1";
+            $query = $db->prepare($sql);
+            $query->execute([
+                'post_id' => $postId,
+                'user_id' => $userId,
+                'content' => $content
+            ]);
+        } else {
+            $sql = "SELECT id_commentaire
+                    FROM commentaire
+                    WHERE id_post = :post_id
+                      AND id_user = :user_id
+                      AND contenu_commentaire = :content
+                      AND id_parent_commentaire = :parent_id
+                    ORDER BY id_commentaire DESC
+                    LIMIT 1";
+            $query = $db->prepare($sql);
+            $query->execute([
+                'post_id' => $postId,
+                'user_id' => $userId,
+                'content' => $content,
+                'parent_id' => $parentId
+            ]);
+        }
+        $id = $query->fetchColumn();
+        return $id ? (int)$id : 0;
+    } catch (Throwable $e) {
+        return 0;
+    }
+}
+
+function forumSetCommentStatusFront(int $commentId, string $status = 'En attente'): bool
+{
+    if ($commentId <= 0 || !class_exists('config')) return false;
+    forumEnsureCommentStatusColumnFront();
+    try {
+        $db = config::getConnexion();
+        $query = $db->prepare("UPDATE commentaire SET statut_commentaire = :status WHERE id_commentaire = :id");
+        return $query->execute(['status' => $status, 'id' => $commentId]);
+    } catch (Throwable $e) {
+        return false;
+    }
+}
+
 /* delete post */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_post'])) {
     $deleteId = (int)($_POST['post_id'] ?? 0);
@@ -247,17 +475,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_comment'])) {
 }
 
 /* ============================================================
-   UPDATE COMMENT
+   UPDATE COMMENT / REPONSE AVEC IMAGE + EMOJI + CONTROLE
    ============================================================ */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_comment'])) {
-    $commentId      = (int)($_POST['comment_id'] ?? 0);
-    $postId         = (int)($_POST['post_id'] ?? 0);
-    $newContent     = trim($_POST['comment_content'] ?? '');
+    $commentId    = (int)($_POST['comment_id'] ?? 0);
+    $postId       = (int)($_POST['post_id'] ?? 0);
+    $newContent   = trim($_POST['comment_content'] ?? '');
+    $emojiContent = trim($_POST['emoji_content'] ?? '');
 
-    if ($commentId > 0 && $newContent !== '') {
-        // On suppose que CommentController a une méthode updateComment($id, $content)
-        if (method_exists($commentController, 'updateComment')) {
-            $commentController->updateComment($commentId, $newContent);
+    if ($commentId > 0) {
+        if ($newContent === '') {
+            $errors['comment'] = 'Le commentaire est obligatoire.';
+        } elseif (getLettersCount($newContent) < 5) {
+            $errors['comment'] = 'Le commentaire doit contenir au moins 5 lettres.';
+        }
+
+        $oldComment = getCommentByIdForum($commentId);
+        $imageCommentPath = $oldComment['image_commentaire'] ?? null;
+
+        if (empty($errors['comment']) && !empty($_FILES['comment_image']['name'])) {
+            $newImage = uploadCommentImageFile($_FILES['comment_image'], $errors, $imageCommentPath);
+            if (empty($errors['comment']) && $newImage !== null) {
+                $imageCommentPath = $newImage;
+            }
+        }
+
+        if (empty($errors['comment'])) {
+            updateCommentForum($commentId, $newContent, $imageCommentPath, $emojiContent);
         }
     }
 
@@ -273,8 +517,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['report_comment'])) {
     $postId    = (int)($_POST['post_id'] ?? 0);
     $reason    = trim($_POST['report_reason'] ?? '');
     $details   = trim($_POST['report_details'] ?? '');
-    // Pour l'instant on signale via reportController si disponible pour les commentaires
-    // Sinon on redirige simplement avec un message
+
+    if ($commentId > 0 && $reason !== "") {
+        signalCommentForumFront($commentId);
+        insertCommentReportForumFront($commentId, $postId, $currentUserId, $reason, $details);
+    }
+
     header('Location: ' . forumUrl(['open_post' => $postId, 'comment_reported' => 1]));
     exit;
 }
@@ -290,6 +538,7 @@ if (isset($_GET['edit']) && ctype_digit($_GET['edit'])) {
         $old['type_post'] = $editPost['type_post'] ?? '';
         $old['statut_post'] = $editPost['statut_post'] ?? '';
         $old['contenu'] = $editPost['contenu'] ?? '';
+        $old['emoji_post'] = $editPost['emoji_post'] ?? '';
     }
 }
 
@@ -298,6 +547,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['publish_post']) || i
     $old['titre'] = trim($_POST['titre'] ?? '');
     $old['type_post'] = trim($_POST['type_post'] ?? '');
     $old['contenu'] = trim($_POST['contenu'] ?? '');
+    $old['emoji_post'] = trim($_POST['emoji_post'] ?? '');
 
     if ($old['titre'] === '') {
         $errors['titre'] = 'Le titre est obligatoire.';
@@ -350,6 +600,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['publish_post']) || i
             );
 
             $postController->addPost($post);
+            $newPostId = forumFindLastPostId($currentUserId, $old['titre'], $old['contenu']);
+            updatePostEmojiForum($newPostId, $old['emoji_post']);
             header('Location: ' . forumUrl(['published' => 1]));
             exit;
         }
@@ -388,6 +640,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['publish_post']) || i
                 );
 
                 $postController->updatePost($post);
+                updatePostEmojiForum($editId, $old['emoji_post']);
                 header('Location: ' . forumUrl(['updated' => 1]));
                 exit;
             }
@@ -435,6 +688,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_comment'])) {
             $emojiContent
         );
         $commentController->addComment($comment);
+
+        // Nouveau commentaire/réponse ajouté depuis le front : il reste en attente
+        // et ne s'affiche qu'après approbation de l'admin dans le back office.
+        $newCommentId = forumFindLastCommentIdFront($postId, $currentUserId, $commentContent, $parentId);
+        forumSetCommentStatusFront($newCommentId, 'En attente');
+
         header('Location: ' . forumUrl(['commented' => 1, 'open_post' => $postId, 'open_comment' => $parentId ?: 0]));
         exit;
     }
@@ -533,7 +792,9 @@ if ($sort === 'recent') {
 // Load comments for posts
 foreach ($posts as &$post) {
     $comments = $commentController->listCommentsByPost($post['id_post']);
-    $post['comments'] = is_array($comments) ? $comments : [];
+    $post['comments'] = is_array($comments) ? array_values(array_filter($comments, function($c) {
+        return (($c['statut_commentaire'] ?? 'En attente') === 'Approuvé');
+    })) : [];
     $post['likes_count'] = (int)$likeController->countLikes($post['id_post']);
     $post['shares_count'] = (int)$shareController->countShares($post['id_post']);
     $post['reports_count'] = (int)$reportController->countReports($post['id_post']);
@@ -992,6 +1253,44 @@ $topContributors = method_exists($postController, 'getTopContributors')
         object-fit:contain;
         display:block;
         background:#000;
+    }
+
+
+    .forum-emoji-input,
+    .comment-emoji-input{
+        width:100%;
+        box-sizing:border-box;
+        border:1px solid rgba(15,23,42,.10);
+        border-radius:18px;
+        background:#fff;
+        font:inherit;
+        color:#203047;
+        outline:none;
+        min-height:54px;
+        padding:0 14px;
+        margin-top:12px;
+        font-size:22px;
+    }
+
+    .comment-emoji-input{
+        width:100%;
+        max-width:100%;
+        min-height:54px;
+        height:54px;
+        margin-top:10px;
+        margin-bottom:12px;
+        padding:0 16px;
+        border-radius:20px;
+        font-size:22px;
+        text-align:left;
+        display:block;
+        box-sizing:border-box;
+    }
+
+    .forum-emoji-input:focus,
+    .comment-emoji-input:focus{
+        border-color:rgba(238,88,40,.25);
+        box-shadow:0 0 0 4px rgba(238,88,40,.08);
     }
 
     .forum-modal-tools{
@@ -2021,7 +2320,7 @@ $topContributors = method_exists($postController, 'getTopContributors')
         justify-content:center;
         font-size:24px;
     }
-
+    
     .emoji-picker{
         position:fixed;
         width:320px;
@@ -2336,6 +2635,10 @@ $topContributors = method_exists($postController, 'getTopContributors')
                             <h3 class="post-title"><?php echo e($post['titre'] ?? ''); ?></h3>
                             <p class="post-content"><?php echo nl2br(e($post['contenu'] ?? '')); ?></p>
 
+                            <?php if (!empty($post['emoji_post'])): ?>
+                                <div class="comment-emoji-line" style="margin-top:10px;"><?php echo e($post['emoji_post']); ?></div>
+                            <?php endif; ?>
+
                             <?php if (!empty($imageUrl)): ?>
                                 <div class="post-media-frame" onclick='openMediaViewer(<?php echo json_encode($viewerPayload, JSON_HEX_APOS | JSON_HEX_QUOT); ?>)'>
                                     <img src="<?php echo e($imageUrl); ?>" alt="Image post" onerror="this.style.display='none';">
@@ -2401,8 +2704,6 @@ $topContributors = method_exists($postController, 'getTopContributors')
                                     <form method="POST" action="" enctype="multipart/form-data" novalidate class="comment-form">
                                         <input type="hidden" name="add_comment" value="1">
                                         <input type="hidden" name="post_id" value="<?php echo (int)$post['id_post']; ?>">
-                                        <input type="hidden" name="emoji_content" id="emoji-hidden-<?php echo (int)$post['id_post']; ?>" value="">
-
                                         <textarea
                                             name="comment_content"
                                             id="comment-content-<?php echo (int)$post['id_post']; ?>"
@@ -2410,6 +2711,8 @@ $topContributors = method_exists($postController, 'getTopContributors')
                                             placeholder="Écrire un commentaire..."
                                             required
                                         ></textarea>
+
+                                        <input type="text" name="emoji_content" id="emoji-hidden-<?php echo (int)$post['id_post']; ?>" value="" class="comment-emoji-input comment-emoji-target" placeholder="😊">
 
                                         <span class="field-error" id="err-comment-content-<?php echo (int)$post['id_post']; ?>" style="color:#dc2626; font-size:12px; display:block; margin-top:4px;"></span>
 
@@ -2422,7 +2725,7 @@ $topContributors = method_exists($postController, 'getTopContributors')
                                             <button
                                                 type="button"
                                                 class="comment-tool-btn comment-emoji-btn"
-                                                data-target="comment-content-<?php echo (int)$post['id_post']; ?>"
+                                                data-target="emoji-hidden-<?php echo (int)$post['id_post']; ?>"
                                                 title="Ajouter un emoji"
                                             >😊</button>
 
@@ -2516,16 +2819,37 @@ $topContributors = method_exists($postController, 'getTopContributors')
                                                             </div>
 
                                                             <!-- Zone d'édition (cachée par défaut) -->
-                                                            <div id="comment-edit-zone-<?php echo $commentId; ?>" style="display:none;">
+                                                            <form method="POST" action="" enctype="multipart/form-data" id="comment-edit-zone-<?php echo $commentId; ?>" style="display:none;" class="comment-edit-form">
+                                                                <input type="hidden" name="update_comment" value="1">
+                                                                <input type="hidden" name="comment_id" value="<?php echo $commentId; ?>">
+                                                                <input type="hidden" name="post_id" value="<?php echo (int)$post['id_post']; ?>">
                                                                 <textarea
-                                                                    class="comment-edit-area"
+                                                                    name="comment_content"
+                                                                    class="comment-edit-area comment-emoji-target"
                                                                     id="comment-edit-input-<?php echo $commentId; ?>"
                                                                 ><?php echo e($comment['contenu_commentaire'] ?? ''); ?></textarea>
-                                                                <div class="comment-edit-actions">
-                                                                    <button type="button" class="comment-edit-save-btn" onclick="saveEditComment(<?php echo $commentId; ?>, <?php echo (int)$post['id_post']; ?>)">Enregistrer</button>
+
+                                                                <input type="text" name="emoji_content" id="edit-emoji-<?php echo $commentId; ?>" value="<?php echo e($comment['emoji_commentaire'] ?? ''); ?>" class="comment-emoji-input comment-emoji-target" placeholder="😊">
+
+                                                                <span class="field-error" id="err-edit-comment-<?php echo $commentId; ?>"></span>
+
+                                                                <div class="comment-tools">
+                                                                    <label class="comment-tool-btn" title="Modifier l'image">
+                                                                        🖼️
+                                                                        <input type="file" name="comment_image" accept=".jpg,.jpeg,.png,.webp" class="comment-hidden-input">
+                                                                    </label>
+
+                                                                    <button
+                                                                        type="button"
+                                                                        class="comment-tool-btn comment-emoji-btn"
+                                                                        data-target="edit-emoji-<?php echo $commentId; ?>"
+                                                                        title="Ajouter un emoji"
+                                                                    >😊</button>
+
+                                                                    <button type="submit" class="comment-edit-save-btn">Enregistrer</button>
                                                                     <button type="button" class="comment-edit-cancel-btn" onclick="cancelEditComment(<?php echo $commentId; ?>)">Annuler</button>
                                                                 </div>
-                                                            </div>
+                                                            </form>
                                                         </div>
 
                                                         <div class="comment-meta-row">
@@ -2543,8 +2867,6 @@ $topContributors = method_exists($postController, 'getTopContributors')
                                                                 <input type="hidden" name="add_comment" value="1">
                                                                 <input type="hidden" name="post_id" value="<?php echo (int)$post['id_post']; ?>">
                                                                 <input type="hidden" name="parent_id" value="<?php echo $commentId; ?>">
-                                                                <input type="hidden" name="emoji_content" id="emoji-reply-<?php echo $commentId; ?>" value="">
-
                                                                 <textarea
                                                                     name="comment_content"
                                                                     id="reply-content-<?php echo $commentId; ?>"
@@ -2552,6 +2874,8 @@ $topContributors = method_exists($postController, 'getTopContributors')
                                                                     placeholder="Votre réponse..."
                                                                     required
                                                                 ></textarea>
+
+                                                                <input type="text" name="emoji_content" id="emoji-reply-<?php echo $commentId; ?>" value="" class="comment-emoji-input comment-emoji-target" placeholder="😊">
 
                                                                 <span id="err-reply-content-<?php echo $commentId; ?>" class="field-error" style="color:#dc2626; font-size:11px; display:block; margin-top:4px;"></span>
 
@@ -2564,7 +2888,7 @@ $topContributors = method_exists($postController, 'getTopContributors')
                                                                     <button
                                                                         type="button"
                                                                         class="comment-tool-btn reply-tool-btn comment-emoji-btn"
-                                                                        data-target="reply-content-<?php echo $commentId; ?>"
+                                                                        data-target="emoji-reply-<?php echo $commentId; ?>"
                                                                         title="Ajouter un emoji"
                                                                     >😊</button>
 
@@ -2639,16 +2963,37 @@ $topContributors = method_exists($postController, 'getTopContributors')
                                                                                 </div>
 
                                                                                 <!-- Zone d'édition réponse (cachée) -->
-                                                                                <div id="comment-edit-zone-<?php echo $replyId; ?>" style="display:none;">
+                                                                                <form method="POST" action="" enctype="multipart/form-data" id="comment-edit-zone-<?php echo $replyId; ?>" style="display:none;" class="comment-edit-form">
+                                                                                    <input type="hidden" name="update_comment" value="1">
+                                                                                    <input type="hidden" name="comment_id" value="<?php echo $replyId; ?>">
+                                                                                    <input type="hidden" name="post_id" value="<?php echo (int)$post['id_post']; ?>">
                                                                                     <textarea
-                                                                                        class="comment-edit-area"
+                                                                                        name="comment_content"
+                                                                                        class="comment-edit-area comment-emoji-target"
                                                                                         id="comment-edit-input-<?php echo $replyId; ?>"
                                                                                     ><?php echo e($reply['contenu_commentaire'] ?? ''); ?></textarea>
-                                                                                    <div class="comment-edit-actions">
-                                                                                        <button type="button" class="comment-edit-save-btn" onclick="saveEditComment(<?php echo $replyId; ?>, <?php echo (int)$post['id_post']; ?>)">Enregistrer</button>
+
+                                                                                    <input type="text" name="emoji_content" id="edit-emoji-<?php echo $replyId; ?>" value="<?php echo e($reply['emoji_commentaire'] ?? ''); ?>" class="comment-emoji-input comment-emoji-target" placeholder="😊">
+
+                                                                                    <span class="field-error" id="err-edit-comment-<?php echo $replyId; ?>"></span>
+
+                                                                                    <div class="comment-tools">
+                                                                                        <label class="comment-tool-btn reply-tool-btn" title="Modifier l'image">
+                                                                                            🖼️
+                                                                                            <input type="file" name="comment_image" accept=".jpg,.jpeg,.png,.webp" class="comment-hidden-input">
+                                                                                        </label>
+
+                                                                                        <button
+                                                                                            type="button"
+                                                                                            class="comment-tool-btn reply-tool-btn comment-emoji-btn"
+                                                                                            data-target="edit-emoji-<?php echo $replyId; ?>"
+                                                                                            title="Ajouter un emoji"
+                                                                                        >😊</button>
+
+                                                                                        <button type="submit" class="comment-edit-save-btn">Enregistrer</button>
                                                                                         <button type="button" class="comment-edit-cancel-btn" onclick="cancelEditComment(<?php echo $replyId; ?>)">Annuler</button>
                                                                                     </div>
-                                                                                </div>
+                                                                                </form>
                                                                             </div>
 
                                                                             <div class="comment-meta-row">
@@ -2792,6 +3137,18 @@ $topContributors = method_exists($postController, 'getTopContributors')
                         ><?php echo e($old['contenu']); ?></textarea>
                         <span class="field-error" id="err-contenu"><?php echo e($errors['contenu']); ?></span>
                     </div>
+
+                    <div class="forum-form-field full-width">
+                        <input
+                            type="text"
+                            name="emoji_post"
+                            id="emoji_post"
+                            placeholder="Emoji du post"
+                            value="<?php echo e($old['emoji_post'] ?? ''); ?>"
+                            class="forum-emoji-input"
+                           
+                        >
+                    </div>
                 </div>
 
                 <div class="forum-modal-tools">
@@ -2800,7 +3157,7 @@ $topContributors = method_exists($postController, 'getTopContributors')
                     <div class="forum-tool-icons">
                         <button type="button" class="tool-trigger" id="photoTrigger">🖼️</button>
                         <button type="button" class="tool-trigger" id="videoTrigger">🎥</button>
-                        <button type="button" class="tool-trigger emoji-open-btn" data-target="contenu" id="emojiTrigger">😊</button>
+                        <button type="button" class="tool-trigger emoji-open-btn" data-target="emoji_post" id="emojiTrigger">😊</button>
                     </div>
                 </div>
 
@@ -2912,7 +3269,7 @@ $topContributors = method_exists($postController, 'getTopContributors')
                         <input type="hidden" name="add_comment" value="1">
                         <input type="hidden" name="post_id" id="viewerPostId" value="">
                         <input type="hidden" name="parent_id" id="viewerParentId" value="">
-                        <input type="hidden" name="emoji_content" id="viewerEmojiHidden" value="">
+                        <input type="text" name="emoji_content" id="viewerEmojiHidden" value="" class="comment-emoji-input comment-emoji-target" placeholder="Emoji">
 
                         <textarea
                             name="comment_content"
@@ -3375,7 +3732,7 @@ if (mediaViewer) {
 if (openCreateModalBtn) openCreateModalBtn.addEventListener('click', () => openModal());
 if (openPhotoBtn) openPhotoBtn.addEventListener('click', () => { openModal(); imageField.click(); });
 if (openVideoBtn) openVideoBtn.addEventListener('click', () => { openModal(); videoField.click(); });
-if (openEmojiBtn) openEmojiBtn.addEventListener('click', (e) => { openModal(); showEmojiPickerFor('contenu', e.currentTarget); });
+if (openEmojiBtn) openEmojiBtn.addEventListener('click', (e) => { openModal(); showEmojiPickerFor('emoji_post', e.currentTarget); });
 if (photoTrigger) photoTrigger.addEventListener('click', () => imageField.click());
 if (videoTrigger) videoTrigger.addEventListener('click', () => videoField.click());
 if (closeForumModal) closeForumModal.addEventListener('click', () => closeModal(true));
@@ -3828,6 +4185,66 @@ function validateComment(textareaId, errorId) {
     if (errorBox) { errorBox.textContent = ''; errorBox.style.display = 'none'; }
     return true;
 }
+
+function validateEditCommentForm(form) {
+    const textarea = form.querySelector('textarea[name="comment_content"]');
+    const errorBox = form.querySelector('.field-error');
+    const imageInput = form.querySelector('input[name="comment_image"]');
+    if (!textarea) return true;
+
+    const text = textarea.value.trim();
+    const letters = text.replace(/[^a-zA-ZÀ-ÿ]/gu, '');
+
+    if (text === '') {
+        if (errorBox) { errorBox.textContent = 'Le commentaire est obligatoire.'; errorBox.style.display = 'block'; errorBox.style.color = '#dc2626'; }
+        textarea.classList.add('field-invalid');
+        textarea.classList.remove('field-valid-input');
+        return false;
+    }
+
+    if (letters.length < 5) {
+        if (errorBox) { errorBox.textContent = 'Le commentaire doit contenir au moins 5 lettres.'; errorBox.style.display = 'block'; errorBox.style.color = '#dc2626'; }
+        textarea.classList.add('field-invalid');
+        textarea.classList.remove('field-valid-input');
+        return false;
+    }
+
+    if (imageInput && imageInput.files && imageInput.files.length > 0) {
+        const file = imageInput.files[0];
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+        if (!allowedTypes.includes(file.type)) {
+            if (errorBox) { errorBox.textContent = 'Formats image autorisés : JPG, JPEG, PNG, WEBP.'; errorBox.style.display = 'block'; errorBox.style.color = '#dc2626'; }
+            return false;
+        }
+        if (file.size > 3 * 1024 * 1024) {
+            if (errorBox) { errorBox.textContent = "L'image ne doit pas dépasser 3 Mo."; errorBox.style.display = 'block'; errorBox.style.color = '#dc2626'; }
+            return false;
+        }
+    }
+
+    if (errorBox) { errorBox.textContent = 'Commentaire valide.'; errorBox.style.display = 'block'; errorBox.style.color = '#22a559'; }
+    textarea.classList.remove('field-invalid');
+    textarea.classList.add('field-valid-input');
+    return true;
+}
+
+document.addEventListener('input', function(e) {
+    const textarea = e.target.closest('.comment-edit-form textarea[name="comment_content"]');
+    if (!textarea) return;
+    validateEditCommentForm(textarea.closest('.comment-edit-form'));
+});
+
+document.addEventListener('change', function(e) {
+    const imageInput = e.target.closest('.comment-edit-form input[name="comment_image"]');
+    if (!imageInput) return;
+    validateEditCommentForm(imageInput.closest('.comment-edit-form'));
+});
+
+document.addEventListener('submit', function(e) {
+    const form = e.target.closest('.comment-edit-form');
+    if (!form) return;
+    if (!validateEditCommentForm(form)) e.preventDefault();
+});
 
 document.addEventListener('DOMContentLoaded', () => {
     const commentForms = document.querySelectorAll('form[method="POST"]');
