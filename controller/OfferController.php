@@ -152,6 +152,9 @@ class OfferController {
     }
 
     public function deleteOffer($id): bool {
+        // fetch current offer to possibly notify
+        $existing = $this->showOffer((int)$id);
+
         $sql = $this->useFrenchSchema()
             ? 'DELETE FROM offre WHERE id_offre = :id'
             : 'DELETE FROM offers WHERE id = :id';
@@ -160,7 +163,34 @@ class OfferController {
         $req->bindValue(':id', (int) $id, PDO::PARAM_INT);
 
         try {
-            return $req->execute();
+            $ok = $req->execute();
+
+            if ($ok && $existing && isset($existing['statut']) && $this->normalizeStatusForRead($existing['statut']) === 'ouverte') {
+                if (session_status() === PHP_SESSION_NONE) {
+                    @session_start();
+                }
+                $note = [
+                    'id' => uniqid('notif_', true),
+                    'offer_id' => (int)$id,
+                    'type' => 'suppression',
+                    'headline' => 'Offre supprimée',
+                    'message' => (string) ($existing['titre'] ?? 'Offre'),
+                    'details' => [
+                        'type_service' => (string) ($existing['type_service'] ?? ''),
+                        'localisation' => (string) ($existing['localisation'] ?? ''),
+                        'prix' => isset($existing['prix']) ? (string) $existing['prix'] : 'N/A',
+                    ],
+                    'link' => 'index.php?page=offre',
+                    'time' => (new DateTimeImmutable('now'))->format('c'),
+                    'read' => false,
+                ];
+                if (!isset($_SESSION['offer_notifications']) || !is_array($_SESSION['offer_notifications'])) {
+                    $_SESSION['offer_notifications'] = [];
+                }
+                array_unshift($_SESSION['offer_notifications'], $note);
+            }
+
+            return $ok;
         } catch (Exception $e) {
             die('Error:' . $e->getMessage());
         }
@@ -169,7 +199,20 @@ class OfferController {
     public function addOffer(Offer $offer): int {
         $computedStatus = $this->resolveStatusFromExpiration($offer->getDateExpiration());
 
+        // Direct check for duplicate title
+        $offerTitle = trim((string) $offer->getTitre());
+        $db = config::getConnexion();
+        
         if ($this->useFrenchSchema()) {
+            $checkStmt = $db->prepare('SELECT COUNT(*) FROM offre WHERE LOWER(titre) = LOWER(?)');
+            $checkStmt->execute([$offerTitle]);
+            $existingCount = $checkStmt->fetchColumn();
+            
+            if ($existingCount > 0) {
+                error_log("DUPLICATE TITLE BLOCKED: '$offerTitle' already exists");
+                return 0;
+            }
+            
             $sql = 'INSERT INTO offre (titre, description, localisation, date_expiration, statut, type_service, prix, id_admin) VALUES (:titre, :description, :localisation, :date_expiration, :statut, :type_service, :prix, :id_admin)';
             $params = [
                 'titre' => $offer->getTitre(),
@@ -182,6 +225,15 @@ class OfferController {
                 'id_admin' => $offer->getIdAdmin(),
             ];
         } else {
+            $checkStmt = $db->prepare('SELECT COUNT(*) FROM offers WHERE LOWER(titre) = LOWER(?)');
+            $checkStmt->execute([$offerTitle]);
+            $existingCount = $checkStmt->fetchColumn();
+            
+            if ($existingCount > 0) {
+                error_log("DUPLICATE TITLE BLOCKED: '$offerTitle' already exists");
+                return 0;
+            }
+            
             $sql = 'INSERT INTO offers (titre, description, prix, service_id, creator_id, image, statut, date_debut, date_fin) VALUES (:titre, :description, :prix, :service_id, :creator_id, :image, :statut, :date_debut, :date_fin)';
             $params = [
                 'titre' => $offer->getTitre(),
@@ -195,13 +247,16 @@ class OfferController {
                 'date_fin' => $offer->getDateExpiration() ? $offer->getDateExpiration()->format('Y-m-d H:i:s') : null,
             ];
         }
-        $db = config::getConnexion();
 
         try {
             $query = $db->prepare($sql);
             $query->execute($params);
 
-            return (int) $db->lastInsertId();
+            $newId = (int) $db->lastInsertId();
+
+
+
+            return $newId;
         } catch (Exception $e) {
             echo 'Error: ' . $e->getMessage();
             return 0;
@@ -219,16 +274,41 @@ class OfferController {
             return false;
         }
 
+        // Check if offer title already exists (excluding current offer)
+        $offerTitle = trim((string) $offer->getTitre());
+        $db = config::getConnexion();
+        
+        if ($this->useFrenchSchema()) {
+            $checkStmt = $db->prepare('SELECT COUNT(*) FROM offre WHERE LOWER(titre) = LOWER(?) AND id_offre != ?');
+            $checkStmt->execute([$offerTitle, $id]);
+            $existingCount = $checkStmt->fetchColumn();
+            
+            if ($existingCount > 0) {
+                error_log("DUPLICATE TITLE BLOCKED ON UPDATE: '$offerTitle' already exists");
+                return false;
+            }
+        } else {
+            $checkStmt = $db->prepare('SELECT COUNT(*) FROM offers WHERE LOWER(titre) = LOWER(?) AND id != ?');
+            $checkStmt->execute([$offerTitle, $id]);
+            $existingCount = $checkStmt->fetchColumn();
+            
+            if ($existingCount > 0) {
+                error_log("DUPLICATE TITLE BLOCKED ON UPDATE: '$offerTitle' already exists");
+                return false;
+            }
+        }
+
         $computedStatus = $this->resolveStatusFromExpiration($offer->getDateExpiration());
 
         try {
-            $db = config::getConnexion();
             if ($this->useFrenchSchema()) {
+                // capture previous state to compute changes
+                $before = $this->showOffer($id);
                 $query = $db->prepare(
                     'UPDATE offre SET titre = :titre, description = :description, localisation = :localisation, date_expiration = :date_expiration, statut = :statut, type_service = :type_service, prix = :prix, id_admin = :id_admin WHERE id_offre = :id'
                 );
 
-                return $query->execute([
+                $ok = $query->execute([
                     'id' => $id,
                     'titre' => $offer->getTitre(),
                     'description' => $offer->getDescription(),
@@ -239,13 +319,73 @@ class OfferController {
                     'prix' => $offer->getPrix(),
                     'id_admin' => $offer->getIdAdmin(),
                 ]);
+
+                if ($ok) {
+                    // determine after state and only notify when offer remains 'ouverte'
+                    $after = $this->showOffer($id);
+                    $shouldNotify = $after && ($this->normalizeStatusForRead($after['statut'] ?? '') === 'ouverte');
+
+                    if ($shouldNotify) {
+                        // compute changed fields
+                        $changes = [];
+                        $fields = ['titre','description','localisation','date_expiration','statut','type_service','prix'];
+                        foreach ($fields as $f) {
+                            $beforeVal = isset($before[$f]) ? (string)$before[$f] : '';
+                            $afterVal = isset($after[$f]) ? (string)$after[$f] : '';
+                            if ($beforeVal !== $afterVal) {
+                                $changes[$f] = ['from' => $beforeVal, 'to' => $afterVal];
+                            }
+                        }
+
+                        if (!empty($changes)) {
+                            // skip notifications that are only an automatic expiration (statut changed to 'fermee')
+                            $onlyStatusChangeToClosed = false;
+                            if (count($changes) === 1 && isset($changes['statut'])) {
+                                $toVal = (string) ($changes['statut']['to'] ?? '');
+                                if ($this->normalizeStatusForRead($toVal) === 'fermee') {
+                                    $onlyStatusChangeToClosed = true;
+                                }
+                            }
+                            if ($onlyStatusChangeToClosed) {
+                                // do not push a notification for automatic expiration
+                                // but still return success
+                                return $ok;
+                            }
+                            if (session_status() === PHP_SESSION_NONE) {
+                                @session_start();
+                            }
+                            $note = [
+                                'id' => uniqid('notif_', true),
+                                'offer_id' => $id,
+                                'type' => 'modification',
+                                'headline' => 'Offre modifiée',
+                                'message' => (string) $offer->getTitre(),
+                                'details' => [
+                                    'type_service' => (string) $offer->getTypeService(),
+                                    'localisation' => (string) $offer->getLocalisation(),
+                                    'prix' => $offer->getPrix() !== null ? number_format((float)$offer->getPrix(), 2, '.', ' ') . ' TND' : 'N/A',
+                                ],
+                                'changes' => $changes,
+                                'link' => 'index.php?page=offre&offer_id=' . $id,
+                                'time' => (new DateTimeImmutable('now'))->format('c'),
+                                'read' => false,
+                            ];
+                            if (!isset($_SESSION['offer_notifications']) || !is_array($_SESSION['offer_notifications'])) {
+                                $_SESSION['offer_notifications'] = [];
+                            }
+                            array_unshift($_SESSION['offer_notifications'], $note);
+                        }
+                    }
+                }
+
+                return $ok;
             }
 
             $query = $db->prepare(
                 'UPDATE offers SET titre = :titre, description = :description, prix = :prix, date_fin = :date_fin, statut = :statut, creator_id = :creator_id WHERE id = :id'
             );
 
-            return $query->execute([
+            $ok = $query->execute([
                 'id' => $id,
                 'titre' => $offer->getTitre(),
                 'description' => $offer->getDescription(),
@@ -254,6 +394,62 @@ class OfferController {
                 'statut' => $computedStatus,
                 'creator_id' => $offer->getIdAdmin() ?: 1,
             ]);
+
+            if ($ok) {
+                // For non-French schema, also compute before/after and only notify when open
+                $before = $this->showOffer($id);
+                $after = $this->showOffer($id);
+                $shouldNotify = $after && ($this->normalizeStatusForRead($after['statut'] ?? '') === 'ouverte');
+                if ($shouldNotify) {
+                    $changes = [];
+                    $fields = ['titre','description','localisation','date_expiration','statut','type_service','prix'];
+                    foreach ($fields as $f) {
+                        $beforeVal = isset($before[$f]) ? (string)$before[$f] : '';
+                        $afterVal = isset($after[$f]) ? (string)$after[$f] : '';
+                        if ($beforeVal !== $afterVal) {
+                            $changes[$f] = ['from' => $beforeVal, 'to' => $afterVal];
+                        }
+                    }
+                    if (!empty($changes)) {
+                        // skip notifications that are only an automatic expiration (statut changed to 'fermee')
+                        $onlyStatusChangeToClosed = false;
+                        if (count($changes) === 1 && isset($changes['statut'])) {
+                            $toVal = (string) ($changes['statut']['to'] ?? '');
+                            if ($this->normalizeStatusForRead($toVal) === 'fermee') {
+                                $onlyStatusChangeToClosed = true;
+                            }
+                        }
+                        if ($onlyStatusChangeToClosed) {
+                            return $ok;
+                        }
+                        if (session_status() === PHP_SESSION_NONE) {
+                            @session_start();
+                        }
+                        $note = [
+                            'id' => uniqid('notif_', true),
+                            'offer_id' => $id,
+                            'type' => 'modification',
+                            'headline' => 'Offre modifiée',
+                            'message' => (string) $offer->getTitre(),
+                            'details' => [
+                                'type_service' => (string) $offer->getTypeService(),
+                                'localisation' => (string) $offer->getLocalisation(),
+                                'prix' => $offer->getPrix() !== null ? number_format((float)$offer->getPrix(), 2, '.', ' ') . ' TND' : 'N/A',
+                            ],
+                            'changes' => $changes,
+                            'link' => 'index.php?page=offre&offer_id=' . $id,
+                            'time' => (new DateTimeImmutable('now'))->format('c'),
+                            'read' => false,
+                        ];
+                        if (!isset($_SESSION['offer_notifications']) || !is_array($_SESSION['offer_notifications'])) {
+                            $_SESSION['offer_notifications'] = [];
+                        }
+                        array_unshift($_SESSION['offer_notifications'], $note);
+                    }
+                }
+            }
+
+            return $ok;
         } catch (PDOException $e) {
             echo 'Error: ' . $e->getMessage();
             return false;

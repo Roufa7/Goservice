@@ -209,6 +209,33 @@ class CandidatureController {
         return $sql;
     }
 
+    private function pushAdminNotificationToFile(array $note): void {
+        $dir = __DIR__ . '/../storage';
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0755, true);
+        }
+        $file = $dir . '/admin_notifications.json';
+
+        $list = [];
+        if (is_file($file)) {
+            $content = @file_get_contents($file);
+            if ($content !== false) {
+                $decoded = json_decode($content, true);
+                if (is_array($decoded)) {
+                    $list = $decoded;
+                }
+            }
+        }
+
+        array_unshift($list, $note);
+        // keep a reasonable cap
+        if (count($list) > 200) {
+            $list = array_slice($list, 0, 200);
+        }
+
+        @file_put_contents($file, json_encode($list, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
+    }
+
     private function mapPayloadToEntity(array $data): Candidature {
         $dateCandidature = null;
         if (!empty($data['date_candidature'])) {
@@ -250,6 +277,8 @@ class CandidatureController {
     }
 
     public function deleteApplication($id): bool {
+        // capture existing application for notification
+        $existing = $this->showApplication((int)$id);
         $schema = $this->resolveApplicationSchema();
         if ($schema === null) {
             return false;
@@ -263,7 +292,59 @@ class CandidatureController {
         $req->bindValue(':id', (int) $id, PDO::PARAM_INT);
 
         try {
-            return $req->execute();
+            $ok = $req->execute();
+
+            if ($ok && $existing) {
+                if (session_status() === PHP_SESSION_NONE) {
+                    @session_start();
+                }
+                $applicantName = trim((string) (($existing['nom'] ?? '') . ' ' . ($existing['prenom'] ?? '')));
+                $offerId = (int) ($existing['id_offre'] ?? 0);
+                $offerTitle = (string) ($existing['offer_titre'] ?? '');
+                $message = $applicantName !== ''
+                    ? sprintf('%s a supprimé sa candidature pour l\'offre «%s» (ID %d).', $applicantName, $offerTitle ?: '—', $offerId)
+                    : sprintf('Une candidature a été supprimée pour l\'offre «%s» (ID %d).', $offerTitle ?: '—', $offerId);
+
+                $note = [
+                    'id' => uniqid('admin_notif_', true),
+                    'application_id' => (int)$id,
+                    'type' => 'candidature_supprime',
+                    'headline' => 'Candidature supprimée',
+                    'message' => $message,
+                    'details' => [
+                        'offer_id' => $offerId,
+                        'offer_titre' => $offerTitle,
+                    ],
+                    'link' => 'index.php?page=offer_applications&offer_id=' . $offerId,
+                    'time' => (new DateTimeImmutable('now'))->format('c'),
+                    'read' => false,
+                ];
+                if (!isset($_SESSION['admin_notifications']) || !is_array($_SESSION['admin_notifications'])) {
+                    $_SESSION['admin_notifications'] = [];
+                }
+                array_unshift($_SESSION['admin_notifications'], $note);
+                // persist to shared file so admins see it across sessions
+                try {
+                    $this->pushAdminNotificationToFile($note);
+                } catch (Exception $e) {
+                    // ignore persistence errors
+                }
+                // debug logging (record deletion)
+                try {
+                    $dbg = __DIR__ . '/../storage/admin_notifications_debug.log';
+                    $line = sprintf("%s DELETE app_id=%s offer=%s title=%s\n", (new DateTimeImmutable('now'))->format('c'), var_export($id, true), var_export($offerId, true), str_replace("\n", ' ', substr((string)$offerTitle,0,120)));
+                    @file_put_contents($dbg, $line, FILE_APPEND | LOCK_EX);
+                } catch (Exception $e) { /* ignore */ }
+            }
+
+            // also persist admin notifications to a shared file so admins (different sessions) can see them
+            try {
+                $this->pushAdminNotificationToFile($note);
+            } catch (Exception $e) {
+                // ignore persistence errors
+            }
+
+            return $ok;
         } catch (Exception $e) {
             return false;
         }
@@ -305,7 +386,86 @@ class CandidatureController {
             $query = $db->prepare($sql);
             $query->execute($params);
 
-            return (int) $db->lastInsertId();
+            $newId = (int) $db->lastInsertId();
+
+            // notify admin back-office that a new candidature was submitted
+            if ($newId > 0) {
+                if (session_status() === PHP_SESSION_NONE) {
+                    @session_start();
+                }
+                // try to fetch some minimal info about the offer title and applicant name if possible
+                $offerTitle = null;
+                $applicantName = null;
+                try {
+                    $offerTable = $this->resolveOfferTable();
+                    if ($offerTable !== null) {
+                        $db2 = config::getConnexion();
+                        if ($offerTable === 'offre') {
+                            $s = $db2->prepare('SELECT titre FROM offre WHERE id_offre = :id LIMIT 1');
+                            $s->execute(['id' => $params['id_offre']]);
+                            $row = $s->fetch(PDO::FETCH_ASSOC);
+                            $offerTitle = $row['titre'] ?? null;
+                        } else {
+                            $s = $db2->prepare('SELECT titre FROM offers WHERE id = :id LIMIT 1');
+                            $s->execute(['id' => $params['id_offre']]);
+                            $row = $s->fetch(PDO::FETCH_ASSOC);
+                            $offerTitle = $row['titre'] ?? null;
+                        }
+                    }
+                } catch (Exception $e) {
+                    // ignore
+                }
+                // attempt to resolve applicant name from user id
+                try {
+                    $userPk = $this->resolveUserPrimaryKey();
+                    if ($userPk && !empty($params['id_user'])) {
+                        $s2 = $db->prepare('SELECT nom, prenom, email FROM users WHERE ' . $userPk . ' = :id LIMIT 1');
+                        $s2->execute(['id' => $params['id_user']]);
+                        $urow = $s2->fetch(PDO::FETCH_ASSOC);
+                        if ($urow) {
+                            $applicantName = trim((string) (($urow['nom'] ?? '') . ' ' . ($urow['prenom'] ?? '')));
+                        }
+                    }
+                } catch (Exception $e) {
+                    // ignore
+                }
+
+                $offerId = (int) ($params['id_offre'] ?? 0);
+                $title = (string) ($offerTitle ?? '');
+                $applicantLabel = $applicantName ?: (string) ($params['email'] ?? '');
+                $shortMsg = $params['message'] ?? null;
+
+                if ($applicantLabel) {
+                    $message = sprintf('%s a postulé à l\'offre «%s» (ID %d).', $applicantLabel, $title ?: '—', $offerId);
+                } else {
+                    $message = sprintf('Nouvelle candidature reçue pour l\'offre «%s» (ID %d).', $title ?: '—', $offerId);
+                }
+                if (!empty($shortMsg)) {
+                    $snippet = mb_substr(trim((string)$shortMsg), 0, 120);
+                    $message .= ' Lettre de motivation: "' . htmlspecialchars($snippet, ENT_QUOTES, 'UTF-8') . '"';
+                }
+
+                $note = [
+                    'id' => uniqid('admin_notif_', true),
+                    'application_id' => $newId,
+                    'type' => 'candidature_ajout',
+                    'headline' => 'Nouvelle candidature',
+                    'message' => $message,
+                    'details' => [
+                        'offer_id' => $offerId,
+                        'offer_titre' => $title,
+                    ],
+                    'link' => 'index.php?page=offer_applications&offer_id=' . $offerId,
+                    'time' => (new DateTimeImmutable('now'))->format('c'),
+                    'read' => false,
+                ];
+                if (!isset($_SESSION['admin_notifications']) || !is_array($_SESSION['admin_notifications'])) {
+                    $_SESSION['admin_notifications'] = [];
+                }
+                array_unshift($_SESSION['admin_notifications'], $note);
+            }
+
+            return $newId;
         } catch (Exception $e) {
             echo 'Error: ' . $e->getMessage();
             return 0;

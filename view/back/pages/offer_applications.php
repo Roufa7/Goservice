@@ -8,6 +8,7 @@ require_once __DIR__ . '/../../../controller/CandidatureController.php';
 $offerController = new OfferController();
 $candidatureController = new CandidatureController();
 
+//Traitement du formulaire
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'update_application_status' && !empty($_POST['application_id']) && !empty($_POST['status'])) {
     $allowedStatuses = ['en attente', 'en_attente', 'acceptee', 'refusee', 'rejetee'];
     $status = (string) $_POST['status'];
@@ -24,6 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
     exit;
 }
 
+//Récupération des données
 $offerId = isset($_GET['offer_id']) && is_numeric($_GET['offer_id']) ? (int) $_GET['offer_id'] : 0;
 $offer = $offerId > 0 ? $offerController->getOffer($offerId) : null;
 $applications = $offerId > 0 ? $candidatureController->getApplicationsByOffer($offerId) : [];

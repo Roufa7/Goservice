@@ -9,10 +9,97 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+// Handle marking a notification read (only affect this page session scope)
+if (isset($_GET['mark_offer_notification'])) {
+    $markId = (string) ($_GET['mark_offer_notification'] ?? '');
+    if ($markId !== '' && isset($_SESSION['offer_notifications']) && is_array($_SESSION['offer_notifications'])) {
+        foreach ($_SESSION['offer_notifications'] as $k => $n) {
+            if (!empty($n['id']) && (string) $n['id'] === $markId) {
+                unset($_SESSION['offer_notifications'][$k]);
+                break;
+            }
+        }
+        $_SESSION['offer_notifications'] = array_values($_SESSION['offer_notifications']);
+    }
+    $targetOffer = isset($_GET['offer_id']) ? rawurlencode((string)$_GET['offer_id']) : '';
+    $redirectUrl = 'index.php?page=offre';
+    if ($targetOffer !== '') {
+        $redirectUrl .= '&offer_id=' . $targetOffer . '#offer-' . $targetOffer;
+    }
+    header('Location: ' . $redirectUrl);
+    exit;
+}
+
 $offerController = new OfferController();
 $candidatureController = new CandidatureController();
 
 $activeOffers = $offerController->listActiveOffers(); //recupere les donnees depuis BD
+
+// Get search and sort parameters
+$searchTerm = cleanInput((string) ($_GET['q'] ?? ''));
+$sortOption = cleanInput((string) ($_GET['sort'] ?? 'date_desc'));
+
+// Helper functions for filtering and sorting
+function filterOffersBySearchFront(array $offers, string $searchTerm): array {
+    $searchTerm = trim(mb_strtolower($searchTerm, 'UTF-8'));
+    if ($searchTerm === '') {
+        return array_values($offers);
+    }
+    return array_values(array_filter($offers, function (array $offer) use ($searchTerm): bool {
+        $haystack = mb_strtolower(implode(' ', [
+            (string) ($offer['titre'] ?? ''),
+            (string) ($offer['type_service'] ?? ''),
+            (string) ($offer['localisation'] ?? ''),
+            (string) ($offer['description'] ?? ''),
+        ]), 'UTF-8');
+        return strpos($haystack, $searchTerm) !== false;
+    }));
+}
+
+function offerSortKeyFront(array $offer, string $sort): mixed {
+    return match ($sort) {
+        'titre_asc', 'titre_desc' => mb_strtolower(trim((string) ($offer['titre'] ?? '')), 'UTF-8'),
+        'type_asc', 'type_desc' => mb_strtolower(trim((string) ($offer['type_service'] ?? '')), 'UTF-8'),
+        'prix_asc', 'prix_desc' => isset($offer['prix']) && $offer['prix'] !== '' ? (float) $offer['prix'] : null,
+        'localisation_asc', 'localisation_desc' => mb_strtolower(trim((string) ($offer['localisation'] ?? '')), 'UTF-8'),
+        default => !empty($offer['date_publication']) ? strtotime((string) $offer['date_publication']) : null,
+    };
+}
+
+function sortOffersFront(array $offers, string $sort): array {
+    $sort = in_array($sort, [
+        'date_asc', 'date_desc', 'date_publication_asc', 'date_publication_desc',
+        'titre_asc', 'titre_desc', 'type_asc', 'type_desc',
+        'localisation_asc', 'localisation_desc', 'prix_asc', 'prix_desc',
+    ], true) ? $sort : 'date_publication_desc';
+
+    usort($offers, function (array $left, array $right) use ($sort): int {
+        $leftKey = offerSortKeyFront($left, $sort);
+        $rightKey = offerSortKeyFront($right, $sort);
+
+        if ($leftKey === $rightKey) {
+            return 0;
+        }
+        if ($leftKey === null) {
+            return 1;
+        }
+        if ($rightKey === null) {
+            return -1;
+        }
+
+        $comparison = is_string($leftKey) && is_string($rightKey)
+            ? strcasecmp($leftKey, $rightKey)
+            : ($leftKey <=> $rightKey);
+
+        return (str_ends_with($sort, '_desc') || $sort === 'date_desc') ? -$comparison : $comparison;
+    });
+
+    return array_values($offers);
+}
+
+// Apply filters and sorting
+$displayedOffers = sortOffersFront(filterOffersBySearchFront($activeOffers, $searchTerm), $sortOption);
+
 $message = '';
 $messageType = '';
 $fieldErrors = [
@@ -267,6 +354,16 @@ function getOfferBadgeClass(string $statut): string {
     };
 }
 
+function getApplicationStatusClass(string $statut): string {
+    $normalized = strtolower(trim($statut));
+
+    return match($normalized) {
+        'acceptée', 'acceptee', 'accepted' => 'application-status-success',
+        'refusée', 'refusee', 'rejected' => 'application-status-danger',
+        default => 'application-status-waiting',
+    };
+}
+
 $selectedOfferId = $formData['offer_id'] !== ''
     ? $formData['offer_id']
     : (string) ($activeOffers[0]['id_offre'] ?? '');
@@ -290,46 +387,178 @@ $selectedOfferTitle = findOfferTitle($activeOffers, $selectedOfferId);
     </p>
 </section>
 
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var toggle = document.getElementById('offreNotifToggle');
+    var dropdown = document.getElementById('offreNotifDropdown');
+    if (!toggle || !dropdown) return;
+
+    // Move dropdown to body to avoid clipping by parent containers
+    function ensureAppended() {
+        if (dropdown.parentElement !== document.body) {
+            document.body.appendChild(dropdown);
+        }
+        dropdown.style.position = 'absolute';
+        dropdown.style.zIndex = 99999;
+        dropdown.style.left = '-9999px';
+        dropdown.style.top = '-9999px';
+    }
+
+    function positionDropdown() {
+        var rect = toggle.getBoundingClientRect();
+        // ensure dropdown is visible to measure
+        dropdown.style.visibility = 'hidden';
+        dropdown.removeAttribute('hidden');
+        // allow browser to compute sizes
+        var ddRect = dropdown.getBoundingClientRect();
+        var left = Math.min(window.innerWidth - ddRect.width - 12, Math.max(8, rect.left + (rect.width/2) - (ddRect.width/2)));
+        var top = rect.bottom + 8 + window.scrollY;
+        dropdown.style.left = (left + window.scrollX) + 'px';
+        dropdown.style.top = top + 'px';
+        dropdown.style.visibility = '';
+    }
+
+    ensureAppended();
+
+    toggle.addEventListener('click', function(e){
+        e.preventDefault();
+        var isOpen = !dropdown.hasAttribute('hidden');
+        if (isOpen) {
+            dropdown.setAttribute('hidden','');
+            toggle.setAttribute('aria-expanded','false');
+        } else {
+            positionDropdown();
+            toggle.setAttribute('aria-expanded','true');
+        }
+    });
+
+    // Close when clicking outside
+    document.addEventListener('click', function(e){
+        if (e.target === toggle || toggle.contains(e.target)) return;
+        if (dropdown.contains(e.target)) return;
+        if (!dropdown.hasAttribute('hidden')) {
+            dropdown.setAttribute('hidden','');
+            toggle.setAttribute('aria-expanded','false');
+        }
+    });
+
+    // Reposition on resize/scroll
+    window.addEventListener('resize', function(){ if (!dropdown.hasAttribute('hidden')) positionDropdown(); });
+    window.addEventListener('scroll', function(){ if (!dropdown.hasAttribute('hidden')) positionDropdown(); });
+});
+</script>
+
 <section class="action-bar reveal">
-    <div class="search-box">
-        <input type="text" id="searchOffers" placeholder="Rechercher une offre...">
-        <select id="filterOffers">
-            <option value="">Toutes les offres</option>
-            <option value="active">Offres Actives</option>
-            <option value="prix">Trier par Prix</option>
-            <option value="date">Plus Récentes</option>
+    <form class="search-box" method="GET" action="index.php">
+        <input type="hidden" name="page" value="offre">
+        <input type="text" name="q" value="<?php echo htmlspecialchars($searchTerm, ENT_QUOTES, 'UTF-8'); ?>" placeholder="Rechercher une offre...">
+        <button type="submit" class="outline-btn">Rechercher</button>
+        <select name="sort" id="offerSortSelect" onchange="this.form.submit()">
+            <option value="date_desc" <?php echo $sortOption === 'date_desc' ? 'selected' : ''; ?>>Plus Récentes</option>
+            <option value="date_asc" <?php echo $sortOption === 'date_asc' ? 'selected' : ''; ?>>Plus Anciennes</option>
+            <option value="titre_asc" <?php echo $sortOption === 'titre_asc' ? 'selected' : ''; ?>>Titre: A à Z</option>
+            <option value="titre_desc" <?php echo $sortOption === 'titre_desc' ? 'selected' : ''; ?>>Titre: Z à A</option>
+            <option value="prix_asc" <?php echo $sortOption === 'prix_asc' ? 'selected' : ''; ?>>Prix: Croissant</option>
+            <option value="prix_desc" <?php echo $sortOption === 'prix_desc' ? 'selected' : ''; ?>>Prix: Décroissant</option>
+            <option value="type_asc" <?php echo $sortOption === 'type_asc' ? 'selected' : ''; ?>>Type: A à Z</option>
         </select>
-    </div>
+        <noscript><button type="submit" class="outline-btn">Trier</button></noscript>
+    </form>
+
+    <?php
+    $notifications = $_SESSION['offer_notifications'] ?? [];
+    $unreadCount = 0;
+    if (is_array($notifications)) {
+        foreach ($notifications as $n) {
+            if (!empty($n['read']) && $n['read']) continue;
+            $unreadCount++;
+        }
+    }
+    ?>
 
     <div class="icon-actions">
+        <div class="notif-wrap" style="margin-right:12px;">
+            <button id="offreNotifToggle" class="ghost-btn notif-btn" type="button" aria-haspopup="true" aria-expanded="false">🔔<?php if ($unreadCount>0): ?><span class="notif-badge"><?php echo (int)$unreadCount; ?></span><?php endif; ?></button>
+            <div class="notif-dropdown" id="offreNotifDropdown" hidden>
+                <div class="notif-header">Notifications</div>
+                <ul class="notif-list">
+                    <?php if (empty($notifications)): ?>
+                        <li class="notif-empty">Aucune notification</li>
+                    <?php else: ?>
+                        <?php foreach ($notifications as $note): ?>
+                            <?php
+                                $nid = htmlspecialchars((string)($note['id'] ?? ''), ENT_QUOTES, 'UTF-8');
+                                $offerId = htmlspecialchars((string)($note['offer_id'] ?? ''), ENT_QUOTES, 'UTF-8');
+                                $link = 'index.php?page=offre&mark_offer_notification=' . rawurlencode($nid);
+                                if ($offerId !== '') {
+                                    $link .= '&offer_id=' . rawurlencode($offerId);
+                                }
+                                $headline = htmlspecialchars((string)($note['headline'] ?? ($note['type'] ?? 'Notification')), ENT_QUOTES, 'UTF-8');
+                                $title = htmlspecialchars((string)($note['message'] ?? ''), ENT_QUOTES, 'UTF-8');
+                                $time = '';
+                                if (!empty($note['time'])) {
+                                    try { $time = (new DateTimeImmutable($note['time']))->format('d/m/Y H:i'); } catch (Exception $e) { $time = htmlspecialchars((string)$note['time'], ENT_QUOTES, 'UTF-8'); }
+                                }
+                                $details = $note['details'] ?? [];
+                            ?>
+                            <li class="notif-item<?php echo empty($note['read']) ? ' is-unread' : ''; ?>">
+                                <a class="notif-link" href="<?php echo $link; ?>">
+                                    <div class="notif-title"><?php echo $headline; ?></div>
+                                    <div style="font-weight:700; color:var(--navy); margin-top:4px;"><?php echo $title; ?></div>
+                                    <?php if (!empty($details) && is_array($details)): ?>
+                                        <div style="margin-top:6px; font-size:0.92rem; color:var(--muted);">
+                                            <?php if (!empty($details['type_service'])): ?>Type: <?php echo htmlspecialchars($details['type_service'], ENT_QUOTES, 'UTF-8'); ?> &middot; <?php endif; ?>
+                                            <?php if (!empty($details['localisation'])): ?>Lieu: <?php echo htmlspecialchars($details['localisation'], ENT_QUOTES, 'UTF-8'); ?> &middot; <?php endif; ?>
+                                            <?php if (!empty($details['prix'])): ?>Prix: <?php echo htmlspecialchars($details['prix'], ENT_QUOTES, 'UTF-8'); ?><?php endif; ?>
+                                        </div>
+                                    <?php endif; ?>
+                                    <?php if (!empty($note['changes']) && is_array($note['changes'])): ?>
+                                        <div style="margin-top:8px; font-size:0.9rem; color:var(--muted);">
+                                            <strong>Changements:</strong>
+                                            <ul style="margin:6px 0 0 18px;padding:0;">
+                                            <?php foreach ($note['changes'] as $field => $chg): ?>
+                                                <li><?php echo htmlspecialchars($field, ENT_QUOTES, 'UTF-8'); ?>: <em><?php echo htmlspecialchars((string)($chg['from'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></em> → <em><?php echo htmlspecialchars((string)($chg['to'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></em></li>
+                                            <?php endforeach; ?>
+                                            </ul>
+                                        </div>
+                                    <?php endif; ?>
+                                    <div class="notif-time muted"><?php echo htmlspecialchars($time, ENT_QUOTES, 'UTF-8'); ?></div>
+                                </a>
+                            </li>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </ul>
+            </div>
+        </div>
+
         <a class="solid-btn" href="#mes-candidatures">📋 Mes Candidatures</a>
     </div>
 </section>
 
 <section class="admin-stats reveal">
     <article class="admin-stat">
-        <strong><?php echo htmlspecialchars(count($activeOffers), ENT_QUOTES, 'UTF-8'); ?></strong>
-        <span>Offres Actives</span>
+        <strong><?php echo htmlspecialchars(count($displayedOffers), ENT_QUOTES, 'UTF-8'); ?></strong>
+        <span><?php echo count($displayedOffers) === count($activeOffers) ? 'Offres Actives' : 'Résultats'; ?></span>
     </article>
     <article class="admin-stat">
-        <strong><?php echo htmlspecialchars(count(array_filter($activeOffers, fn($o) => !empty($o['localisation']))), ENT_QUOTES, 'UTF-8'); ?></strong>
+        <strong><?php echo htmlspecialchars(count(array_filter($displayedOffers, fn($o) => !empty($o['localisation']))), ENT_QUOTES, 'UTF-8'); ?></strong>
         <span>Offres Localisées</span>
     </article>
     <article class="admin-stat">
-        <strong><?php echo htmlspecialchars(count(array_unique(array_column($activeOffers, 'type_service'))), ENT_QUOTES, 'UTF-8'); ?></strong>
+        <strong><?php echo htmlspecialchars(count(array_unique(array_column($displayedOffers, 'type_service'))), ENT_QUOTES, 'UTF-8'); ?></strong>
         <span>Types de Services</span>
     </article>
 </section>
 
 <section class="module-split reveal">
     <div class="offers-column">
-        <?php if (empty($activeOffers)): ?>
+        <?php if (empty($displayedOffers)): ?>
             <article class="card offers-empty-state">
-                <h3>Aucune offre disponible pour le moment</h3>
-                <p>Revenez bientôt pour découvrir de nouvelles offres exclusives !</p>
+                <h3><?php echo !empty($searchTerm) ? 'Aucune offre ne correspond à votre recherche' : 'Aucune offre disponible pour le moment'; ?></h3>
+                <p><?php echo !empty($searchTerm) ? 'Essayez avec d\'autres mots clés.' : 'Revenez bientôt pour découvrir de nouvelles offres exclusives !'; ?></p>
             </article>
         <?php else: ?>
-            <?php foreach ($activeOffers as $offer): ?>
+            <?php foreach ($displayedOffers as $offer): ?>
                 <article class="card offer-card">
                     <div class="offer-card-head">
                         <span class="section-badge"><?php echo htmlspecialchars($offer['type_service'] ?: 'Service', ENT_QUOTES, 'UTF-8'); ?></span>
@@ -472,38 +701,56 @@ $selectedOfferTitle = findOfferTitle($activeOffers, $selectedOfferId);
             <p>Commencez par postuler à une offre pour voir vos candidatures ici.</p>
         </div>
     <?php else: ?>
-        <div class="table-wrap" style="margin-top: 14px;">
-            <table class="module-table">
-                <thead>
-                    <tr>
-                        <th>Offre</th>
-                        <th>Date</th>
-                        <th>Statut</th>
-                        <th>Expérience</th>
-                        <th>Compétences</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($userApplications as $application): ?>
-                        <tr>
-                            <td><?php echo htmlspecialchars((string) ($application['offer_titre'] ?? 'Offre supprimée'), ENT_QUOTES, 'UTF-8'); ?></td>
-                            <td><?php echo htmlspecialchars(formatOfferDate($application['created_at'] ?? null), ENT_QUOTES, 'UTF-8'); ?></td>
-                            <td><?php echo htmlspecialchars((string) ($application['statut'] ?? 'en attente'), ENT_QUOTES, 'UTF-8'); ?></td>
-                            <td><?php echo htmlspecialchars((string) ($application['experience'] ?? 'N/A'), ENT_QUOTES, 'UTF-8'); ?></td>
-                            <td><?php echo htmlspecialchars((string) ($application['competences'] ?? 'N/A'), ENT_QUOTES, 'UTF-8'); ?></td>
-                            <td class="admin-tools">
-                                <a class="small-btn" href="index.php?page=offre&edit_application=<?php echo htmlspecialchars((string) ($application['id'] ?? 0), ENT_QUOTES, 'UTF-8'); ?>#postuler-offre">Modifier</a>
-                                <form method="POST" style="display:inline;">
-                                    <input type="hidden" name="action" value="delete_application">
-                                    <input type="hidden" name="application_id" value="<?php echo htmlspecialchars((string) ($application['id'] ?? 0), ENT_QUOTES, 'UTF-8'); ?>">
-                                    <button type="submit" class="danger-btn" onclick="return confirm('Supprimer cette candidature ?');">Supprimer</button>
-                                </form>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
+        <div class="application-card-list" style="margin-top: 14px;">
+            <?php foreach ($userApplications as $application): ?>
+                <?php
+                    $applicationStatus = (string) ($application['statut'] ?? 'en attente');
+                    $applicationStatusLabel = ucfirst($applicationStatus);
+                ?>
+                <article class="application-card">
+                    <div class="application-card-head">
+                        <div>
+                            <span class="application-chip">Candidature</span>
+                            <h3 class="application-title"><?php echo htmlspecialchars((string) ($application['offer_titre'] ?? 'Offre supprimée'), ENT_QUOTES, 'UTF-8'); ?></h3>
+                        </div>
+                        <span class="application-status <?php echo htmlspecialchars(getApplicationStatusClass($applicationStatus), ENT_QUOTES, 'UTF-8'); ?>">
+                            <?php echo htmlspecialchars($applicationStatusLabel, ENT_QUOTES, 'UTF-8'); ?>
+                        </span>
+                    </div>
+
+                    <div class="application-card-grid">
+                        <div class="application-info-block">
+                            <span>Date</span>
+                            <strong><?php echo htmlspecialchars(formatOfferDate($application['created_at'] ?? null), ENT_QUOTES, 'UTF-8'); ?></strong>
+                        </div>
+                        <div class="application-info-block">
+                            <span>Expérience</span>
+                            <strong><?php echo htmlspecialchars((string) ($application['experience'] ?? 'N/A'), ENT_QUOTES, 'UTF-8'); ?></strong>
+                        </div>
+                        <div class="application-info-block application-info-full">
+                            <span>Compétences</span>
+                            <strong><?php echo htmlspecialchars((string) ($application['competences'] ?? 'N/A'), ENT_QUOTES, 'UTF-8'); ?></strong>
+                        </div>
+                        <?php if (!empty($application['message'])): ?>
+                            <div class="application-info-block application-info-full" style="margin-top:12px;">
+                                <span>Lettre de motivation</span>
+                                <div style="background:var(--card); padding:12px; border-radius:8px; margin-top:6px; color:var(--text);">
+                                    <?php echo nl2br(htmlspecialchars((string) $application['message'], ENT_QUOTES, 'UTF-8')); ?>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+
+                    <div class="application-card-actions">
+                        <a class="small-btn application-edit-btn" href="index.php?page=offre&edit_application=<?php echo htmlspecialchars((string) ($application['id'] ?? 0), ENT_QUOTES, 'UTF-8'); ?>#postuler-offre">Modifier</a>
+                        <form method="POST" class="application-delete-form">
+                            <input type="hidden" name="action" value="delete_application">
+                            <input type="hidden" name="application_id" value="<?php echo htmlspecialchars((string) ($application['id'] ?? 0), ENT_QUOTES, 'UTF-8'); ?>">
+                            <button type="submit" class="danger-btn application-delete-btn" onclick="return confirm('Supprimer cette candidature ?');">Supprimer</button>
+                        </form>
+                    </div>
+                </article>
+            <?php endforeach; ?>
         </div>
     <?php endif; ?>
 </section>
@@ -703,9 +950,173 @@ $selectedOfferTitle = findOfferTitle($activeOffers, $selectedOfferId);
     margin-top: 22px;
 }
 
-.my-applications-panel .module-table td,
-.my-applications-panel .module-table th {
-    vertical-align: middle;
+.application-card-list {
+    display: grid;
+    gap: 16px;
+}
+
+.application-card {
+    position: relative;
+    overflow: hidden;
+    padding: 22px;
+    border-radius: 24px;
+    background: rgba(255,255,255,0.96);
+    border: 1px solid rgba(20,39,56,0.10);
+    border-left: 4px solid #4CAF50;
+    box-shadow: 0 14px 32px rgba(20,39,56,0.06);
+}
+
+.application-card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 16px;
+}
+
+.application-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 14px;
+    border-radius: 999px;
+    background: rgba(238,88,40,0.10);
+    color: #EE5828;
+    font-weight: 800;
+    font-size: 0.95rem;
+}
+
+.application-title {
+    margin: 12px 0 0;
+    font-size: 1.45rem;
+    line-height: 1.2;
+}
+
+.application-status {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 14px;
+    border-radius: 999px;
+    font-size: 0.92rem;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.application-status-waiting {
+    background: rgba(238,88,40,0.12);
+    color: #EE5828;
+}
+
+.application-status-success {
+    background: rgba(76,175,80,0.14);
+    color: #2f8f35;
+}
+
+.application-status-danger {
+    background: rgba(244,67,54,0.12);
+    color: #c92f24;
+}
+
+.application-card-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    padding: 16px;
+    border-radius: 18px;
+    background: rgba(20,39,56,0.04);
+}
+
+.application-info-block {
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    align-items: center;
+    gap: 8px 12px;
+}
+
+.application-info-block span {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: #7b8796;
+    text-align: left;
+}
+
+.application-info-block strong {
+    font-size: 1rem;
+    color: var(--text);
+    font-weight: 700;
+    word-break: break-word;
+}
+
+/* Full-width info blocks (message) keep vertical layout */
+.application-info-full {
+    display: block;
+}
+
+@media (max-width: 720px) {
+    .application-info-block {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+}
+
+.application-info-full {
+    grid-column: 1 / -1;
+}
+
+.application-card-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.application-delete-form {
+    margin: 0;
+}
+
+.application-card .small-btn,
+.application-card .danger-btn {
+    min-width: 132px;
+}
+
+.application-card .danger-btn {
+    background: linear-gradient(135deg, #EE5828, #D84A1E);
+    color: #fff;
+    border-color: transparent;
+}
+
+.application-card .danger-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 14px 24px rgba(238,88,40,0.22);
+}
+
+body.dark .application-card {
+    background: rgba(20,39,56,0.88);
+    border-color: rgba(255,255,255,0.08);
+}
+
+body.dark .application-card-grid {
+    background: rgba(255,255,255,0.05);
+}
+
+body.dark .application-info-block span {
+    color: #b7c2cf;
+}
+
+body.dark .application-status-waiting {
+    background: rgba(238,88,40,0.18);
+    color: #ff9d7d;
+}
+
+body.dark .application-status-success {
+    background: rgba(76,175,80,0.18);
+    color: #9bd79e;
+}
+
+body.dark .application-status-danger {
+    background: rgba(244,67,54,0.18);
+    color: #ff9b93;
 }
 
 .badge {
@@ -776,3 +1187,52 @@ $selectedOfferTitle = findOfferTitle($activeOffers, $selectedOfferId);
     }
 }
 </style>
+
+<script>
+(function() {
+    try {
+        // Auto-submit sort select
+        var sortSelect = document.getElementById('offerSortSelect');
+        if (sortSelect && sortSelect.form) {
+            sortSelect.addEventListener('change', function() {
+                this.form.submit();
+            });
+        }
+
+        // Toggle offer details
+        document.querySelectorAll('.toggle-details-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                var card = this.closest('.offer-card');
+                var details = card.querySelector('.offer-details');
+                var isExpanded = this.getAttribute('aria-expanded') === 'true';
+                
+                if (isExpanded) {
+                    details.style.display = 'none';
+                    this.setAttribute('aria-expanded', 'false');
+                    this.textContent = 'Voir détails';
+                } else {
+                    details.style.display = 'block';
+                    this.setAttribute('aria-expanded', 'true');
+                    this.textContent = 'Masquer détails';
+                }
+            });
+        });
+
+        // Handle "Postuler" button click to load offer
+        document.querySelectorAll('.postuler-btn').forEach(function(btn) {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                var offerId = this.getAttribute('data-offer-id');
+                var offerTitle = this.getAttribute('data-offer-title');
+                var selectField = document.querySelector('select[name="offer_id"]');
+                if (selectField) {
+                    selectField.value = offerId;
+                    // Scroll to form
+                    document.querySelector('#postuler-offre').scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    selectField.focus();
+                }
+            });
+        });
+    } catch(e) {}
+})();
+</script>

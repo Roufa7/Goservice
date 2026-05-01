@@ -1,0 +1,30 @@
+[
+    {
+        "id": "admin_notif_69f4fd8f44a201.46354336",
+        "application_id": 9,
+        "type": "candidature_supprime",
+        "headline": "Candidature supprimée",
+        "message": "Admin GoService a supprimé sa candidature pour l'offre «proffessionnel» (ID 16).",
+        "details": {
+            "offer_id": 16,
+            "offer_titre": "proffessionnel"
+        },
+        "link": "index.php?page=offer_applications&offer_id=16",
+        "time": "2026-05-01T21:22:55+02:00",
+        "read": false
+    },
+    {
+        "id": "admin_notif_69f4fd8f44a201.46354336",
+        "application_id": 9,
+        "type": "candidature_supprime",
+        "headline": "Candidature supprimée",
+        "message": "Admin GoService a supprimé sa candidature pour l'offre «proffessionnel» (ID 16).",
+        "details": {
+            "offer_id": 16,
+            "offer_titre": "proffessionnel"
+        },
+        "link": "index.php?page=offer_applications&offer_id=16",
+        "time": "2026-05-01T21:22:55+02:00",
+        "read": false
+    }
+]
