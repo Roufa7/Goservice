@@ -1,6 +1,10 @@
 <?php
 include_once(__DIR__ . '/../config.php');
 include_once(__DIR__ . '/../model/Offer.php');
+// Load i18n helper so controller can store translated notification headlines
+if (is_file(__DIR__ . '/../view/i18n.php')) {
+    include_once __DIR__ . '/../view/i18n.php';
+}
 
 if (!class_exists('OfferController')) {
 class OfferController {
@@ -40,6 +44,31 @@ class OfferController {
         $stmt = $db->prepare('SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = :table_name');
         $stmt->execute(['table_name' => $table]);
         return (int) $stmt->fetchColumn() > 0;
+    }
+
+    private function columnExists(string $table, string $column): bool {
+        if (!$this->tableExists($table)) {
+            return false;
+        }
+
+        $db = config::getConnexion();
+        $stmt = $db->prepare('SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = :table_name AND column_name = :column_name');
+        $stmt->execute([
+            'table_name' => $table,
+            'column_name' => $column,
+        ]);
+
+        return (int) $stmt->fetchColumn() > 0;
+    }
+
+    private function resolveMetricColumn(string $table, array $candidates): ?string {
+        foreach ($candidates as $candidate) {
+            if ($this->columnExists($table, $candidate)) {
+                return $candidate;
+            }
+        }
+
+        return null;
     }
 
     private function useFrenchSchema(): bool {
@@ -132,6 +161,8 @@ class OfferController {
     public function getStats(): array {
         $this->syncOfferStatusesByExpiration();
 
+        $table = $this->useFrenchSchema() ? 'offre' : 'offers';
+
         if ($this->useFrenchSchema()) {
             $sql = 'SELECT COUNT(*) AS total, SUM(statut = "ouverte") AS ouverte, SUM(statut = "fermee") AS fermee FROM offre';
         } else {
@@ -141,15 +172,18 @@ class OfferController {
 
         try {
             $stats = $db->query($sql)->fetch(PDO::FETCH_ASSOC) ?: [];
+
             return [
                 'total' => (int) ($stats['total'] ?? 0),
                 'ouverte' => (int) ($stats['ouverte'] ?? 0),
                 'fermee' => (int) ($stats['fermee'] ?? 0),
+                'places' => (int) ($stats['places'] ?? 0),
             ];
         } catch (Exception $e) {
             die('Error:' . $e->getMessage());
         }
     }
+
 
     public function deleteOffer($id): bool {
         // fetch current offer to possibly notify
@@ -173,7 +207,11 @@ class OfferController {
                     'id' => uniqid('notif_', true),
                     'offer_id' => (int)$id,
                     'type' => 'suppression',
-                    'headline' => 'Offre supprimée',
+                    'headline' => is_callable('app_text') ? [
+                        'fr' => 'Offre supprimée',
+                        'en' => 'Offer deleted',
+                        'ar' => 'تم حذف العرض',
+                    ] : 'Offre supprimée',
                     'message' => (string) ($existing['titre'] ?? 'Offre'),
                     'details' => [
                         'type_service' => (string) ($existing['type_service'] ?? ''),
@@ -358,7 +396,11 @@ class OfferController {
                                 'id' => uniqid('notif_', true),
                                 'offer_id' => $id,
                                 'type' => 'modification',
-                                'headline' => 'Offre modifiée',
+                                'headline' => is_callable('app_text') ? [
+                                    'fr' => 'Offre modifiée',
+                                    'en' => 'Offer updated',
+                                    'ar' => 'تم تعديل العرض',
+                                ] : 'Offre modifiée',
                                 'message' => (string) $offer->getTitre(),
                                 'details' => [
                                     'type_service' => (string) $offer->getTypeService(),
@@ -429,7 +471,11 @@ class OfferController {
                             'id' => uniqid('notif_', true),
                             'offer_id' => $id,
                             'type' => 'modification',
-                            'headline' => 'Offre modifiée',
+                            'headline' => is_callable('app_text') ? [
+                                'fr' => 'Offre modifiée',
+                                'en' => 'Offer updated',
+                                'ar' => 'تم تعديل العرض',
+                            ] : 'Offre modifiée',
                             'message' => (string) $offer->getTitre(),
                             'details' => [
                                 'type_service' => (string) $offer->getTypeService(),

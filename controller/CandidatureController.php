@@ -309,7 +309,11 @@ class CandidatureController {
                     'id' => uniqid('admin_notif_', true),
                     'application_id' => (int)$id,
                     'type' => 'candidature_supprime',
-                    'headline' => 'Candidature supprimée',
+                    'headline' => is_callable('app_text') ? [
+                        'fr' => 'Candidature supprimée',
+                        'en' => 'Application deleted',
+                        'ar' => 'تم حذف الترشيح',
+                    ] : 'Candidature supprimée',
                     'message' => $message,
                     'details' => [
                         'offer_id' => $offerId,
@@ -449,7 +453,11 @@ class CandidatureController {
                     'id' => uniqid('admin_notif_', true),
                     'application_id' => $newId,
                     'type' => 'candidature_ajout',
-                    'headline' => 'Nouvelle candidature',
+                    'headline' => is_callable('app_text') ? [
+                        'fr' => 'Nouvelle candidature',
+                        'en' => 'New application',
+                        'ar' => 'ترشيح جديد',
+                    ] : 'Nouvelle candidature',
                     'message' => $message,
                     'details' => [
                         'offer_id' => $offerId,

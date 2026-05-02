@@ -1,14 +1,20 @@
 <?php
 require_once __DIR__ . '/../../../config.php';
+require_once __DIR__ . '/../../../view/i18n.php';
 require_once __DIR__ . '/../../../model/Offer.php';
 require_once __DIR__ . '/../../../model/Candidature.php';
 require_once __DIR__ . '/../../../controller/OfferController.php';
 require_once __DIR__ . '/../../../controller/CandidatureController.php';
 
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+app_set_language_from_request();
+
 $offerController = new OfferController();
 $candidatureController = new CandidatureController();
 
-//Traitement du formulaire
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'update_application_status' && !empty($_POST['application_id']) && !empty($_POST['status'])) {
     $allowedStatuses = ['en attente', 'en_attente', 'acceptee', 'refusee', 'rejetee'];
     $status = (string) $_POST['status'];
@@ -25,7 +31,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
     exit;
 }
 
-//Récupération des données
 $offerId = isset($_GET['offer_id']) && is_numeric($_GET['offer_id']) ? (int) $_GET['offer_id'] : 0;
 $offer = $offerId > 0 ? $offerController->getOffer($offerId) : null;
 $applications = $offerId > 0 ? $candidatureController->getApplicationsByOffer($offerId) : [];
@@ -37,12 +42,10 @@ function formatDate(?string $value): string {
 
 function formatApplicationStatus(string $status): string {
     return match($status) {
-        'acceptee' => 'Acceptée',
-        'accepted' => 'Acceptée',
-        'refusee' => 'Refusée',
-        'rejetee' => 'Refusée',
-        'en_attente' => 'En attente',
-        default => 'En attente'
+        'acceptee', 'accepted' => app_text('Acceptée','Accepted','مقبول'),
+        'refusee', 'rejetee', 'rejected' => app_text('Refusée','Rejected','مرفوض'),
+        'en_attente', 'en attente' => app_text('En attente','Pending','قيد الانتظار'),
+        default => app_text('En attente','Pending','قيد الانتظار')
     };
 }
 
@@ -57,16 +60,26 @@ function normalizeApplicationStatus(string $status): string {
 }
 ?>
 
-<section class="admin-panel reveal offer-applications-page">
-    <a class="back-link" href="?page=offers">← Retour aux offres</a>
-    <h2 class="page-title">Candidatures par offre</h2>
+<section class="admin-panel reveal offer-applications-page" style="position:relative; z-index:20; overflow:visible;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <a class="back-link" href="?page=offers">← <?php echo app_text('Retour aux offres','Back to offers','العودة إلى العروض'); ?></a>
+        <div class="lang-switch lang-switch-dropdown" style="display:inline-block; position:relative; z-index:40;">
+            <button type="button" class="ghost-btn lang-switch-toggle" aria-haspopup="true" aria-expanded="false" aria-label="<?php echo app_text('Choisir la langue','Choose language','اختر اللغة'); ?>">🌐</button>
+            <div class="lang-switch-menu" hidden style="position:absolute; top:calc(100% + 10px); right:0; min-width:132px; background:#ffffff; border:1px solid rgba(20,39,56,.12); border-radius:16px; box-shadow:0 16px 30px rgba(20,39,56,.16); padding:8px; z-index:9999; backdrop-filter: blur(8px);">
+                <a href="<?php echo app_lang_url('fr'); ?>" style="display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; border-radius:10px; color:#0b2545; font-weight:700; text-decoration:none; transition:background .2s ease;">FR <span style="opacity:.55; font-size:12px;">FR</span></a>
+                <a href="<?php echo app_lang_url('en'); ?>" style="display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; border-radius:10px; color:#0b2545; font-weight:700; text-decoration:none; transition:background .2s ease;">EN <span style="opacity:.55; font-size:12px;">EN</span></a>
+                <a href="<?php echo app_lang_url('ar'); ?>" style="display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; border-radius:10px; color:#0b2545; font-weight:700; text-decoration:none; transition:background .2s ease;">AR <span style="opacity:.55; font-size:12px;">AR</span></a>
+            </div>
+        </div>
+    </div>
+    <h2 class="page-title"><?php echo app_text('Candidatures par offre','Applications by offer','الطلبات حسب العرض'); ?></h2>
 
     <?php if ($updateSuccess): ?>
-        <div class="notice notice-success">Statut de candidature mis à jour avec succès.</div>
+        <div class="notice notice-success"><?php echo app_text('Statut de candidature mis à jour avec succès.','Application status updated successfully.','تم تحديث حالة الطلب بنجاح.'); ?></div>
     <?php endif; ?>
 
     <?php if ($offer === null): ?>
-        <div class="no-results">Offre introuvable ou identifiant invalide.</div>
+        <div class="no-results"><?php echo app_text('Offre introuvable ou identifiant invalide.','Offer not found or invalid id.','العرض غير موجود أو المعرف غير صالح.'); ?></div>
     <?php else: ?>
         <div class="offer-summary-card">
             <div class="offer-summary-main">
@@ -75,25 +88,25 @@ function normalizeApplicationStatus(string $status): string {
                 <p><?php echo htmlspecialchars((string) ($offer['description'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></p>
                 <div class="offer-summary-stats">
                     <div class="summary-stat">
-                        <span>Statut</span>
+                        <span><?php echo app_text('Statut','Status','الحالة'); ?></span>
                         <strong><?php echo htmlspecialchars(ucfirst((string) ($offer['statut'] ?? '')), ENT_QUOTES, 'UTF-8'); ?></strong>
                     </div>
                     <div class="summary-stat">
-                        <span>Prix</span>
+                        <span><?php echo app_text('Prix','Price','السعر'); ?></span>
                         <strong><?php echo htmlspecialchars(isset($offer['prix']) && $offer['prix'] !== null ? number_format((float) $offer['prix'], 2, '.', ' ') . ' TND' : 'N/A', ENT_QUOTES, 'UTF-8'); ?></strong>
                     </div>
                     <div class="summary-stat">
-                        <span>Candidatures</span>
+                        <span><?php echo app_text('Candidatures','Applications','الطلبات'); ?></span>
                         <strong><?php echo htmlspecialchars((string) count($applications), ENT_QUOTES, 'UTF-8'); ?></strong>
                     </div>
                 </div>
             </div>
 
             <div class="offer-summary-meta">
-                <div><strong>Localisation :</strong> <?php echo htmlspecialchars((string) ($offer['localisation'] ?? 'N/A'), ENT_QUOTES, 'UTF-8'); ?></div>
-                <div><strong>Publié :</strong> <?php echo htmlspecialchars(formatDate($offer['date_publication'] ?? null), ENT_QUOTES, 'UTF-8'); ?></div>
-                <div><strong>Expiration :</strong> <?php echo htmlspecialchars(formatDate($offer['date_expiration'] ?? null), ENT_QUOTES, 'UTF-8'); ?></div>
-                <div><strong>Offre ID :</strong> <?php echo htmlspecialchars((string) $offerId, ENT_QUOTES, 'UTF-8'); ?></div>
+                <div><strong><?php echo app_text('Localisation :','Location:','الموقع:'); ?></strong> <?php echo htmlspecialchars((string) ($offer['localisation'] ?? 'N/A'), ENT_QUOTES, 'UTF-8'); ?></div>
+                <div><strong><?php echo app_text('Publié :','Published:','نشر:'); ?></strong> <?php echo htmlspecialchars(formatDate($offer['date_publication'] ?? null), ENT_QUOTES, 'UTF-8'); ?></div>
+                <div><strong><?php echo app_text('Expiration :','Expiration:','انتهاء الصلاحية:'); ?></strong> <?php echo htmlspecialchars(formatDate($offer['date_expiration'] ?? null), ENT_QUOTES, 'UTF-8'); ?></div>
+                <div><strong><?php echo app_text('Offre ID :','Offer ID:','معرف العرض:'); ?></strong> <?php echo htmlspecialchars((string) $offerId, ENT_QUOTES, 'UTF-8'); ?></div>
             </div>
         </div>
 
@@ -101,19 +114,19 @@ function normalizeApplicationStatus(string $status): string {
             <table class="module-table">
                 <thead>
                     <tr>
-                        <th>Candidat</th>
-                        <th>Date candidature</th>
-                        <th>Statut</th>
-                        <th>Expérience</th>
-                        <th>Compétences</th>
-                        <th>Message</th>
-                        <th>Actions</th>
+                        <th><?php echo app_text('Candidat','Candidate','المرشح'); ?></th>
+                        <th><?php echo app_text('Date candidature','Application date','تاريخ التقديم'); ?></th>
+                        <th><?php echo app_text('Statut','Status','الحالة'); ?></th>
+                        <th><?php echo app_text('Expérience','Experience','الخبرة'); ?></th>
+                        <th><?php echo app_text('Compétences','Skills','المهارات'); ?></th>
+                        <th><?php echo app_text('Message','Message','الرسالة'); ?></th>
+                        <th><?php echo app_text('Actions','Actions','الإجراءات'); ?></th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($applications)): ?>
                         <tr>
-                            <td colspan="7" class="empty-table-cell">Aucune candidature pour cette offre.</td>
+                            <td colspan="7" class="empty-table-cell"><?php echo app_text('Aucune candidature pour cette offre.','No applications for this offer.','لا توجد طلبات لهذا العرض.'); ?></td>
                         </tr>
                     <?php else: ?>
                         <?php foreach ($applications as $application): ?>
@@ -142,7 +155,7 @@ function normalizeApplicationStatus(string $status): string {
                                             <?php echo $normalizedStatus === 'acceptee' ? 'disabled' : ''; ?>
                                             aria-disabled="<?php echo $normalizedStatus === 'acceptee' ? 'true' : 'false'; ?>"
                                         >
-                                            <?php echo $normalizedStatus === 'acceptee' ? 'Acceptée' : 'Accepter'; ?>
+                                            <?php echo $normalizedStatus === 'acceptee' ? app_text('Acceptée','Accepted','مقبول') : app_text('Accepter','Accept','قبول'); ?>
                                         </button>
                                     </form>
                                     <form method="POST" class="js-status-form inline-form" data-target-status="refusee">
@@ -155,7 +168,7 @@ function normalizeApplicationStatus(string $status): string {
                                             <?php echo $normalizedStatus === 'refusee' ? 'disabled' : ''; ?>
                                             aria-disabled="<?php echo $normalizedStatus === 'refusee' ? 'true' : 'false'; ?>"
                                         >
-                                            <?php echo $normalizedStatus === 'refusee' ? 'Refusée' : 'Refuser'; ?>
+                                            <?php echo $normalizedStatus === 'refusee' ? app_text('Refusée','Rejected','مرفوض') : app_text('Refuser','Reject','رفض'); ?>
                                         </button>
                                     </form>
                                 </td>
@@ -532,4 +545,34 @@ function normalizeApplicationStatus(string $status): string {
         }
     }
     </style>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.lang-switch-dropdown').forEach(function(wrapper) {
+            var toggle = wrapper.querySelector('.lang-switch-toggle');
+            var menu = wrapper.querySelector('.lang-switch-menu');
+            if (!toggle || !menu) return;
+
+            toggle.addEventListener('click', function(e) {
+                e.preventDefault();
+                document.querySelectorAll('.lang-switch-menu').forEach(function(other) {
+                    if (other !== menu) other.setAttribute('hidden', '');
+                });
+                menu.toggleAttribute('hidden');
+                toggle.setAttribute('aria-expanded', menu.hasAttribute('hidden') ? 'false' : 'true');
+            });
+        });
+
+        document.addEventListener('click', function(e) {
+            document.querySelectorAll('.lang-switch-dropdown').forEach(function(wrapper) {
+                var toggle = wrapper.querySelector('.lang-switch-toggle');
+                var menu = wrapper.querySelector('.lang-switch-menu');
+                if (!toggle || !menu) return;
+                if (wrapper.contains(e.target)) return;
+                menu.setAttribute('hidden', '');
+                toggle.setAttribute('aria-expanded', 'false');
+            });
+        });
+    });
+    </script>
 

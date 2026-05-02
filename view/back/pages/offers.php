@@ -1,10 +1,17 @@
 <?php
 require_once __DIR__ . '/../../../config.php';
+require_once __DIR__ . '/../../../view/i18n.php';
 require_once __DIR__ . '/../../../model/Offer.php';
 require_once __DIR__ . '/../../../model/Candidature.php';
 require_once __DIR__ . '/../../../controller/OfferController.php';
 require_once __DIR__ . '/../../../controller/CandidatureController.php';
 require_once __DIR__ . '/../../../controller/OfferPdfExporter.php';
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+app_set_language_from_request();
 
 $offerController = new OfferController();
 $candidatureController = new CandidatureController();
@@ -116,7 +123,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') { //exécute uniquement si formulaire
 
             if (in_array($status, $allowedStatuses, true)) {
                 $candidatureController->updateApplicationStatus(intval($_POST['application_id']), $status);
-                $message = 'Statut de candidature mis à jour !';
+                    $message = app_text('Statut de candidature mis à jour !', 'Application status updated!', 'تم تحديث حالة الطلب!');
                 $messageType = 'success';
 
                 $isAjax = strtolower((string) ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '')) === 'xmlhttprequest';
@@ -135,15 +142,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') { //exécute uniquement si formulaire
             }
 
             $isAjax = strtolower((string) ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '')) === 'xmlhttprequest';
-            if ($isAjax) {
-                header('Content-Type: application/json; charset=UTF-8');
-                http_response_code(422);
-                echo json_encode([
-                    'ok' => false,
-                    'message' => 'Statut invalide.',
-                ]);
-                exit;
-            }
+                if ($isAjax) {
+                    header('Content-Type: application/json; charset=UTF-8');
+                    http_response_code(422);
+                    echo json_encode([
+                        'ok' => false,
+                        'message' => app_text('Statut invalide.','Invalid status.','حالة غير صالحة.'),
+                    ]);
+                    exit;
+                }
         //CREATE / UPDATE OFFER    
         } elseif ($_POST['action'] === 'create' || ($_POST['action'] === 'update' && !empty($_POST['offer_id']))) {
             $formData = [
@@ -159,7 +166,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') { //exécute uniquement si formulaire
             $hasErrors = implode('', $fieldErrors) !== '';
 
             if ($hasErrors) {
-                $message = 'Veuillez corriger les erreurs du formulaire.';
+                    $message = app_text('Veuillez corriger les erreurs du formulaire.','Please fix the form errors.','يرجى تصحيح أخطاء النموذج.');
                 $messageType = 'error';
                 if ($_POST['action'] === 'update' && !empty($_POST['offer_id'])) {
                     $currentOffer = array_merge(
@@ -190,10 +197,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') { //exécute uniquement si formulaire
                     $createResult = $offerController->createOffer($payload);
                     
                     if ($createResult === 0) {
-                        $message = 'Une offre avec ce titre existe déjà. Veuillez utiliser un titre différent.';
+                        $message = app_text('Une offre avec ce titre existe déjà. Veuillez utiliser un titre différent.','An offer with this title already exists. Please choose a different title.','هناك عرض بنفس العنوان بالفعل. الرجاء استخدام عنوان مختلف.');
                         $messageType = 'error';
                     } else {
-                        $message = 'Offre créée avec succès !';
+                        $message = app_text('Offre créée avec succès !','Offer created successfully!','تم إنشاء العرض بنجاح!');
                         $messageType = 'success';
                         $formData = [
                             'titre' => '',
@@ -207,8 +214,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') { //exécute uniquement si formulaire
                 } else {
                     $updateResult = $offerController->updateOffer(intval($_POST['offer_id']), $payload);
                     
-                    if ($updateResult === false) {
-                        $message = 'Une offre avec ce titre existe déjà. Veuillez utiliser un titre différent.';
+                        if ($updateResult === false) {
+                        $message = app_text('Une offre avec ce titre existe déjà. Veuillez utiliser un titre différent.','An offer with this title already exists. Please choose a different title.','هناك عرض بنفس العنوان بالفعل. الرجاء استخدام عنوان مختلف.');
                         $messageType = 'error';
                         $currentOffer = array_merge(
                             $offerController->getOffer(intval($_POST['offer_id'])) ?? [],
@@ -226,7 +233,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') { //exécute uniquement si formulaire
                         $isAjax = strtolower((string) ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '')) === 'xmlhttprequest';
                         if ($isAjax) {
                             header('Content-Type: application/json; charset=UTF-8');
-                            echo json_encode(['ok' => true, 'message' => 'Offre mise à jour avec succès !']);
+                            echo json_encode(['ok' => true, 'message' => app_text('Offre mise à jour avec succès !','Offer updated successfully!','تم تحديث العرض بنجاح!')]);
                             exit;
                         }
                         header('Location: ?page=offers');
@@ -238,7 +245,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') { //exécute uniquement si formulaire
         } elseif ($_POST['action'] === 'update' && !empty($_POST['offer_id'])) {
         } elseif ($_POST['action'] === 'delete' && !empty($_POST['offer_id'])) {
             $offerController->deleteOffer(intval($_POST['offer_id']));
-            $message = 'Offre supprimée !';
+            $message = app_text('Offre supprimée !','Offer deleted!','تم حذف العرض!');
             $messageType = 'success';
             $currentOffer = null;
         }
@@ -495,13 +502,10 @@ function buildOfferExportUrl(string $searchTerm, string $sortOption): string {
 
 function formatApplicationStatus(string $status): string {
     return match($status) {
-        'acceptee' => 'Acceptée',
-        'accepted' => 'Acceptée',
-        'refusee' => 'Refusée',
-        'rejetee' => 'Refusée',
-        'rejected' => 'Refusée',
-        'en_attente' => 'En attente',
-        default => 'En attente'
+        'acceptee', 'accepted' => app_text('Acceptée','Accepted','مقبول'),
+        'refusee', 'rejetee', 'rejected' => app_text('Refusée','Rejected','مرفوض'),
+        'en_attente', 'en attente' => app_text('En attente','Pending','قيد الانتظار'),
+        default => app_text('En attente','Pending','قيد الانتظار')
     };
 }
 
@@ -541,13 +545,13 @@ if ($currentOffer) {
         }
     }
     ?>
-    <div class="notif-wrap" style="margin-bottom:12px;">
-        <button id="adminNotifToggle" class="ghost-btn notif-btn" type="button" aria-haspopup="true" aria-expanded="false">🔔<?php if ($unreadAdminCount>0): ?><span class="notif-badge"><?php echo (int)$unreadAdminCount; ?></span><?php endif; ?></button>
-        <div class="notif-dropdown" id="adminNotifDropdown" hidden>
-            <div class="notif-header">Notifications administrateur</div>
+    
+    <!-- Notification dropdown (positioned absolutely via JS) -->
+    <div class="notif-dropdown" id="adminNotifDropdown" hidden>
+            <div class="notif-header"><?php echo app_text('Notifications administrateur','Admin Notifications','إشعارات المشرف'); ?></div>
             <ul class="notif-list">
                 <?php if (empty($adminNotifs)): ?>
-                    <li class="notif-empty">Aucune notification</li>
+                    <li class="notif-empty"><?php echo app_text('Aucune notification','No notifications','لا توجد إشعارات'); ?></li>
                 <?php else: ?>
                     <?php foreach ($adminNotifs as $note): ?>
                         <?php
@@ -562,7 +566,13 @@ if ($currentOffer) {
                             } else {
                                 $link = $markUrl . '&goto=' . rawurlencode($target);
                             }
-                            $headline = htmlspecialchars((string)($note['headline'] ?? ($note['type'] ?? 'Notification')), ENT_QUOTES, 'UTF-8');
+                            $headlineRaw = $note['headline'] ?? ($note['type'] ?? 'Notification');
+                            if (is_array($headlineRaw) && function_exists('app_text')) {
+                                $headlineText = app_text($headlineRaw['fr'] ?? '', $headlineRaw['en'] ?? '', $headlineRaw['ar'] ?? null);
+                            } else {
+                                $headlineText = (string) $headlineRaw;
+                            }
+                            $headline = htmlspecialchars($headlineText, ENT_QUOTES, 'UTF-8');
                             $title = htmlspecialchars((string)($note['message'] ?? ''), ENT_QUOTES, 'UTF-8');
                             $time = '';
                             if (!empty($note['time'])) {
@@ -575,14 +585,14 @@ if ($currentOffer) {
                                 <div class="notif-title"><?php echo $headline; ?></div>
                                 <div style="font-weight:700; color:var(--navy); margin-top:4px;"><?php echo $title; ?></div>
                                 <?php if (!empty($details) && is_array($details)): ?>
-                                    <div style="margin-top:6px; font-size:0.92rem; color:var(--muted);">
-                                        <?php if (!empty($details['offer_titre'])): ?>Offre: <?php echo htmlspecialchars($details['offer_titre'], ENT_QUOTES, 'UTF-8'); ?> &middot; <?php endif; ?>
-                                        <?php if (!empty($details['offer_id'])): ?>ID: <?php echo htmlspecialchars((string)$details['offer_id'], ENT_QUOTES, 'UTF-8'); ?><?php endif; ?>
+                                        <div style="margin-top:6px; font-size:0.92rem; color:var(--muted);">
+                                        <?php if (!empty($details['offer_titre'])): ?><?php echo app_text('Offre:','Offer:','العرض:'); ?> <?php echo htmlspecialchars($details['offer_titre'], ENT_QUOTES, 'UTF-8'); ?> &middot; <?php endif; ?>
+                                        <?php if (!empty($details['offer_id'])): ?><?php echo app_text('ID:','ID:','المعرّف:'); ?> <?php echo htmlspecialchars((string)$details['offer_id'], ENT_QUOTES, 'UTF-8'); ?><?php endif; ?>
                                     </div>
                                 <?php endif; ?>
                                 <?php if (!empty($note['changes']) && is_array($note['changes'])): ?>
                                     <div style="margin-top:8px; font-size:0.9rem; color:var(--muted);">
-                                        <strong>Changements:</strong>
+                                        <strong><?php echo app_text('Changements:','Changes:','التغييرات:'); ?></strong>
                                         <ul style="margin:6px 0 0 18px;padding:0;">
                                         <?php foreach ($note['changes'] as $field => $chg): ?>
                                             <li><?php echo htmlspecialchars($field, ENT_QUOTES, 'UTF-8'); ?>: <em><?php echo htmlspecialchars((string)($chg['from'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></em> → <em><?php echo htmlspecialchars((string)($chg['to'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></em></li>
@@ -597,8 +607,8 @@ if ($currentOffer) {
                 <?php endif; ?>
             </ul>
         </div>
-    </div>
-    <script>
+
+<script>
     document.addEventListener('DOMContentLoaded', function() {
         var toggle = document.getElementById('adminNotifToggle');
         var dropdown = document.getElementById('adminNotifDropdown');
@@ -692,37 +702,95 @@ if ($currentOffer) {
             }
         });
     });
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.lang-switch-dropdown').forEach(function(wrapper) {
+            var toggle = wrapper.querySelector('.lang-switch-toggle');
+            var menu = wrapper.querySelector('.lang-switch-menu');
+            if (!toggle || !menu) return;
+
+            toggle.addEventListener('click', function(e) {
+                e.preventDefault();
+                var rect = toggle.getBoundingClientRect();
+                document.querySelectorAll('.lang-switch-menu').forEach(function(other) {
+                    if (other !== menu) other.setAttribute('hidden', '');
+                });
+                if (menu.parentElement !== document.body) {
+                    document.body.appendChild(menu);
+                }
+                menu.style.left = Math.max(8, Math.min(window.innerWidth - 156, rect.right - 132)) + 'px';
+                menu.style.top = (rect.bottom + 10) + 'px';
+                menu.toggleAttribute('hidden');
+                toggle.setAttribute('aria-expanded', menu.hasAttribute('hidden') ? 'false' : 'true');
+            });
+        });
+
+        document.addEventListener('click', function(e) {
+            document.querySelectorAll('.lang-switch-dropdown').forEach(function(wrapper) {
+                var toggle = wrapper.querySelector('.lang-switch-toggle');
+                var menu = wrapper.querySelector('.lang-switch-menu');
+                if (!toggle || !menu) return;
+                if (wrapper.contains(e.target)) return;
+                menu.setAttribute('hidden', '');
+                toggle.setAttribute('aria-expanded', 'false');
+            });
+        });
+    });
     </script>
 
-<section class="action-bar reveal"> 
+<section class="action-bar reveal offers-page-toolbar" style="position:relative; z-index:20; overflow:visible;"> 
     <form class="search-box" method="GET" action="index.php">
         <input type="hidden" name="page" value="offers">
-        <input type="text" name="q" value="<?php echo htmlspecialchars($searchTerm, ENT_QUOTES, 'UTF-8'); ?>" placeholder="Rechercher une offre...">
-        <button type="submit" class="outline-btn">Rechercher</button>
-        <select name="sort" id="offerSortSelect" onchange="this.form.submit()">
-            <option value="date_publication_desc" <?php echo $sortOption === 'date_publication_desc' ? 'selected' : ''; ?>>Date publication: récentes</option>
-            <option value="date_publication_asc" <?php echo $sortOption === 'date_publication_asc' ? 'selected' : ''; ?>>Date publication: anciennes</option>
-            <option value="date_expiration_desc" <?php echo $sortOption === 'date_expiration_desc' ? 'selected' : ''; ?>>Date expiration: récentes</option>
-            <option value="date_expiration_asc" <?php echo $sortOption === 'date_expiration_asc' ? 'selected' : ''; ?>>Date expiration: anciennes</option>
-            <option value="titre_asc" <?php echo $sortOption === 'titre_asc' ? 'selected' : ''; ?>>Titre: A à Z</option>
-            <option value="titre_desc" <?php echo $sortOption === 'titre_desc' ? 'selected' : ''; ?>>Titre: Z à A</option>
-            <option value="prix_asc" <?php echo $sortOption === 'prix_asc' ? 'selected' : ''; ?>>Prix: croissant</option>
-            <option value="prix_desc" <?php echo $sortOption === 'prix_desc' ? 'selected' : ''; ?>>Prix: décroissant</option>
+        <input type="text" name="q" value="<?php echo htmlspecialchars($searchTerm, ENT_QUOTES, 'UTF-8'); ?>" placeholder="<?php echo app_text('...Rechercher une offre','...Search offers','...ابحث عن عرض'); ?>" style="min-width: 220px; max-width: 320px; min-height: 44px; padding: 0 14px; font-size: 0.95rem;">
+        <button type="submit" class="outline-btn" style="min-height: 44px; padding: 0 16px; font-size: 0.92rem;"><?php echo app_text('Rechercher','Search','بحث'); ?></button>
+        <select name="sort" id="offerSortSelect" onchange="this.form.submit()" style="min-width: 230px; max-width: 280px; min-height: 44px; padding-right: 34px; font-size: 0.92rem;">
+            <option value="date_publication_desc" <?php echo $sortOption === 'date_publication_desc' ? 'selected' : ''; ?>><?php echo app_text('Date publication: récentes','Publication date: recent','تاريخ النشر: الأحدث'); ?></option>
+            <option value="date_publication_asc" <?php echo $sortOption === 'date_publication_asc' ? 'selected' : ''; ?>><?php echo app_text('Date publication: anciennes','Publication date: oldest','تاريخ النشر: الأقدم'); ?></option>
+            <option value="date_expiration_desc" <?php echo $sortOption === 'date_expiration_desc' ? 'selected' : ''; ?>><?php echo app_text('Date expiration: récentes','Expiration date: recent','تاريخ الانتهاء: الأحدث'); ?></option>
+            <option value="date_expiration_asc" <?php echo $sortOption === 'date_expiration_asc' ? 'selected' : ''; ?>><?php echo app_text('Date expiration: anciennes','Expiration date: oldest','تاريخ الانتهاء: الأقدم'); ?></option>
+            <option value="titre_asc" <?php echo $sortOption === 'titre_asc' ? 'selected' : ''; ?>><?php echo app_text('Titre: A à Z','Title: A to Z','العنوان: من الألف إلى الياء'); ?></option>
+            <option value="titre_desc" <?php echo $sortOption === 'titre_desc' ? 'selected' : ''; ?>><?php echo app_text('Titre: Z à A','Title: Z to A','العنوان: من الياء إلى الألف'); ?></option>
+            <option value="prix_asc" <?php echo $sortOption === 'prix_asc' ? 'selected' : ''; ?>><?php echo app_text('Prix: croissant','Price: ascending','السعر: تصاعدي'); ?></option>
+            <option value="prix_desc" <?php echo $sortOption === 'prix_desc' ? 'selected' : ''; ?>><?php echo app_text('Prix: décroissant','Price: descending','السعر: تنازلي'); ?></option>
         </select>
-        <noscript><button type="submit" class="outline-btn">Trier</button></noscript>
+        <noscript><button type="submit" class="outline-btn"><?php echo app_text('Trier','Sort','ترتيب'); ?></button></noscript>
     </form>
 
-    <div class="export-bar">
-        <button type="button" class="outline-btn" id="offersStatsToggle">Statistiques</button>
-        <a class="solid-btn" href="<?php echo htmlspecialchars(buildOfferExportUrl($searchTerm, $sortOption), ENT_QUOTES, 'UTF-8'); ?>">Exporter PDF</a>
+    <div class="export-bar" style="position:relative; z-index:30; overflow:visible; gap:10px; flex-wrap:nowrap;">
+        <button type="button" class="outline-btn" id="offersStatsToggle" style="min-height: 44px; padding: 0 16px; font-size: 0.92rem;" data-text-open="<?php echo app_text('Statistiques','Statistics','الإحصاءات'); ?>" data-text-close="<?php echo app_text('Masquer les statistiques','Hide statistics','إخفاء الإحصاءات'); ?>"><?php echo app_text('Statistiques','Statistics','الإحصاءات'); ?></button>
+        <a class="solid-btn" href="<?php echo htmlspecialchars(buildOfferExportUrl($searchTerm, $sortOption), ENT_QUOTES, 'UTF-8'); ?>" style="min-height: 44px; padding: 0 16px; font-size: 0.92rem;"><?php echo app_text('Exporter PDF','Export PDF','تصدير PDF'); ?></a>
+        <div class="lang-switch lang-switch-dropdown" style="display:inline-block; margin-right:12px; position:relative; z-index:40;">
+            <button type="button" class="ghost-btn lang-switch-toggle" aria-haspopup="true" aria-expanded="false" aria-label="<?php echo app_text('Choisir la langue','Choose language','اختر اللغة'); ?>">🌐</button>
+            <div class="lang-switch-menu" hidden style="position:fixed; min-width:132px; background:#ffffff; border:1px solid rgba(20,39,56,.12); border-radius:16px; box-shadow:0 16px 30px rgba(20,39,56,.16); padding:8px; z-index:99999; backdrop-filter: blur(8px);">
+                <a href="<?php echo app_lang_url('fr'); ?>" style="display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; border-radius:10px; color:#0b2545; font-weight:700; text-decoration:none; transition:background .2s ease;">FR <span style="opacity:.55; font-size:12px;">FR</span></a>
+                <a href="<?php echo app_lang_url('en'); ?>" style="display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; border-radius:10px; color:#0b2545; font-weight:700; text-decoration:none; transition:background .2s ease;">EN <span style="opacity:.55; font-size:12px;">EN</span></a>
+                <a href="<?php echo app_lang_url('ar'); ?>" style="display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; border-radius:10px; color:#0b2545; font-weight:700; text-decoration:none; transition:background .2s ease;">AR <span style="opacity:.55; font-size:12px;">AR</span></a>
+            </div>
+        </div>
+        <div class="notif-wrap">
+            <button id="adminNotifToggle" class="ghost-btn notif-btn" type="button" aria-haspopup="true" aria-expanded="false">🔔<?php if ($unreadAdminCount>0): ?><span class="notif-badge"><?php echo (int)$unreadAdminCount; ?></span><?php endif; ?></button>
+        </div>
     </div>
 </section>
 
-<section class="admin-stats reveal" id="offersStatsSummary">
-    <article class="admin-stat"><strong><?php echo htmlspecialchars($stats['total'], ENT_QUOTES, 'UTF-8'); ?></strong><span>Offres</span></article>
-    <article class="admin-stat"><strong><?php echo htmlspecialchars($stats['ouverte'], ENT_QUOTES, 'UTF-8'); ?></strong><span>Ouvertes</span></article>
-    <article class="admin-stat"><strong><?php echo htmlspecialchars($closedOffers, ENT_QUOTES, 'UTF-8'); ?></strong><span>Fermées</span></article>
-    <article class="admin-stat"><strong><?php echo htmlspecialchars($applicationStats['total'], ENT_QUOTES, 'UTF-8'); ?></strong><span>Candidatures</span></article>
+<style>
+.offers-page-toolbar,
+.action-bar.reveal,
+.offers-page-toolbar .export-bar {
+    position: relative;
+    z-index: 999;
+    overflow: visible;
+}
+
+.offers-page-toolbar .lang-switch-menu {
+    z-index: 10000 !important;
+}
+</style>
+
+<section class="admin-stats reveal offers-stats-panel" id="offersStatsSummary">
+    <article class="admin-stat"><strong><?php echo htmlspecialchars($stats['total'], ENT_QUOTES, 'UTF-8'); ?></strong><span><?php echo app_text('Offres','Offers','العروض'); ?></span></article>
+    <article class="admin-stat"><strong><?php echo htmlspecialchars($stats['ouverte'], ENT_QUOTES, 'UTF-8'); ?></strong><span><?php echo app_text('Ouvertes','Open','مفتوحة'); ?></span></article>
+    <article class="admin-stat"><strong><?php echo htmlspecialchars($closedOffers, ENT_QUOTES, 'UTF-8'); ?></strong><span><?php echo app_text('Fermées','Closed','مغلقة'); ?></span></article>
+    <article class="admin-stat"><strong><?php echo htmlspecialchars($applicationStats['total'], ENT_QUOTES, 'UTF-8'); ?></strong><span><?php echo app_text('Candidatures','Applications','الطلبات'); ?></span></article>
 </section>
 
 <!-- Modal: Statistics -->
@@ -734,59 +802,59 @@ if ($currentOffer) {
       </svg>
     </button>
 
-    <header class="modal-header">
-      <div>
-        <h2 id="offersStatsTitle">Statistiques des offres</h2>
-        <p id="offersStatsDescription" class="muted">Vue synthétique — performance, répartition et dernières publications</p>
-      </div>
+        <header class="modal-header">
+            <div>
+                <h2 id="offersStatsTitle"><?php echo app_text('Statistiques des offres','Offers statistics','إحصاءات العروض'); ?></h2>
+                <p id="offersStatsDescription" class="muted"><?php echo app_text('Vue synthétique — performance, répartition et dernières publications','Overview — performance, distribution and recent posts','نظرة عامة — الأداء والتوزيع وآخر المنشورات'); ?></p>
+            </div>
       <div class="modal-meta">
         <small><?php echo (new DateTimeImmutable('now'))->format('d/m/Y H:i'); ?></small>
       </div>
     </header>
 
-    <div class="modal-body">
-      <div class="stats-cards">
-        <div class="stat-card">
-          <div class="stat-number"><?php echo htmlspecialchars((string) count($offers), ENT_QUOTES, 'UTF-8'); ?></div>
-          <div class="stat-label">Total offres</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-number"><?php echo htmlspecialchars((string) $stats['ouverte'], ENT_QUOTES, 'UTF-8'); ?></div>
-          <div class="stat-label">Ouvertes</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-number"><?php echo htmlspecialchars((string) $closedOffers, ENT_QUOTES, 'UTF-8'); ?></div>
-          <div class="stat-label">Fermées</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-number"><?php echo htmlspecialchars($averageOfferPrice !== null ? number_format($averageOfferPrice, 2, ',', ' ') : 'N/A', ENT_QUOTES, 'UTF-8'); ?> <span class="small-currency">DT</span></div>
-          <div class="stat-label">Prix moyen</div>
-        </div>
-      </div>
+        <div class="modal-body offers-stats-modal">
+                <div class="stats-cards">
+                <div class="stat-card">
+                    <div class="stat-number"><?php echo htmlspecialchars((string) count($offers), ENT_QUOTES, 'UTF-8'); ?></div>
+                    <div class="stat-label"><?php echo app_text('Total offres','Total offers','إجمالي العروض'); ?></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number"><?php echo htmlspecialchars((string) $stats['ouverte'], ENT_QUOTES, 'UTF-8'); ?></div>
+                    <div class="stat-label"><?php echo app_text('Ouvertes','Open','مفتوحة'); ?></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number"><?php echo htmlspecialchars((string) $closedOffers, ENT_QUOTES, 'UTF-8'); ?></div>
+                    <div class="stat-label"><?php echo app_text('Fermées','Closed','مغلقة'); ?></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number"><?php echo htmlspecialchars($averageOfferPrice !== null ? number_format($averageOfferPrice, 2, ',', ' ') : 'N/A', ENT_QUOTES, 'UTF-8'); ?> <span class="small-currency">DT</span></div>
+                    <div class="stat-label"><?php echo app_text('Prix moyen','Average price','متوسط السعر'); ?></div>
+                </div>
+            </div>
 
       <div class="charts-container">
-        <div class="chart-panel">
-          <h3>Répartition par type de service</h3>
+                <div class="chart-panel">
+                    <h3><?php echo app_text('Répartition par type de service','Distribution by service type','توزيع حسب نوع الخدمة'); ?></h3>
           <canvas id="chartTypeDistribution" width="200" height="200"></canvas>
         </div>
-        <div class="chart-panel">
-          <h3>État des offres</h3>
+                <div class="chart-panel">
+                    <h3><?php echo app_text('État des offres','Offer status','حالة العروض'); ?></h3>
           <canvas id="chartOfferStatus" width="200" height="200"></canvas>
         </div>
       </div>
 
-      <div class="chart-panel full-width">
-        <h3>Répartition des prix par type</h3>
+            <div class="chart-panel full-width">
+                <h3><?php echo app_text('Répartition des prix par type','Price distribution by type','توزيع الأسعار حسب النوع'); ?></h3>
         <canvas id="chartPriceByType" height="80"></canvas>
       </div>
 
       <div class="stats-grid">
         <div class="latest-box most-desired-box">
-          <div class="box-header">
-            <div>
-              <h3>Offre la plus convoitée</h3>
-              <p class="box-subtitle">Offre avec le plus de candidatures</p>
-            </div>
+                        <div class="box-header">
+                        <div>
+                            <h3><?php echo app_text('Offre la plus convoitée','Most desired offer','العرض الأكثر طلبًا'); ?></h3>
+                            <p class="box-subtitle"><?php echo app_text('Offre avec le plus de candidatures','Offer with the most applications','العرض الذي يحتوي على أكبر عدد من الطلبات'); ?></p>
+                        </div>
             <span class="crown-badge">★</span>
           </div>
           <div class="offer-card-content">
@@ -800,8 +868,8 @@ if ($currentOffer) {
                 <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z" fill="#4b96ff"/>
               </svg>
               <div class="stat-content">
-                <strong class="stat-number"><?php echo htmlspecialchars((string) $mostAppsCount, ENT_QUOTES, 'UTF-8'); ?></strong>
-                <span class="stat-label"><?php echo $mostAppsCount !== 1 ? 'Candidatures' : 'Candidature'; ?></span>
+                                <strong class="stat-number"><?php echo htmlspecialchars((string) $mostAppsCount, ENT_QUOTES, 'UTF-8'); ?></strong>
+                                <span class="stat-label"><?php echo $mostAppsCount !== 1 ? app_text('Candidatures','Applications','طلبات') : app_text('Candidature','Application','طلب'); ?></span>
               </div>
             </div>
           </div>
@@ -810,25 +878,25 @@ if ($currentOffer) {
     </div>
 
     <footer class="modal-footer">
-      <button type="button" class="outline-btn" id="offersStatsModalCloseBtn">Fermer</button>
+            <button type="button" class="outline-btn" id="offersStatsModalCloseBtn"><?php echo app_text('Fermer','Close','إغلاق'); ?></button>
     </footer>
   </div>
 </div>
 
 <section class="admin-panel reveal offers-table-panel">
-    <span class="section-badge">Gestion des offres</span>
+    <span class="section-badge"><?php echo app_text('Gestion des offres','Offers management','إدارة العروض'); ?></span>
 
     <div class="table-wrap">
         <table class="module-table">
             <thead>
                 <tr>
-                    <th>Titre</th>
-                    <th>Type service</th>
-                    <th>Localisation</th>
-                    <th>Publication</th>
-                    <th>Expiration</th>
-                    <th>Statut</th>
-                    <th>Actions</th>
+                    <th><?php echo app_text('Titre','Title','العنوان'); ?></th>
+                    <th><?php echo app_text('Type service','Service type','نوع الخدمة'); ?></th>
+                    <th><?php echo app_text('Localisation','Location','الموقع'); ?></th>
+                    <th><?php echo app_text('Publication','Publication','التاريخ'); ?></th>
+                    <th><?php echo app_text('Expiration','Expiration','تاريخ الانتهاء'); ?></th>
+                    <th><?php echo app_text('Statut','Status','الحالة'); ?></th>
+                    <th><?php echo app_text('Actions','Actions','الإجراءات'); ?></th>
                 </tr>
             </thead>
             <tbody>
@@ -846,16 +914,16 @@ if ($currentOffer) {
                             <td><?php echo htmlspecialchars(formatDate($offer['date_expiration']), ENT_QUOTES, 'UTF-8'); ?></td>
                             <td><?php echo htmlspecialchars(ucfirst($offer['statut']), ENT_QUOTES, 'UTF-8'); ?></td>
                             <td class="admin-tools">
-                                <a href="?page=offer_applications&offer_id=<?php echo urlencode((string) ($offer['id_offre'] ?? '')); ?>" class="small-btn">Voir candidatures</a>
+                                <a href="?page=offer_applications&offer_id=<?php echo urlencode((string) ($offer['id_offre'] ?? '')); ?>" class="small-btn"><?php echo app_text('Voir candidatures','View applications','عرض الطلبات'); ?></a>
                                 <form method="GET" style="display:inline;">
                                     <input type="hidden" name="page" value="offers">
                                     <input type="hidden" name="edit" value="<?php echo htmlspecialchars($offer['id_offre'], ENT_QUOTES, 'UTF-8'); ?>">
-                                    <button type="submit" class="danger-btn">Modifier</button>
+                                    <button type="submit" class="danger-btn"><?php echo app_text('Modifier','Edit','تعديل'); ?></button>
                                 </form>
                                 <form method="POST" style="display:inline;">
                                     <input type="hidden" name="action" value="delete">
                                     <input type="hidden" name="offer_id" value="<?php echo htmlspecialchars($offer['id_offre'], ENT_QUOTES, 'UTF-8'); ?>">
-                                    <button type="submit" class="danger-btn" onclick="return confirm('Supprimer cette offre ?');">Supprimer</button>
+                                    <button type="submit" class="danger-btn" onclick="return confirm('<?php echo addslashes(app_text("Supprimer cette offre ?","Delete this offer?","حذف هذا العرض؟")); ?>');"><?php echo app_text('Supprimer','Delete','حذف'); ?></button>
                                 </form>
                             </td>
                         </tr>
@@ -908,7 +976,7 @@ if ($currentOffer) {
                         <tr class="offer-details-row">
                             <td colspan="6">
                                 <div class="offer-details">
-                                    <strong>Description:</strong>
+                                    <strong><?php echo app_text('Description:','Description:','الوصف:'); ?></strong>
                                     <p><?php echo nl2br(htmlspecialchars($fo['description'] ?? '', ENT_QUOTES, 'UTF-8')); ?></p>
                                 </div>
                             </td>
@@ -921,7 +989,7 @@ if ($currentOffer) {
 </section>
 <?php endif; ?>
 <section class="admin-panel reveal offers-form-panel">
-    <span class="section-badge"><?php echo $currentOffer ? 'Modifier l\'offre' : 'Publier une offre'; ?></span>
+    <span class="section-badge"><?php echo $currentOffer ? app_text("Modifier l\'offre","Edit offer","تعديل العرض") : app_text('Publier une offre','Publish an offer','نشر عرض'); ?></span>
 
     <form method="POST" id="form-grid" class="form-grid offers-form" novalidate data-allowed-services='<?php echo htmlspecialchars(json_encode($typeServiceOptions), ENT_QUOTES, "UTF-8"); ?>'>
         <input type="hidden" name="action" value="<?php echo $currentOffer ? 'update' : 'create'; ?>">
@@ -930,15 +998,15 @@ if ($currentOffer) {
         <?php endif; ?>
 
         <div class="field-block form-field">
-            <label for="titreField">Titre de l'offre</label>
-            <input type="text" name="titre" id="titreField" placeholder="Titre de l'offre" value="<?php echo htmlspecialchars($formData['titre'], ENT_QUOTES, 'UTF-8'); ?>" aria-invalid="<?php echo $fieldErrors['titre'] !== '' ? 'true' : 'false'; ?>">
+            <label for="titreField"><?php echo app_text("Titre de l'offre","Offer title","عنوان العرض"); ?></label>
+            <input type="text" name="titre" id="titreField" placeholder="<?php echo app_text("Titre de l'offre","Offer title","عنوان العرض"); ?>" value="<?php echo htmlspecialchars($formData['titre'], ENT_QUOTES, 'UTF-8'); ?>" aria-invalid="<?php echo $fieldErrors['titre'] !== '' ? 'true' : 'false'; ?>">
             <small class="field-error" data-error-for="titre"><?php echo htmlspecialchars($fieldErrors['titre'], ENT_QUOTES, 'UTF-8'); ?></small>
         </div>
 
         <div class="field-block form-field">
-            <label for="typeServiceField">Type de service</label>
+            <label for="typeServiceField"><?php echo app_text('Type de service','Service type','نوع الخدمة'); ?></label>
             <select name="type_service" id="typeServiceField" aria-invalid="<?php echo $fieldErrors['type_service'] !== '' ? 'true' : 'false'; ?>">
-                <option value="">Sélectionnez le type de service</option>
+                <option value=""><?php echo app_text('Sélectionnez le type de service','Select service type','اختر نوع الخدمة'); ?></option>
                 <?php foreach ($typeServiceOptions as $option): ?>
                     <option value="<?php echo htmlspecialchars($option, ENT_QUOTES, 'UTF-8'); ?>" <?php echo $formData['type_service'] === $option ? 'selected' : ''; ?>>
                         <?php echo htmlspecialchars(ucfirst($option), ENT_QUOTES, 'UTF-8'); ?>
@@ -949,39 +1017,39 @@ if ($currentOffer) {
         </div>
 
         <div class="field-block form-field localisation-field-block">
-            <label for="localisationField">Localisation</label>
-            <input type="text" name="localisation" id="localisationField" placeholder="Localisation" value="<?php echo htmlspecialchars($formData['localisation'], ENT_QUOTES, 'UTF-8'); ?>" aria-invalid="<?php echo $fieldErrors['localisation'] !== '' ? 'true' : 'false'; ?>">
+            <label for="localisationField"><?php echo app_text('Localisation','Location','الموقع'); ?></label>
+            <input type="text" name="localisation" id="localisationField" placeholder="<?php echo app_text('Localisation','Location','الموقع'); ?>" value="<?php echo htmlspecialchars($formData['localisation'], ENT_QUOTES, 'UTF-8'); ?>" aria-invalid="<?php echo $fieldErrors['localisation'] !== '' ? 'true' : 'false'; ?>">
             <small class="field-error" data-error-for="localisation"><?php echo htmlspecialchars($fieldErrors['localisation'], ENT_QUOTES, 'UTF-8'); ?></small>
         </div>
 
         <div class="field-block form-field">
-            <label for="date_expiration">Date d'expiration</label>
+            <label for="date_expiration"><?php echo app_text("Date d'expiration","Expiration date","تاريخ الانتهاء"); ?></label>
             <input type="date" id="date_expiration" name="date_expiration" value="<?php echo htmlspecialchars($formData['date_expiration'], ENT_QUOTES, 'UTF-8'); ?>" aria-invalid="<?php echo $fieldErrors['date_expiration'] !== '' ? 'true' : 'false'; ?>">
             <small class="field-error" data-error-for="date_expiration"><?php echo htmlspecialchars($fieldErrors['date_expiration'], ENT_QUOTES, 'UTF-8'); ?></small>
         </div>
 
         <div class="field-block form-field auto-status-block">
-            <label>Statut</label>
-            <input type="text" value="Automatique selon date d'expiration" readonly aria-readonly="true" class="readonly-status-input">
-            <small class="status-auto-note">Le statut passe automatiquement a Fermee quand la date est depassee.</small>
+            <label><?php echo app_text('Statut','Status','الحالة'); ?></label>
+            <input type="text" value="<?php echo app_text('Automatique selon date d\'expiration','Automatic based on expiration date','تلقائي حسب تاريخ الانتهاء'); ?>" readonly aria-readonly="true" class="readonly-status-input">
+            <small class="status-auto-note"><?php echo app_text("Le statut passe automatiquement a Fermee quand la date est depassee.","Status automatically becomes Closed when the date is passed.","الحالة تتحول تلقائيًا إلى مغلقة عندما تتجاوز التاريخ."); ?></small>
         </div>
 
         <div class="field-block form-field price-field-block">
-            <label for="prixField">Prix</label>
-            <input type="text" name="prix" id="prixField" inputmode="decimal" pattern="^\d+(?:[\.,]\d{1,2})?$" placeholder="Prix" value="<?php echo htmlspecialchars($formData['prix'], ENT_QUOTES, 'UTF-8'); ?>" aria-invalid="<?php echo $fieldErrors['prix'] !== '' ? 'true' : 'false'; ?>">
+            <label for="prixField"><?php echo app_text('Prix','Price','السعر'); ?></label>
+            <input type="text" name="prix" id="prixField" inputmode="decimal" pattern="^\d+(?:[\.,]\d{1,2})?$" placeholder="<?php echo app_text('Prix','Price','السعر'); ?>" value="<?php echo htmlspecialchars($formData['prix'], ENT_QUOTES, 'UTF-8'); ?>" aria-invalid="<?php echo $fieldErrors['prix'] !== '' ? 'true' : 'false'; ?>">
             <small class="field-error" data-error-for="prix"><?php echo htmlspecialchars($fieldErrors['prix'], ENT_QUOTES, 'UTF-8'); ?></small>
         </div>
 
         <div class="field-block form-field full-span">
-            <label for="descriptionField">Description</label>
-            <textarea name="description" id="descriptionField" placeholder="Description de l'offre..." rows="4" aria-invalid="<?php echo $fieldErrors['description'] !== '' ? 'true' : 'false'; ?>"><?php echo htmlspecialchars($formData['description'], ENT_QUOTES, 'UTF-8'); ?></textarea>
+            <label for="descriptionField"><?php echo app_text('Description','Description','الوصف'); ?></label>
+            <textarea name="description" id="descriptionField" placeholder="<?php echo app_text("Description de l'offre...","Offer description...","وصف العرض..."); ?>" rows="4" aria-invalid="<?php echo $fieldErrors['description'] !== '' ? 'true' : 'false'; ?>"><?php echo htmlspecialchars($formData['description'], ENT_QUOTES, 'UTF-8'); ?></textarea>
             <small class="field-error" data-error-for="description"><?php echo htmlspecialchars($fieldErrors['description'], ENT_QUOTES, 'UTF-8'); ?></small>
         </div>
 
         <div class="icon-actions offers-form-actions">
-            <button type="submit" class="solid-btn"><?php echo $currentOffer ? 'Mettre à jour' : 'Publier'; ?></button>
+            <button type="submit" class="solid-btn"><?php echo $currentOffer ? app_text('Mettre à jour','Update','تحديث') : app_text('Publier','Publish','نشر'); ?></button>
             <?php if ($currentOffer): ?>
-                <a href="?page=offers" class="outline-btn">Annuler</a>
+                <a href="?page=offers" class="outline-btn"><?php echo app_text('Annuler','Cancel','إلغاء'); ?></a>
             <?php endif; ?>
         </div>
     </form>
@@ -1062,7 +1130,7 @@ if ($currentOffer) {
                         // Chart 1: Type Distribution (Doughnut)
                         var ctxType = document.getElementById('chartTypeDistribution');
                         if (ctxType && !chartsInstances.typeChart) {
-                            var colors = ['#4b96ff', '#ff6b6b', '#ffd93d', '#6bcf7f', '#a78bfa', '#f472b6', '#06b6d4', '#ec4899'];
+                            var colors = ['#EE5828', '#142738', '#4CAF50', '#000000', '#EE5828', '#142738', '#4CAF50', '#000000'];
                             chartsInstances.typeChart = new Chart(ctxType, {
                                 type: 'doughnut',
                                 data: {
@@ -1070,7 +1138,7 @@ if ($currentOffer) {
                                     datasets: [{
                                         data: chartDataFromServer.typeCounts,
                                         backgroundColor: colors.slice(0, chartDataFromServer.typeLabels.length),
-                                        borderColor: '#ffffff',
+                                        borderColor: '#FFFFFF',
                                         borderWidth: 3
                                     }]
                                 },
@@ -1080,7 +1148,7 @@ if ($currentOffer) {
                                     plugins: {
                                         legend: {
                                             position: 'bottom',
-                                            labels: { font: { size: 12 }, padding: 12, color: '#6b7b89' }
+                                            labels: { font: { size: 12 }, padding: 12, color: '#000000' }
                                         }
                                     }
                                 }
@@ -1096,8 +1164,8 @@ if ($currentOffer) {
                                     labels: chartDataFromServer.statusLabels,
                                     datasets: [{
                                         data: chartDataFromServer.statusCounts,
-                                        backgroundColor: ['#6bcf7f', '#ff6b6b'],
-                                        borderColor: '#ffffff',
+                                        backgroundColor: ['#4CAF50', '#EE5828'],
+                                        borderColor: '#FFFFFF',
                                         borderWidth: 3
                                     }]
                                 },
@@ -1107,7 +1175,7 @@ if ($currentOffer) {
                                     plugins: {
                                         legend: {
                                             position: 'bottom',
-                                            labels: { font: { size: 12 }, padding: 12, color: '#6b7b89' }
+                                            labels: { font: { size: 12 }, padding: 12, color: '#000000' }
                                         }
                                     }
                                 }
@@ -1124,7 +1192,7 @@ if ($currentOffer) {
                                     datasets: [{
                                         label: 'Prix moyen (DT)',
                                         data: chartDataFromServer.priceValues,
-                                        backgroundColor: '#4b96ff',
+                                        backgroundColor: '#EE5828',
                                         borderRadius: 6,
                                         borderSkipped: false
                                     }]
@@ -1133,16 +1201,16 @@ if ($currentOffer) {
                                     responsive: true,
                                     indexAxis: 'x',
                                     plugins: {
-                                        legend: { display: true, labels: { font: { size: 12 }, color: '#6b7b89' } }
+                                        legend: { display: true, labels: { font: { size: 12 }, color: '#000000' } }
                                     },
                                     scales: {
                                         y: {
                                             beginAtZero: true,
-                                            ticks: { color: '#6b7b89', font: { size: 11 } },
-                                            grid: { color: 'rgba(107, 123, 137, 0.1)' }
+                                            ticks: { color: '#000000', font: { size: 11 } },
+                                            grid: { color: 'rgba(20, 39, 56, 0.14)' }
                                         },
                                         x: {
-                                            ticks: { color: '#6b7b89', font: { size: 11 } },
+                                            ticks: { color: '#000000', font: { size: 11 } },
                                             grid: { display: false }
                                         }
                                     }
@@ -1163,7 +1231,8 @@ if ($currentOffer) {
                 if (!statsModal) return;
                 statsModal.removeAttribute('hidden');
                 document.body.classList.add('modal-open');
-                statsToggle.textContent = 'Masquer les statistiques';
+                var closeText = statsToggle.getAttribute('data-text-close');
+                statsToggle.textContent = closeText || 'Masquer les statistiques';
                 try {
                     var first = statsModal.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
                     if (first) first.focus();
@@ -1177,7 +1246,8 @@ if ($currentOffer) {
                 if (!statsModal) return;
                 statsModal.setAttribute('hidden', 'hidden');
                 document.body.classList.remove('modal-open');
-                statsToggle.textContent = 'Statistiques';
+                var openText = statsToggle.getAttribute('data-text-open');
+                statsToggle.textContent = openText || 'Statistiques';
                 try { statsToggle.focus(); } catch (e) {}
                 document.removeEventListener('keydown', escHandler);
             }
@@ -1330,10 +1400,12 @@ if ($currentOffer) {
 }
 
 .module-table thead th {
-    background: rgba(58, 84, 112, 0.22);
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
+    background: #FFFFFF;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    border-bottom: 2px solid #142738;
+    color: #000000;
 }
 
 .module-table tbody tr {
@@ -1341,7 +1413,7 @@ if ($currentOffer) {
 }
 
 .module-table tbody tr:hover {
-    background: rgba(90, 149, 238, 0.08);
+    background: rgba(238, 88, 40, 0.06);
 }
 
 .offers-stats-panel {
@@ -1390,6 +1462,114 @@ body.admin-body.dark .offer-stats-details > div {
 
 .offer-stats-list li {
     display: flex;
+
+/* Offers stats panel palette lock: only orange / navy / green / white / black */
+.offers-stats-panel .admin-stat,
+.offers-stats-modal .stat-card,
+.offers-stats-modal .latest-box,
+.offers-stats-modal .chart-panel,
+.offers-stats-modal .distribution {
+    background: #FFFFFF;
+    border: 1px solid #142738;
+    box-shadow: none;
+}
+
+.offers-stats-panel .admin-stat {
+    border-top: 6px solid #EE5828;
+}
+
+.offers-stats-panel .admin-stat:nth-child(3n + 2) {
+    border-top-color: #142738;
+}
+
+.offers-stats-panel .admin-stat:nth-child(3n + 3) {
+    border-top-color: #4CAF50;
+}
+
+.offers-stats-panel .admin-stat strong,
+.offers-stats-modal .stat-number {
+    color: #000000;
+}
+
+.offers-stats-panel .admin-stat span,
+.offers-stats-modal .stat-label,
+.offers-stats-modal .box-subtitle,
+.offers-stats-modal .latest-title,
+.offers-stats-modal .latest-box h3,
+.offers-stats-modal .distribution h3,
+.offers-stats-modal .chart-panel h3,
+.offers-stats-modal .offer-stats-details h3,
+.offers-stats-modal .modal-header h2,
+.offers-stats-modal .modal-header .muted,
+.offers-stats-modal .modal-meta small {
+    color: #142738;
+}
+
+.offers-stats-modal .offer-stats-details > div {
+    background: #FFFFFF;
+    border: 1px solid #142738;
+    box-shadow: none;
+}
+
+.offers-stats-modal .offer-stats-details p {
+    color: #000000;
+}
+
+.offers-stats-modal .small-currency {
+    color: #000000;
+}
+
+.offers-stats-modal .most-desired-box {
+    background: #FFFFFF;
+    border: 2px solid #EE5828;
+    box-shadow: none;
+}
+
+.offers-stats-modal .most-desired-box::before {
+    display: none;
+}
+
+.offers-stats-modal .most-desired-box:hover {
+    transform: none;
+    box-shadow: none;
+    border-color: #4CAF50;
+}
+
+.offers-stats-modal .most-desired-box .box-header {
+    border-bottom: 1px solid #142738;
+}
+
+.offers-stats-modal .crown-badge {
+    color: #EE5828;
+    text-shadow: none;
+}
+
+.offers-stats-modal .meta-badge,
+.offers-stats-modal .meta-badge.secondary {
+    background: #FFFFFF;
+    color: #142738;
+    border: 1px solid #142738;
+}
+
+.offers-stats-modal .candidatures-stat {
+    background: #FFFFFF;
+    border: 1px solid #4CAF50;
+    box-shadow: none;
+}
+
+.offers-stats-modal .stat-icon path {
+    fill: #4CAF50;
+}
+
+.offers-stats-modal .offer-stats-list li {
+    background: #FFFFFF;
+    color: #000000;
+    border: 1px solid #142738;
+}
+
+.offers-stats-modal .distribution {
+    box-shadow: none;
+}
     align-items: center;
     justify-content: space-between;
     gap: 12px;
@@ -1443,32 +1623,32 @@ body.admin-body.dark .offer-stats-list li {
 </style>
 
 <section class="admin-panel reveal applications-panel">
-    <span class="section-badge">Candidatures récentes</span>
+    <span class="section-badge"><?php echo app_text('Candidatures récentes','Recent applications','الطلبات الأخيرة'); ?></span>
 
     <div class="table-wrap">
         <table class="module-table">
             <thead>
                 <tr>
-                    <th>Candidat</th>
-                    <th>Offre</th>
-                    <th>Date candidature</th>
-                    <th>Statut</th>
-                    <th>Expérience</th>
-                    <th>Compétences</th>
-                    <th>Actions</th>
+                    <th><?php echo app_text('Candidat','Candidate','المرشح'); ?></th>
+                    <th><?php echo app_text('Offre','Offer','العرض'); ?></th>
+                    <th><?php echo app_text('Date candidature','Application date','تاريخ التقديم'); ?></th>
+                    <th><?php echo app_text('Statut','Status','الحالة'); ?></th>
+                    <th><?php echo app_text('Expérience','Experience','الخبرة'); ?></th>
+                    <th><?php echo app_text('Compétences','Skills','المهارات'); ?></th>
+                    <th><?php echo app_text('Actions','Actions','الإجراءات'); ?></th>
                 </tr>
             </thead>
             <tbody>
                 <?php if (empty($recentApplications)): ?>
                     <tr>
-                        <td colspan="7">Aucune candidature pour le moment.</td>
+                        <td colspan="7"><?php echo app_text('Aucune candidature pour le moment.','No applications at the moment.','لا توجد طلبات حالياً.'); ?></td>
                     </tr>
                 <?php else: ?>
                     <?php foreach ($recentApplications as $application): ?> 
                         <?php $normalizedStatus = normalizeApplicationStatus((string) ($application['statut'] ?? '')); ?>
                         <tr>
                             <td><?php echo htmlspecialchars((string) ($application['id'] ?? 'N/A'), ENT_QUOTES, 'UTF-8'); ?></td>
-                            <td><?php echo htmlspecialchars((string) ($application['offer_titre'] ?? 'Offre supprimée'), ENT_QUOTES, 'UTF-8'); ?></td>
+                            <td><?php echo htmlspecialchars((string) ($application['offer_titre'] ?? app_text('Offre supprimée','Offer deleted','تم حذف العرض')), ENT_QUOTES, 'UTF-8'); ?></td>
                             <td><?php echo htmlspecialchars(formatDate((string) ($application['created_at'] ?? null)), ENT_QUOTES, 'UTF-8'); ?></td>
                             <td>
                                 <span class="status-chip status-<?php echo htmlspecialchars($normalizedStatus, ENT_QUOTES, 'UTF-8'); ?>" data-status-chip>
@@ -1488,7 +1668,7 @@ body.admin-body.dark .offer-stats-list li {
                                         <?php echo $normalizedStatus === 'acceptee' ? 'disabled' : ''; ?>
                                         aria-disabled="<?php echo $normalizedStatus === 'acceptee' ? 'true' : 'false'; ?>"
                                     >
-                                        <?php echo $normalizedStatus === 'acceptee' ? 'Acceptée' : 'Accepter'; ?>
+                                        <?php echo $normalizedStatus === 'acceptee' ? app_text('Acceptée','Accepted','مقبول') : app_text('Accepter','Accept','قبول'); ?>
                                     </button>
                                 </form>
                                 <form method="POST" class="js-status-form inline-form" data-target-status="refusee">
@@ -1501,7 +1681,7 @@ body.admin-body.dark .offer-stats-list li {
                                         <?php echo $normalizedStatus === 'refusee' ? 'disabled' : ''; ?>
                                         aria-disabled="<?php echo $normalizedStatus === 'refusee' ? 'true' : 'false'; ?>"
                                     >
-                                        <?php echo $normalizedStatus === 'refusee' ? 'Refusée' : 'Refuser'; ?>
+                                        <?php echo $normalizedStatus === 'refusee' ? app_text('Refusée','Rejected','مرفوض') : app_text('Refuser','Reject','رفض'); ?>
                                     </button>
                                 </form>
                             </td>
@@ -1535,21 +1715,21 @@ body.admin-body.dark .offer-stats-list li {
 }
 
 .status-acceptee {
-    background: rgba(46, 125, 50, 0.2);
-    color: #78e08f;
-    border: 1px solid rgba(120, 224, 143, 0.35);
+    background: rgba(76, 175, 80, 0.2);
+    color: #4CAF50;
+    border: 1px solid rgba(76, 175, 80, 0.35);
 }
 
 .status-refusee {
-    background: rgba(198, 40, 40, 0.2);
-    color: #ff8a80;
-    border: 1px solid rgba(255, 138, 128, 0.35);
+    background: rgba(238, 88, 40, 0.2);
+    color: #EE5828;
+    border: 1px solid rgba(238, 88, 40, 0.35);
 }
 
 .status-en_attente {
-    background: rgba(237, 108, 2, 0.18);
-    color: #ffcc80;
-    border: 1px solid rgba(255, 204, 128, 0.35);
+    background: rgba(238, 88, 40, 0.18);
+    color: #EE5828;
+    border: 1px solid rgba(238, 88, 40, 0.35);
 }
 </style>
 
@@ -1587,8 +1767,8 @@ body.admin-body.dark .offer-stats-list li {
   position: absolute;
   right: 16px;
   top: 16px;
-  background: #ffffff;
-  border: 1px solid rgba(20,39,56,0.06);
+  background: #FFFFFF;
+  border: 1px solid #142738;
   width: 40px;
   height: 40px;
   border-radius: 999px;
@@ -1601,8 +1781,9 @@ body.admin-body.dark .offer-stats-list li {
 }
 
 .modal-close.top-right:hover {
-  background: #f5f8fa;
+  background: #FFFFFF;
   box-shadow: 0 8px 24px rgba(6,18,36,0.1);
+  border-color: #EE5828;
 }
 
 /* Header */
@@ -1617,18 +1798,18 @@ body.admin-body.dark .offer-stats-list li {
 .modal-header h2 {
   margin: 0;
   font-size: 1.125rem;
-  color: #0f2a3a;
+  color: #000000;
   font-weight: 800;
 }
 
 .modal-header .muted {
   margin: 6px 0 0;
-  color: #6b7b89;
+  color: #142738;
   font-size: 0.95rem;
 }
 
 .modal-meta small {
-  color: #7b8a96;
+  color: #142738;
   font-size: 0.9rem;
 }
 
@@ -1641,30 +1822,30 @@ body.admin-body.dark .offer-stats-list li {
 }
 
 .stat-card {
-  background: #fff;
+  background: #FFFFFF;
   border-radius: 12px;
   padding: 18px;
   text-align: center;
   box-shadow: 0 8px 20px rgba(8,20,40,0.04);
-  border: 1px solid rgba(20,39,56,0.04);
+  border: 1px solid #142738;
   transition: all 0.2s ease;
 }
 
 .stat-card:hover {
   box-shadow: 0 12px 28px rgba(8,20,40,0.08);
-  border-color: rgba(20,39,56,0.08);
+  border-color: #142738;
 }
 
 .stat-number {
   font-size: 34px;
   font-weight: 800;
-  color: #0f2a3a;
+  color: #000000;
   line-height: 1;
 }
 
 .stat-label {
   margin-top: 8px;
-  color: #6b7b89;
+  color: #142738;
   font-weight: 700;
   font-size: 0.95rem;
 }
@@ -1672,7 +1853,7 @@ body.admin-body.dark .offer-stats-list li {
 .small-currency {
   font-size: 0.6em;
   font-weight: 700;
-  color: #35506a;
+  color: #000000;
   margin-left: 6px;
 }
 
@@ -1686,14 +1867,14 @@ body.admin-body.dark .offer-stats-list li {
 .latest-box {
   padding: 18px;
   border-radius: 12px;
-  background: #fff;
-  border: 1px solid rgba(20,39,56,0.04);
+  background: #FFFFFF;
+  border: 1px solid #142738;
   box-shadow: 0 8px 18px rgba(8,20,40,0.04);
 }
 
 .latest-box h3 {
   margin: 0 0 8px 0;
-  color: #0f2a3a;
+  color: #000000;
   font-size: 1rem;
   font-weight: 700;
 }
@@ -1701,20 +1882,20 @@ body.admin-body.dark .offer-stats-list li {
 .latest-title {
   margin: 6px 0;
   font-weight: 700;
-  color: #132434;
+  color: #000000;
 }
 
 .latest-date {
-  color: #6b7b89;
+  color: #142738;
   margin-top: 6px;
   font-size: 0.95rem;
 }
 
 /* Most desired offer styling */
 .most-desired-box {
-  background: linear-gradient(135deg, #f5f9ff 0%, #eef5ff 100%);
-  border: 2px solid #4b96ff;
-  box-shadow: 0 12px 32px rgba(75, 150, 255, 0.15);
+  background: linear-gradient(135deg, #FFFFFF 0%, #FFFFFF 100%);
+  border: 2px solid #EE5828;
+  box-shadow: 0 12px 32px rgba(238, 88, 40, 0.15);
   transition: all 0.3s cubic-bezier(0.2, 0.9, 0.2, 1);
   position: relative;
   overflow: hidden;
@@ -1732,9 +1913,9 @@ body.admin-body.dark .offer-stats-list li {
 }
 
 .most-desired-box:hover {
-  box-shadow: 0 16px 40px rgba(75, 150, 255, 0.25);
+  box-shadow: 0 16px 40px rgba(238, 88, 40, 0.25);
   transform: translateY(-2px);
-  border-color: #3a8ae6;
+  border-color: #4CAF50;
 }
 
 .most-desired-box:hover::before {
@@ -1748,12 +1929,12 @@ body.admin-body.dark .offer-stats-list li {
   gap: 16px;
   margin-bottom: 16px;
   padding-bottom: 12px;
-  border-bottom: 1px solid rgba(75, 150, 255, 0.15);
+  border-bottom: 1px solid #142738;
 }
 
 .most-desired-box h3 {
   margin: 0;
-  color: #0f2a3a;
+  color: #000000;
   font-size: 1.15rem;
   font-weight: 800;
   letter-spacing: -0.02em;
@@ -1761,7 +1942,7 @@ body.admin-body.dark .offer-stats-list li {
 
 .box-subtitle {
   margin: 4px 0 0;
-  color: #6b7b89;
+  color: #142738;
   font-size: 0.85rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -1770,8 +1951,8 @@ body.admin-body.dark .offer-stats-list li {
 
 .crown-badge {
   font-size: 1.8rem;
-  color: #ffd700;
-  text-shadow: 0 2px 8px rgba(255, 215, 0, 0.4);
+  color: #EE5828;
+  text-shadow: 0 2px 8px rgba(238, 88, 40, 0.4);
   animation: wobble 3s ease-in-out infinite;
   flex-shrink: 0;
 }
@@ -1791,7 +1972,7 @@ body.admin-body.dark .offer-stats-list li {
 .most-desired-box .latest-title {
   font-size: 1.08rem;
   margin: 0;
-  color: #0f2a3a;
+  color: #000000;
   font-weight: 800;
   line-height: 1.4;
 }
@@ -1805,29 +1986,29 @@ body.admin-body.dark .offer-stats-list li {
 .meta-badge {
   display: inline-block;
   padding: 6px 12px;
-  background: rgba(75, 150, 255, 0.1);
-  color: #2c5aa0;
+  background: rgba(238, 88, 40, 0.1);
+  color: #142738;
   border-radius: 999px;
   font-size: 0.85rem;
   font-weight: 700;
-  border: 1px solid rgba(75, 150, 255, 0.25);
+  border: 1px solid #142738;
   transition: all 0.2s ease;
 }
 
 .meta-badge:hover {
-  background: rgba(75, 150, 255, 0.2);
-  border-color: rgba(75, 150, 255, 0.4);
+  background: rgba(238, 88, 40, 0.2);
+  border-color: #EE5828;
 }
 
 .meta-badge.secondary {
-  background: rgba(107, 123, 137, 0.08);
-  color: #35506a;
-  border-color: rgba(107, 123, 137, 0.2);
+  background: rgba(238, 88, 40, 0.08);
+  color: #000000;
+  border-color: #142738;
 }
 
 .meta-badge.secondary:hover {
-  background: rgba(107, 123, 137, 0.15);
-  border-color: rgba(107, 123, 137, 0.35);
+  background: rgba(238, 88, 40, 0.15);
+  border-color: #EE5828;
 }
 
 .candidatures-stat {
@@ -1835,17 +2016,17 @@ body.admin-body.dark .offer-stats-list li {
   align-items: center;
   gap: 12px;
   padding: 14px 16px;
-  background: #ffffff;
+  background: #FFFFFF;
   border-radius: 12px;
-  border: 2px solid rgba(75, 150, 255, 0.15);
+  border: 2px solid #4CAF50;
   transition: all 0.2s ease;
   margin-top: 4px;
 }
 
 .candidatures-stat:hover {
-  border-color: rgba(75, 150, 255, 0.4);
-  box-shadow: 0 6px 16px rgba(75, 150, 255, 0.1);
-  background: rgba(245, 249, 255, 0.6);
+  border-color: #EE5828;
+  box-shadow: 0 6px 16px rgba(238, 88, 40, 0.1);
+  background: #FFFFFF;
 }
 
 .stat-icon {
@@ -1860,14 +2041,14 @@ body.admin-body.dark .offer-stats-list li {
 }
 
 .stat-number {
-  color: #4b96ff;
+  color: #EE5828;
   font-size: 1.3rem;
   font-weight: 900;
   letter-spacing: -0.01em;
 }
 
 .stat-label {
-  color: #6b7b89;
+  color: #142738;
   font-weight: 700;
   font-size: 0.9rem;
   text-transform: uppercase;
@@ -1887,16 +2068,16 @@ body.admin-body.dark .offer-stats-list li {
 
 /* Distribution list */
 .distribution {
-  background: #fff;
+  background: #FFFFFF;
   padding: 18px;
   border-radius: 12px;
-  border: 1px solid rgba(20,39,56,0.04);
+  border: 1px solid #142738;
   box-shadow: 0 8px 18px rgba(8,20,40,0.04);
 }
 
 .distribution h3 {
   margin-top: 0;
-  color: #0f2a3a;
+  color: #000000;
   font-size: 1rem;
   font-weight: 700;
 }
@@ -1915,15 +2096,17 @@ body.admin-body.dark .offer-stats-list li {
   align-items: center;
   padding: 10px 14px;
   border-radius: 999px;
-  background: #f7fafb;
-  color: #12303e;
+  background: #FFFFFF;
+  color: #000000;
   font-weight: 700;
   font-size: 0.95rem;
   transition: all 0.15s ease;
+  border: 1px solid #142738;
 }
 
 .offer-stats-list li:hover {
-  background: #eef2f5;
+  background: #FFFFFF;
+  border-color: #EE5828;
 }
 
 .type-name {
@@ -1931,7 +2114,7 @@ body.admin-body.dark .offer-stats-list li {
 }
 
 .type-count {
-  color: #4b96ff;
+  color: #EE5828;
   font-size: 1.1em;
 }
 
