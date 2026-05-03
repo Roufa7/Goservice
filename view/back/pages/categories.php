@@ -80,7 +80,9 @@ if (isset($_POST['action']) && $_POST['action'] === 'edit') {
 }
 
 // ── CHARGER LES DONNÉES ──
-$categories = $categorieController->listCategoriesWithCount();
+$categories   = $categorieController->listCategoriesWithCount();
+$statsAvancees = $categorieController->getStatsCategoriesAvancees();
+$top5          = $categorieController->getTop5Categories();
 
 $total = count($categories);
 $editData = null;
@@ -249,7 +251,121 @@ body.admin-body.dark .btn-edit-sm:hover{
     background: rgba(76,138,255,0.30) !important;
     color: #d7e8ff !important;
 }
+
+/* ── Stats catégories (même pattern que services) ── */
+.cat-stats-toggle-wrap{display:flex;justify-content:flex-end;margin-bottom:16px;}
+.cat-stats-toggle-btn{border:none;background:linear-gradient(135deg,#ee5828,#c94718);color:#fff;padding:10px 20px;border-radius:12px;font-weight:800;font-size:13px;cursor:pointer;box-shadow:0 8px 20px rgba(238,88,40,.25);font-family:inherit;}
+
+/* KPI cards */
+.ck2-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:26px;}
+.ck2-card{background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:20px 16px;display:flex;align-items:center;gap:13px;box-shadow:0 8px 24px rgba(7,20,34,.07);transition:transform .2s;min-width:0;}
+.ck2-card:hover{transform:translateY(-3px);}
+.ck2-icon{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:21px;flex-shrink:0;}
+.ck2-num{font-size:26px;font-weight:900;color:var(--text);line-height:1;font-family:'Poppins',sans-serif;}
+.ck2-lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:4px;}
+.ck2-sub{font-size:10px;color:var(--muted);margin-top:2px;}
+.ic2-or{background:rgba(238,88,40,.12);}
+.ic2-gr{background:rgba(41,180,99,.12);}
+.ic2-rd{background:rgba(255,95,95,.12);}
+.ic2-bl{background:rgba(76,138,255,.14);}
+.ic2-yw{background:rgba(255,193,7,.15);}
+
+/* Charts row — même pattern exact que .ck-row dans services */
+.ck2-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-bottom:26px;}
+@media(max-width:1000px){.ck2-row{grid-template-columns:1fr;}}
+.ck2-panel{background:var(--panel);border:1px solid var(--border);border-radius:20px;padding:22px;box-shadow:0 8px 24px rgba(7,20,34,.07);min-width:0;overflow:hidden;}
+.ck2-title{font-size:13px;font-weight:900;color:var(--text);text-transform:uppercase;letter-spacing:.05em;}
+.ck2-sub-txt{font-size:11px;color:var(--muted);margin:5px 0 14px;}
+/* LA CLÉ : même que .ck-canvas dans services.php */
+.ck2-canvas{height:210px;position:relative;}
+
+/* Légende donut inline */
+.ck2-legend{display:flex;flex-direction:column;gap:10px;margin-top:14px;}
+.ck2-legend-item{display:flex;align-items:center;gap:10px;}
+.ck2-legend-dot{width:11px;height:11px;border-radius:50%;flex-shrink:0;}
+.ck2-legend-lbl{font-size:12px;color:var(--text);font-weight:600;flex:1;}
+.ck2-legend-val{font-size:13px;font-weight:900;color:var(--text);}
+.ck2-legend-pct{font-size:11px;color:var(--muted);margin-left:4px;}
+
+/* Score de santé — barres de progression */
+.ck2-health-list{display:flex;flex-direction:column;gap:12px;margin-top:4px;}
+.ck2-health-item{display:flex;flex-direction:column;gap:5px;}
+.ck2-health-top{display:flex;justify-content:space-between;align-items:center;}
+.ck2-health-name{font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:75%;}
+.ck2-health-val{font-size:11px;font-weight:900;white-space:nowrap;}
+.ck2-health-bar-bg{width:100%;height:7px;border-radius:99px;background:var(--border);}
+.ck2-health-bar-fill{height:7px;border-radius:99px;transition:width .6s ease;}
 </style>
+
+<!-- Toggle stats catégories -->
+<div class="cat-stats-toggle-wrap">
+    <button type="button" id="toggleCatStatsBtn" class="cat-stats-toggle-btn">Masquer les statistiques</button>
+</div>
+
+<!-- STATS ZONE CATÉGORIES -->
+<div id="catStatsZone">
+
+    <?php
+    $totalCat     = (int)($statsAvancees['total_categories'] ?? $total);
+    $catUtilisees = (int)($statsAvancees['categories_utilisees'] ?? 0);
+    $catVides     = (int)($statsAvancees['categories_vides'] ?? 0);
+    $totalSrv     = (int)($statsAvancees['total_services'] ?? 0);
+    $topCatNom    = $statsAvancees['top_categorie'] ?? '—';
+    $topCatNb     = (int)($statsAvancees['top_nb'] ?? 0);
+    $pctUtil      = $totalCat > 0 ? round($catUtilisees / $totalCat * 100, 1) : 0;
+    $pctVides     = $totalCat > 0 ? round($catVides / $totalCat * 100, 1) : 0;
+    ?>
+
+    <!-- KPI -->
+    <div class="ck2-grid reveal">
+        <div class="ck2-card"><div class="ck2-icon ic2-or">🗂️</div><div><div class="ck2-num"><?= $totalCat ?></div><div class="ck2-lbl">Total catégories</div></div></div>
+        <div class="ck2-card"><div class="ck2-icon ic2-gr">✅</div><div><div class="ck2-num"><?= $catUtilisees ?></div><div class="ck2-lbl">Utilisées</div><div class="ck2-sub">Avec au moins un service</div></div></div>
+        <div class="ck2-card"><div class="ck2-icon ic2-rd">📭</div><div><div class="ck2-num"><?= $catVides ?></div><div class="ck2-lbl">Vides</div><div class="ck2-sub">Sans service lié</div></div></div>
+        <div class="ck2-card"><div class="ck2-icon ic2-bl">⚙️</div><div><div class="ck2-num"><?= $totalSrv ?></div><div class="ck2-lbl">Services liés</div><div class="ck2-sub">Tous confondus</div></div></div>
+        <div class="ck2-card"><div class="ck2-icon ic2-yw">🏆</div><div><div class="ck2-num" style="font-size:15px;word-break:break-word;"><?= htmlspecialchars($topCatNom) ?></div><div class="ck2-lbl">Top catégorie</div><div class="ck2-sub"><?= $topCatNb ?> service(s)</div></div></div>
+    </div>
+
+    <!-- Graphiques — 3 colonnes comme services -->
+    <div class="ck2-row reveal">
+
+        <!-- Donut utilisées vs vides -->
+        <div class="ck2-panel">
+            <div class="ck2-title">Utilisées vs vides</div>
+            <div class="ck2-sub-txt">Répartition selon leur utilisation</div>
+            <div class="ck2-canvas"><canvas id="chartCatDonut"></canvas></div>
+            <div class="ck2-legend">
+                <div class="ck2-legend-item">
+                    <div class="ck2-legend-dot" style="background:#4cd774;"></div>
+                    <span class="ck2-legend-lbl">Utilisées</span>
+                    <span class="ck2-legend-val"><?= $catUtilisees ?></span>
+                    <span class="ck2-legend-pct"><?= $pctUtil ?>%</span>
+                </div>
+                <div class="ck2-legend-item">
+                    <div class="ck2-legend-dot" style="background:#ff8b8b;"></div>
+                    <span class="ck2-legend-lbl">Vides</span>
+                    <span class="ck2-legend-val"><?= $catVides ?></span>
+                    <span class="ck2-legend-pct"><?= $pctVides ?>%</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top 5 barres horizontales -->
+        <div class="ck2-panel">
+            <div class="ck2-title">Top 5 catégories</div>
+            <div class="ck2-sub-txt">Par nombre de services liés</div>
+            <div class="ck2-canvas"><canvas id="chartCatTop5"></canvas></div>
+        </div>
+
+        <!-- Distribution du nombre de services par catégorie -->
+        <div class="ck2-panel">
+            <div class="ck2-title">Distribution des services</div>
+            <div class="ck2-sub-txt">Nombre de catégories par tranche de services</div>
+            <div class="ck2-canvas"><canvas id="chartCatDist"></canvas></div>
+        </div>
+
+    </div>
+
+</div><!-- /catStatsZone -->
 
 <section class="action-bar reveal" style="margin-bottom:24px;">
     <div class="search-box">
@@ -270,28 +386,12 @@ body.admin-body.dark .btn-edit-sm:hover{
     </div>
 
     <div class="export-bar" style="display:flex; gap:12px; align-items:center;">
+        <a href="index.php?page=exportCategoriesPdf" target="_blank" class="outline-btn" style="text-decoration:none;display:inline-flex;align-items:center;gap:6px;">🖨️ Exporter PDF</a>
         <button class="solid-btn" type="button" onclick="toggleAddForm()">
             + Ajouter une catégorie
         </button>
     </div>
 </section>
-
-<div class="stats-row">
-    <div class="stat-sm">
-        <div class="stat-sm-icon">🗂️</div>
-        <div>
-            <div class="stat-sm-num"><?php echo $total; ?></div>
-            <div class="stat-sm-lbl">Catégories</div>
-        </div>
-    </div>
-    <div class="stat-sm">
-        <div class="stat-sm-icon">⚡</div>
-        <div>
-            <div class="stat-sm-num"><?php echo array_sum(array_column($categories, 'nb_services')); ?></div>
-            <div class="stat-sm-lbl">Services liés</div>
-        </div>
-    </div>
-</div>
 
 
 
@@ -492,7 +592,7 @@ body.admin-body.dark .btn-edit-sm:hover{
                         <?php foreach ($servicesLies as $service): ?>
                             <?php
                             $img = !empty($service['image'])
-                                ? '/GoService/' . ltrim($service['image'], '/')
+                                ? '/GoService_v3/' . ltrim($service['image'], '/')
                                 : '/GoService/assets/images/service/default.jpg';
 
                             $dispo = trim((string)($service['disponibilite'] ?? ''));
@@ -664,7 +764,7 @@ function filterCategories() {
     rows.forEach(row => {
         const name = row.dataset.name || "";
 
-        if (name.startsWith(value)) {
+        if (name.includes(value)) {
             row.style.display = "";
         } else {
             row.style.display = "none";
@@ -702,4 +802,93 @@ if (categorySearch) {
 if (categorySort) {
     categorySort.addEventListener("change", sortCategories);
 }
+
+// ── Toggle stats catégories — même pattern que services ──
+document.getElementById('toggleCatStatsBtn').addEventListener('click', function(){
+    const z = document.getElementById('catStatsZone');
+    const hidden = z.style.display === 'none';
+    z.style.display = hidden ? 'block' : 'none';
+    this.textContent = hidden ? 'Masquer les statistiques' : 'Afficher les statistiques';
+});
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+(function(){
+    const isDark    = document.body.classList.contains('dark');
+    const tickColor = isDark ? '#c8d0da' : '#617084';
+    const gridColor = isDark ? 'rgba(255,255,255,.06)' : 'rgba(0,0,0,.06)';
+    const legColor  = isDark ? '#c8d0da' : '#617084';
+
+    const top5Labels = <?= json_encode(array_column($top5,'nom')) ?>;
+    const top5Data   = <?= json_encode(array_map(fn($c)=>(int)$c['nb'], $top5)) ?>;
+    const catUtil    = <?= (int)($statsAvancees['categories_utilisees']??0) ?>;
+    const catVides   = <?= (int)($statsAvancees['categories_vides']??0) ?>;
+    const pal = ['#ee5828','#4cd774','#6ea8ff','#ffd04d','#b97aff','#ff8b8b','#5ce5d0','#ffb347','#f06292'];
+
+    // Donut utilisées vs vides — même options que chartStatut dans services.php
+    new Chart(document.getElementById('chartCatDonut'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Utilisées', 'Vides'],
+            datasets: [{ data: [catUtil, catVides], backgroundColor: ['#4cd774','#ff8b8b'], borderWidth: 0, hoverOffset: 8 }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false, cutout: '68%',
+            plugins: { legend: { display: false } }
+        }
+    });
+
+    // Barres horizontales Top 5 — maintainAspectRatio:false dans un wrapper height:210px
+    new Chart(document.getElementById('chartCatTop5'), {
+        type: 'bar',
+        data: {
+            labels: top5Labels,
+            datasets: [{ label: 'Services', data: top5Data, backgroundColor: '#b97aff', borderRadius: 7, borderSkipped: false }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { ticks: { color: tickColor, stepSize: 1 }, grid: { color: gridColor } },
+                y: { ticks: { color: tickColor, font: { size: 11 } }, grid: { display: false } }
+            }
+        }
+    });
+
+    // Distribution : combien de catégories ont 0, 1, 2, 3+ services
+    const allNbs = <?= json_encode(array_map(fn($c) => (int)$c['nb_services'], $categories)) ?>;
+    const distBuckets = [0, 0, 0, 0];
+    allNbs.forEach(n => {
+        if      (n === 0) distBuckets[0]++;
+        else if (n === 1) distBuckets[1]++;
+        else if (n === 2) distBuckets[2]++;
+        else              distBuckets[3]++;
+    });
+    new Chart(document.getElementById('chartCatDist'), {
+        type: 'bar',
+        data: {
+            labels: ['Vides (0)', '1 service', '2 services', '3+ services'],
+            datasets: [{
+                label: 'Catégories',
+                data: distBuckets,
+                backgroundColor: ['#ff8b8b', '#ffd04d', '#6ea8ff', '#4cd774'],
+                borderRadius: 10,
+                borderSkipped: false
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false },
+                tooltip: { callbacks: { label: ctx => ` ${ctx.raw} catégorie(s)` } }
+            },
+            scales: {
+                x: { ticks: { color: tickColor, font: { size: 11 } }, grid: { display: false } },
+                y: { ticks: { color: tickColor, stepSize: 1 }, grid: { color: gridColor },
+                     title: { display: true, text: 'Nb de catégories', color: tickColor, font: { size: 10 } } }
+            }
+        }
+    });
+})();
 </script>

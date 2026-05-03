@@ -104,5 +104,47 @@ class CategorieController
 
     return $query->fetchAll();
 }
+    // ── STATS AVANCÉES CATÉGORIES ──
+    public function getStatsCategoriesAvancees(): array
+    {
+        $db  = config::getConnexion();
+        $sql = "SELECT
+                    COUNT(DISTINCT c.id_categorie)                        AS total_categories,
+                    COUNT(DISTINCT CASE WHEN s.id_service IS NOT NULL
+                          THEN c.id_categorie END)                        AS categories_utilisees,
+                    COUNT(DISTINCT CASE WHEN s.id_service IS NULL
+                          THEN c.id_categorie END)                        AS categories_vides,
+                    COUNT(s.id_service)                                   AS total_services,
+                    ROUND(AVG(s.prix), 2)                                 AS prix_moyen
+                FROM categorie c
+                LEFT JOIN service s ON c.id_categorie = s.id_categorie";
+        $row = $db->query($sql)->fetch();
+
+        // Catégorie la plus utilisée
+        $sql2 = "SELECT c.nom, c.icone, COUNT(s.id_service) AS nb
+                 FROM categorie c
+                 LEFT JOIN service s ON c.id_categorie = s.id_categorie
+                 GROUP BY c.id_categorie
+                 ORDER BY nb DESC
+                 LIMIT 1";
+        $top = $db->query($sql2)->fetch();
+        $row['top_categorie']    = $top['nom']   ?? '—';
+        $row['top_icone']        = $top['icone'] ?? '🗂️';
+        $row['top_nb']           = (int)($top['nb'] ?? 0);
+        return $row;
+    }
+
+    // ── TOP 5 CATÉGORIES LES PLUS UTILISÉES ──
+    public function getTop5Categories(): array
+    {
+        $db  = config::getConnexion();
+        $sql = "SELECT c.nom, c.icone, COUNT(s.id_service) AS nb
+                FROM categorie c
+                LEFT JOIN service s ON c.id_categorie = s.id_categorie
+                GROUP BY c.id_categorie
+                ORDER BY nb DESC
+                LIMIT 5";
+        return $db->query($sql)->fetchAll();
+    }
 }
 ?>

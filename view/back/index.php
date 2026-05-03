@@ -13,6 +13,8 @@ $allowedPages = [
     'events',
     'addService',
     'editService',
+    'exportServicesPdf',
+    'exportCategoriesPdf',
 ];
 
 if (!in_array($page, $allowedPages, true)) {
@@ -20,5 +22,12 @@ if (!in_array($page, $allowedPages, true)) {
 }
 
 $view = __DIR__ . '/pages/' . $page . '.php';
+
+// Pages export : HTML complet autonome, pas de layout back office
+$standalonePages = ['exportServicesPdf', 'exportCategoriesPdf'];
+if (in_array($page, $standalonePages, true)) {
+    require $view;
+    exit;
+}
 
 require __DIR__ . '/layouts/main.php';

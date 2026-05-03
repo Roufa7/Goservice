@@ -5,6 +5,7 @@ ini_set('display_errors', 1);
 require_once __DIR__ . '/../../../controller/ServiceController.php';
 require_once __DIR__ . '/../../../controller/CategorieController.php';
 require_once __DIR__ . '/../../../model/Service.php';
+require_once __DIR__ . '/../../../service/GeocoderService.php';
 
 $serviceController   = new ServiceController();
 $categorieController = new CategorieController();
@@ -89,16 +90,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (empty($errors)) {
         $service = new Service(
-            $titre,
-            $description,
-            $prix,
-            $disponibilite,
-            $statut,
-            $image_path,
-            $serviceData['id_provider'] ?? 1,
-            $id_categorie
+            $titre, $description, $prix, $disponibilite, $statut,
+            $image_path, $serviceData['id_provider'] ?? 1, $id_categorie,
+            $serviceData['adresse'] ?? null,
+            $serviceData['latitude'] ?? null,
+            $serviceData['longitude'] ?? null
         );
-
         $serviceController->updateService($service, $id);
         header('Location: index.php?page=services&updated=1');
         exit;
@@ -224,7 +221,7 @@ $id_categorie  = $_POST['categorie'] ?? $serviceData['id_categorie'];
         <?php if (!empty($serviceData['image'])): ?>
         <div class="current-image-box">
             <img
-                src="/GoService/<?php echo htmlspecialchars(ltrim($serviceData['image'], '/')); ?>"
+                src="/GoService_v3/<?php echo htmlspecialchars(ltrim($serviceData['image'], '/')); ?>"
                 alt="Image actuelle"
                 onerror="this.style.display='none'"
             >
@@ -603,3 +600,59 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 });
 </script>
+
+<!-- ══ Carte localisation (lecture seule pour l'admin) ══ -->
+<?php if (!empty($serviceData['latitude']) && !empty($serviceData['longitude'])): ?>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+.admin-map-card{background:var(--panel);border:1px solid var(--border);border-radius:18px;overflow:hidden;margin:24px 0;box-shadow:0 8px 24px rgba(7,20,34,.08);}
+.admin-map-header{padding:16px 22px;display:flex;align-items:center;gap:14px;border-bottom:1px solid var(--border);}
+.admin-map-icon{width:40px;height:40px;background:rgba(238,88,40,.12);border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.admin-map-title{font-size:14px;font-weight:800;color:var(--text);}
+.admin-map-addr{font-size:12px;color:var(--muted);margin-top:2px;}
+.admin-map-note{font-size:11px;color:#4cd774;margin-top:2px;}
+#adminServiceMap{height:280px;width:100%;}
+</style>
+<div class="admin-map-card">
+    <div class="admin-map-header">
+        <div class="admin-map-icon">📍</div>
+        <div>
+            <div class="admin-map-title">Localisation du prestataire <span style="font-size:11px;font-weight:400;color:var(--muted);">(lecture seule — saisie par le provider)</span></div>
+            <div class="admin-map-addr"><?= htmlspecialchars($serviceData['adresse'] ?? 'Non renseignée') ?></div>
+            <div class="admin-map-note">✓ Coordonnées : <?= round((float)$serviceData['latitude'],4) ?>, <?= round((float)$serviceData['longitude'],4) ?></div>
+        </div>
+    </div>
+    <div id="adminServiceMap"></div>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function(){
+    const lat = <?= (float)$serviceData['latitude'] ?>;
+    const lng = <?= (float)$serviceData['longitude'] ?>;
+    const adresse = <?= json_encode($serviceData['adresse'] ?? '') ?>;
+    const titre   = <?= json_encode($serviceData['titre'] ?? '') ?>;
+
+    const map = L.map('adminServiceMap', {scrollWheelZoom:false}).setView([lat,lng],14);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+        attribution:'© <a href="https://openstreetmap.org">OpenStreetMap</a>',maxZoom:19
+    }).addTo(map);
+
+    const icon = L.divIcon({
+        html:'<div style="background:linear-gradient(135deg,#ff7b39,#f15a24);width:28px;height:28px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid #fff;box-shadow:0 4px 12px rgba(238,88,40,.4);"></div>',
+        iconSize:[28,28],iconAnchor:[14,28],className:''
+    });
+    L.marker([lat,lng],{icon}).addTo(map)
+     .bindPopup('<b>'+titre+'</b><br><small>'+adresse+'</small>')
+     .openPopup();
+    L.circle([lat,lng],{color:'#ee5828',fillColor:'#ee5828',fillOpacity:.05,weight:1.5,radius:1200}).addTo(map);
+})();
+</script>
+<?php else: ?>
+<div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px 20px;margin:20px 0;display:flex;align-items:center;gap:12px;">
+    <span style="font-size:20px;">📍</span>
+    <div>
+        <div style="font-size:13px;font-weight:700;color:var(--text);">Pas de localisation</div>
+        <div style="font-size:12px;color:var(--muted);">Ce prestataire n'a pas encore saisi son adresse depuis le front office.</div>
+    </div>
+</div>
+<?php endif; ?>

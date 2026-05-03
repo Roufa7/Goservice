@@ -7,6 +7,8 @@
 
     --bg: #f7f8fb;
     --card: rgba(255,255,255,0.88);
+    --panel: #ffffff;
+    --border: rgba(20,39,56,0.10);
     --text: #142738;
     --muted: #617084;
     --line: rgba(20, 39, 56, 0.10);
@@ -25,6 +27,8 @@
 body.dark {
     --bg: #0e1a27;
     --card: rgba(20,39,56,0.84);
+    --panel: #0f1e2d;
+    --border: rgba(255,255,255,0.09);
     --text: #FFFFFF;
     --muted: #c8d0da;
     --line: rgba(255,255,255,0.08);
@@ -3983,4 +3987,73 @@ body.admin-body.dark .btn-edit-sm {
 body.admin-body.dark .btn-edit-sm:hover {
     background: rgba(76,138,255,0.28);
     color: #cfe2ff !important;
+}
+/* ══════════════════════════════════════════
+   DARK MODE — nouvelles classes stats/charts
+══════════════════════════════════════════ */
+body.admin-body.dark .sk-card,
+body.admin-body.dark .ck-panel,
+body.admin-body.dark .cat-chart-box,
+body.admin-body.dark .srv-table-wrap,
+body.admin-body.dark .srv-toolbar input,
+body.admin-body.dark .srv-toolbar select,
+body.admin-body.dark .top-item,
+body.admin-body.dark .ck-grid-cat .ck-card-cat,
+body.admin-body.dark .nf-item {
+    background: var(--panel) !important;
+    border-color: var(--border) !important;
+    color: var(--text) !important;
+}
+
+body.admin-body.dark .sk-num,
+body.admin-body.dark .ck-title,
+body.admin-body.dark .top-title,
+body.admin-body.dark .ck-num,
+body.admin-body.dark .cat-chart-title,
+body.admin-body.dark .nf-item-title {
+    color: var(--text) !important;
+}
+
+body.admin-body.dark .sk-lbl,
+body.admin-body.dark .ck-sub,
+body.admin-body.dark .top-cat,
+body.admin-body.dark .ck-lbl,
+body.admin-body.dark .cat-chart-sub,
+body.admin-body.dark .srv-count,
+body.admin-body.dark .nf-item-msg,
+body.admin-body.dark .nf-item-time {
+    color: var(--muted) !important;
+}
+
+body.admin-body.dark .srv-table th {
+    color: var(--muted) !important;
+}
+
+body.admin-body.dark .srv-table td {
+    color: var(--text) !important;
+    border-bottom-color: var(--border) !important;
+}
+
+body.admin-body.dark .srv-table thead tr {
+    border-bottom-color: var(--border) !important;
+}
+
+body.admin-body.dark .top-item {
+    background: rgba(238,88,40,.06) !important;
+}
+
+/* Catégories stats dark */
+body.admin-body.dark .stats-row-cat,
+body.admin-body.dark .cat-stat {
+    background: var(--panel) !important;
+    border-color: var(--border) !important;
+}
+
+body.admin-body.dark .cat-stat-num,
+body.admin-body.dark .cat-stat-top {
+    color: var(--text) !important;
+}
+
+body.admin-body.dark .cat-stat-lbl {
+    color: var(--muted) !important;
 }

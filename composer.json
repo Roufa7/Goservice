@@ -1,0 +1,22 @@
+{
+    "name": "goservice/v3",
+    "description": "GoService - Plateforme de services avec géolocalisation",
+    "type": "project",
+    "require": {
+        "php": ">=7.4",
+        "willdurand/geocoder": "^4.3",
+        "php-http/curl-client": "^2.0",
+        "nyholm/psr7": "^1.4"
+    },
+    "autoload": {
+        "psr-4": {
+            "GoService\\": "src/"
+        }
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "allow-plugins": {
+            "php-http/discovery": true
+        }
+    }
+}

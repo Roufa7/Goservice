@@ -45,7 +45,7 @@ function svcRating(array $service): array {
 }
 
 $img = !empty($service['image'])
-    ? '/GoService/' . ltrim($service['image'], '/')
+    ? '/GoService_v3/' . ltrim($service['image'], '/')
     : '/GoService/assets/images/service/default.jpg';
 
 $isAvailable = svcIsAvailable($service);
@@ -375,4 +375,124 @@ $prix = isset($service['prix']) ? number_format((float)$service['prix'], 2, ',',
             </div>
         </div>
     </div>
+<!-- ══════════════════════════════════════════════════════
+     SECTION CARTE LEAFLET — Localisation du prestataire
+     ══════════════════════════════════════════════════════ -->
+<?php if (!empty($service['latitude']) && !empty($service['longitude'])): ?>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+<style>
+.svc-map-section {
+    padding: 0 32px 40px;
+}
+.svc-map-card {
+    background: linear-gradient(180deg,#0e2941 0%,#102d47 100%);
+    border-radius: 22px;
+    overflow: hidden;
+    box-shadow: 0 18px 45px rgba(7,20,34,.20);
+}
+.svc-map-header {
+    padding: 22px 28px 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    border-bottom: 1px solid rgba(255,255,255,.07);
+}
+.svc-map-header-icon {
+    width: 46px; height: 46px;
+    background: rgba(238,88,40,.15);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; flex-shrink: 0;
+}
+.svc-map-header-title {
+    color: #fff;
+    font-size: 20px;
+    font-weight: 800;
+    margin: 0;
+}
+.svc-map-header-addr {
+    color: #78aeda;
+    font-size: 13px;
+    margin-top: 3px;
+}
+.svc-map-container {
+    height: 380px;
+    width: 100%;
+}
+@media(max-width:640px){
+    .svc-map-section { padding: 0 14px 28px; }
+    .svc-map-container { height: 260px; }
+}
+</style>
+
+<section class="svc-map-section">
+    <div class="svc-map-card">
+        <div class="svc-map-header">
+            <div class="svc-map-header-icon">📍</div>
+            <div>
+                <div class="svc-map-header-title">Localisation du prestataire</div>
+                <div class="svc-map-header-addr"><?= htmlspecialchars($service['adresse'] ?? 'Adresse non précisée') ?></div>
+            </div>
+        </div>
+        <div id="serviceMap" class="svc-map-container"></div>
+    </div>
 </section>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function(){
+    const lat = <?= (float)$service['latitude'] ?>;
+    const lng = <?= (float)$service['longitude'] ?>;
+    const titre   = <?= json_encode($titre) ?>;
+    const adresse = <?= json_encode($service['adresse'] ?? '') ?>;
+    const prix    = <?= json_encode($prix . ' €') ?>;
+    const cat     = <?= json_encode($categorie) ?>;
+
+    const map = L.map('serviceMap', { zoomControl: true, scrollWheelZoom: false })
+                 .setView([lat, lng], 15);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© <a href="https://openstreetmap.org">OpenStreetMap</a>',
+        maxZoom: 19
+    }).addTo(map);
+
+    // Marqueur personnalisé couleur GoService
+    const icon = L.divIcon({
+        html: `<div style="
+            background: linear-gradient(135deg,#ff7b39,#f15a24);
+            width: 36px; height: 36px;
+            border-radius: 50% 50% 50% 0;
+            transform: rotate(-45deg);
+            border: 4px solid #fff;
+            box-shadow: 0 6px 20px rgba(238,88,40,.5);
+        "></div>`,
+        iconSize: [36, 36],
+        iconAnchor: [18, 36],
+        className: ''
+    });
+
+    const popup = `
+        <div style="font-family:'Poppins',sans-serif;min-width:180px;padding:4px;">
+            <div style="font-weight:800;font-size:14px;color:#0e2941;margin-bottom:4px;">${titre}</div>
+            <div style="font-size:12px;color:#617084;margin-bottom:6px;">📂 ${cat}</div>
+            <div style="font-size:13px;color:#ee5828;font-weight:700;margin-bottom:6px;">💶 ${prix}</div>
+            <div style="font-size:11px;color:#617084;">📍 ${adresse}</div>
+        </div>`;
+
+    L.marker([lat, lng], { icon })
+     .addTo(map)
+     .bindPopup(popup, { maxWidth: 240 })
+     .openPopup();
+
+    // Cercle de zone d'intervention
+    L.circle([lat, lng], {
+        color: '#ee5828',
+        fillColor: '#ee5828',
+        fillOpacity: 0.06,
+        weight: 1.5,
+        radius: 1500
+    }).addTo(map);
+})();
+</script>
+<?php endif; ?>

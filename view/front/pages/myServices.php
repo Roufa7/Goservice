@@ -84,7 +84,7 @@ $totalEnAttente = count(array_filter($services, fn($s) => trim((string)($s['stat
 
                         <?php
                         $img = !empty($service['image'])
-                            ? '/GoService/' . ltrim($service['image'], '/')
+                            ? '/GoService_v3/' . ltrim($service['image'], '/')
                             : '/GoService/assets/images/service/default.jpg';
                         ?>
 

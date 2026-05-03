@@ -63,7 +63,7 @@ $titre     = htmlspecialchars($service['titre']);
 $categorie = htmlspecialchars($service['nom_categorie'] ?? 'Service');
 $prix      = number_format((float)$service['prix'], 2, ',', '');
 $img       = !empty($service['image'])
-    ? '/GoService/' . ltrim($service['image'], '/')
+    ? '/GoService_v3/' . ltrim($service['image'], '/')
     : '/GoService/assets/images/service/default.jpg';
 ?>
 
@@ -217,7 +217,7 @@ $img       = !empty($service['image'])
         <div class="rsv-summary">
             <img src="<?php echo htmlspecialchars($img); ?>" alt="<?php echo $titre; ?>"
                  class="rsv-summary-img"
-                 onerror="this.src='/GoService/assets/images/service/default.jpg'">
+                 onerror="this.src='/GoService_v3/assets/images/service/default.jpg'">
             <div class="rsv-summary-body">
                 <div class="rsv-summary-cat"><?php echo $categorie; ?></div>
                 <div class="rsv-summary-title"><?php echo $titre; ?></div>

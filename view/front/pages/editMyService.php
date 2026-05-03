@@ -5,6 +5,7 @@ ini_set('display_errors', 1);
 require_once __DIR__ . '/../../../controller/ServiceController.php';
 require_once __DIR__ . '/../../../controller/CategorieController.php';
 require_once __DIR__ . '/../../../model/Service.php';
+require_once __DIR__ . '/../../../service/GeocoderService.php';
 
 $serviceController   = new ServiceController();
 $categorieController = new CategorieController();
@@ -37,8 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $prix          = trim($_POST['prix'] ?? '');
     $disponibilite = trim($_POST['disponibilite'] ?? '');
     $id_categorie  = trim($_POST['id_categorie'] ?? '');
-
-    /* on garde le statut existant ou En attente */
+    $adresse       = trim($_POST['adresse'] ?? '');
     $statut = $serviceData['statut'] ?? 'En attente';
 
     if ($titre === '' || !preg_match('/^[A-Za-zÀ-ÿ\s]{3,}$/u', $titre)) {
@@ -89,17 +89,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if (empty($errors)) {
-        $service = new Service(
-            $titre,
-            $description,
-            $prix,
-            $disponibilite,
-            $statut,
-            $image_path,
-            $id_provider,
-            $id_categorie
-        );
+        // Géocodage adresse via Nominatim
+        $lat = $serviceData['latitude'] ?? null;
+        $lng = $serviceData['longitude'] ?? null;
+        if (!empty($adresse) && $adresse !== ($serviceData['adresse'] ?? '')) {
+            $coords = GeocoderService::geocode($adresse);
+            if ($coords) { $lat = $coords['lat']; $lng = $coords['lng']; }
+        }
 
+        $service = new Service(
+            $titre, $description, $prix, $disponibilite, $statut,
+            $image_path, $id_provider, $id_categorie,
+            $adresse ?: null, $lat, $lng
+        );
         $serviceController->updateServiceByProvider($service, $id, $id_provider);
         header('Location: index.php?page=myServices&updated=1');
         exit;
@@ -112,6 +114,7 @@ $description   = $_POST['description'] ?? $serviceData['description'];
 $prix          = $_POST['prix'] ?? $serviceData['prix'];
 $disponibilite = $_POST['disponibilite'] ?? $serviceData['disponibilite'];
 $id_categorie  = $_POST['id_categorie'] ?? $serviceData['id_categorie'];
+$adresse       = $_POST['adresse'] ?? ($serviceData['adresse'] ?? '');
 $statutAffiche = $serviceData['statut'] ?? 'En attente';
 ?>
 
@@ -233,7 +236,7 @@ $statutAffiche = $serviceData['statut'] ?? 'En attente';
         <?php if (!empty($serviceData['image'])): ?>
             <div class="current-image-box">
                 <img
-                    src="/GoService/<?php echo htmlspecialchars(ltrim($serviceData['image'], '/')); ?>"
+                    src="/GoService_v3/<?php echo htmlspecialchars(ltrim($serviceData['image'], '/')); ?>"
                     alt="Image actuelle"
                     onerror="this.style.display='none'"
                 >
@@ -350,6 +353,36 @@ $statutAffiche = $serviceData['statut'] ?? 'En attente';
 
                 <div id="err_image" style="display:none; color:#ff6b6b; font-size:13px; margin-top:8px;"></div>
                 <div id="ok_image" style="display:none; color:#28a745; font-size:13px; margin-top:6px;"></div>
+            </div>
+
+            <!-- ══ Adresse + Mini-carte ══ -->
+            <div class="field-block full-width">
+                <label class="field-label">📍 ADRESSE DU PRESTATAIRE
+                    <span style="font-size:11px;color:var(--muted);font-weight:400;"> — optionnel, pour apparaître sur la carte</span>
+                </label>
+                <div style="display:flex;gap:10px;align-items:center;">
+                    <input type="text" id="adresse" name="adresse"
+                        placeholder="Ex : Avenue Habib Bourguiba, Tunis, Tunisie"
+                        value="<?= htmlspecialchars($adresse) ?>"
+                        autocomplete="off" style="flex:1;">
+                    <button type="button" id="btnPreviewMap"
+                        style="background:linear-gradient(135deg,#ee5828,#c94718);color:#fff;border:none;
+                               padding:10px 16px;border-radius:10px;cursor:pointer;font-weight:700;
+                               font-size:12px;white-space:nowrap;height:42px;">
+                        🗺️ Prévisualiser
+                    </button>
+                </div>
+                <?php if (!empty($adresse)): ?>
+                <div style="font-size:11px;color:#4cd774;margin-top:6px;">
+                    ✓ Adresse actuelle : <?= htmlspecialchars($adresse) ?>
+                    <?php if (!empty($serviceData['latitude'])): ?>
+                    — <span style="color:var(--muted);">coordonnées enregistrées ✓</span>
+                    <?php endif; ?>
+                </div>
+                <?php endif; ?>
+                <div id="miniMapWrap" style="display:none;margin-top:12px;border-radius:14px;overflow:hidden;height:200px;border:2px solid #ee5828;">
+                    <div id="miniMap" style="width:100%;height:100%;"></div>
+                </div>
             </div>
 
             <div class="add-service-actions">
@@ -581,4 +614,55 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 });
+</script>
+
+<!-- Leaflet mini-map preview -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function(){
+    let miniMap = null, miniMarker = null;
+
+    // Afficher la carte si coordonnées déjà enregistrées
+    <?php if (!empty($serviceData['latitude']) && !empty($serviceData['longitude'])): ?>
+    window.addEventListener('load', function(){
+        initMiniMap(<?= (float)$serviceData['latitude'] ?>, <?= (float)$serviceData['longitude'] ?>,
+                    <?= json_encode($adresse) ?>);
+    });
+    <?php endif; ?>
+
+    function initMiniMap(lat, lng, label) {
+        const wrap = document.getElementById('miniMapWrap');
+        wrap.style.display = 'block';
+        if (!miniMap) {
+            miniMap = L.map('miniMap').setView([lat, lng], 14);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© <a href="https://openstreetmap.org">OpenStreetMap</a>', maxZoom: 18
+            }).addTo(miniMap);
+        } else {
+            miniMap.setView([lat, lng], 14);
+        }
+        const icon = L.divIcon({
+            html: '<div style="background:#ee5828;width:20px;height:20px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid #fff;box-shadow:0 3px 8px rgba(0,0,0,.3);"></div>',
+            iconSize:[20,20], iconAnchor:[10,20], className:''
+        });
+        if (miniMarker) miniMap.removeLayer(miniMarker);
+        miniMarker = L.marker([lat, lng], {icon}).addTo(miniMap)
+            .bindPopup('<b>📍 ' + label + '</b>').openPopup();
+        setTimeout(() => miniMap.invalidateSize(), 100);
+    }
+
+    document.getElementById('btnPreviewMap').addEventListener('click', function(){
+        const adresse = document.getElementById('adresse').value.trim();
+        if (!adresse) { alert('Veuillez saisir une adresse.'); return; }
+        fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(adresse),
+              { headers: {'Accept-Language':'fr'} })
+            .then(r => r.json())
+            .then(data => {
+                if (!data.length) { alert('Adresse introuvable. Soyez plus précis.'); return; }
+                initMiniMap(parseFloat(data[0].lat), parseFloat(data[0].lon), adresse);
+            })
+            .catch(() => alert('Erreur de connexion.'));
+    });
+})();
 </script>

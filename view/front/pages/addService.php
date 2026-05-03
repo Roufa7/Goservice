@@ -186,6 +186,27 @@ $categories = $categorieController->listCategories();
                 <div id="ok_image" style="display:none; color:#28a745; font-size:13px; margin-top:6px;"></div>
             </div>
 
+            <!-- ══ Adresse + Mini-carte ══ -->
+            <div class="field-block full-width">
+                <label>📍 ADRESSE DU PRESTATAIRE
+                    <span style="font-size:11px;color:var(--muted);font-weight:400;"> — optionnel, pour apparaître sur la carte</span>
+                </label>
+                <div style="display:flex;gap:10px;align-items:center;">
+                    <input type="text" id="adresse" name="adresse"
+                        placeholder="Ex : Avenue Habib Bourguiba, Tunis, Tunisie"
+                        autocomplete="off" style="flex:1;">
+                    <button type="button" id="btnPreviewMap"
+                        style="background:linear-gradient(135deg,#ee5828,#c94718);color:#fff;border:none;
+                               padding:10px 16px;border-radius:10px;cursor:pointer;font-weight:700;
+                               font-size:12px;white-space:nowrap;height:42px;">
+                        🗺️ Prévisualiser
+                    </button>
+                </div>
+                <div id="miniMapWrap" style="display:none;margin-top:12px;border-radius:14px;overflow:hidden;height:200px;border:2px solid #ee5828;">
+                    <div id="miniMap" style="width:100%;height:100%;"></div>
+                </div>
+            </div>
+
             <div class="add-service-actions">
                 <button type="submit" class="solid-btn">✓ Enregistrer</button>
                 <a href="index.php?page=services" class="outline-btn">Annuler</a>
@@ -415,4 +436,46 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 });
+</script>
+
+<!-- Leaflet mini-map preview -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function(){
+    let miniMap = null, miniMarker = null;
+
+    document.getElementById('btnPreviewMap').addEventListener('click', function(){
+        const adresse = document.getElementById('adresse').value.trim();
+        if (!adresse) { alert('Veuillez saisir une adresse d\'abord.'); return; }
+
+        const wrap = document.getElementById('miniMapWrap');
+        wrap.style.display = 'block';
+
+        if (!miniMap) {
+            miniMap = L.map('miniMap').setView([34.0, 9.0], 6);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© <a href="https://openstreetmap.org">OpenStreetMap</a>', maxZoom: 18
+            }).addTo(miniMap);
+        }
+
+        fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(adresse),
+              { headers: {'Accept-Language': 'fr'} })
+            .then(r => r.json())
+            .then(data => {
+                if (!data.length) { alert('Adresse introuvable. Soyez plus précis (ex: Tunis, Tunisie).'); return; }
+                const lat = parseFloat(data[0].lat), lng = parseFloat(data[0].lon);
+                miniMap.setView([lat, lng], 14);
+                const icon = L.divIcon({
+                    html: '<div style="background:#ee5828;width:20px;height:20px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid #fff;box-shadow:0 3px 8px rgba(0,0,0,.3);"></div>',
+                    iconSize:[20,20], iconAnchor:[10,20], className:''
+                });
+                if (miniMarker) miniMap.removeLayer(miniMarker);
+                miniMarker = L.marker([lat, lng], {icon}).addTo(miniMap)
+                    .bindPopup('<b>📍 ' + adresse + '</b>').openPopup();
+                setTimeout(() => miniMap.invalidateSize(), 100);
+            })
+            .catch(() => alert('Erreur de connexion au service de géocodage.'));
+    });
+})();
 </script>
