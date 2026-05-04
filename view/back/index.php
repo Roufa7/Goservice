@@ -15,6 +15,14 @@ if (!in_array($page, $allowedPages, true)) {
     $page = 'dashboard';
 }
 
+$eventAdminData = [];
+if ($page === 'events') {
+    require_once __DIR__ . '/../../controller/EventAdminController.php';
+    $eventAdminController = new EventAdminController();
+    $eventAdminController->handleRequest();
+    $eventAdminData = $eventAdminController->getPageData($_GET);
+}
+
 $view = __DIR__ . '/pages/' . $page . '.php';
 
 require __DIR__ . '/layouts/main.php';

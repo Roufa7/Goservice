@@ -16,6 +16,14 @@ if (!in_array($page, $allowedPages, true)) {
     $page = 'home';
 }
 
+$eventFrontData = [];
+if ($page === 'events') {
+    require_once __DIR__ . '/../../controller/EventFrontController.php';
+    $eventFrontController = new EventFrontController();
+    $eventFrontController->handleRequest();
+    $eventFrontData = $eventFrontController->getPageData($_GET);
+}
+
 $view = __DIR__ . '/pages/' . $page . '.php';
 
 require __DIR__ . '/layouts/main.php';

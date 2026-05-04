@@ -28,6 +28,9 @@ $adminNav = [
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo htmlspecialchars($title, ENT_QUOTES, 'UTF-8'); ?></title>
     <link rel="stylesheet" href="../../assets/css/style.css">
+    <?php if (($page ?? '') === 'events'): ?>
+        <link rel="stylesheet" href="../../assets/css/events.css">
+    <?php endif; ?>
 </head>
 <body class="admin-body dark">
     <div class="admin-shell">
@@ -74,5 +77,8 @@ $adminNav = [
 
     <script src="../../assets/js/theme.js"></script>
     <script src="../../assets/js/main.js"></script>
+    <?php if (($page ?? '') === 'events'): ?>
+        <script src="../../assets/js/events.js" defer></script>
+    <?php endif; ?>
 </body>
 </html>
