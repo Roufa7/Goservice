@@ -12,6 +12,45 @@ if (session_status() === PHP_SESSION_NONE) {
 
 app_set_language_from_request();
 
+function offerNotificationFilePath(): string {
+    return __DIR__ . '/../../../storage/offer_notifications.json';
+}
+
+function loadOfferNotificationsFromFile(): array {
+    $file = offerNotificationFilePath();
+    if (!is_file($file)) {
+        return [];
+    }
+    $content = @file_get_contents($file);
+    if ($content === false) {
+        return [];
+    }
+    $decoded = json_decode($content, true);
+    return is_array($decoded) ? $decoded : [];
+}
+
+function removeOfferNotificationFromFile(string $id): void {
+    if ($id === '') {
+        return;
+    }
+    $file = offerNotificationFilePath();
+    if (!is_file($file)) {
+        return;
+    }
+    $content = @file_get_contents($file);
+    if ($content === false) {
+        return;
+    }
+    $decoded = json_decode($content, true);
+    if (!is_array($decoded)) {
+        return;
+    }
+    $filtered = array_values(array_filter($decoded, static function ($n) use ($id) {
+        return (string) ($n['id'] ?? '') !== $id;
+    }));
+    @file_put_contents($file, json_encode($filtered, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
+}
+
 // Handle marking a notification read (only affect this page session scope)
 if (isset($_GET['mark_offer_notification'])) {
     $markId = (string) ($_GET['mark_offer_notification'] ?? '');
@@ -24,6 +63,7 @@ if (isset($_GET['mark_offer_notification'])) {
         }
         $_SESSION['offer_notifications'] = array_values($_SESSION['offer_notifications']);
     }
+    removeOfferNotificationFromFile($markId);
     $targetOffer = isset($_GET['offer_id']) ? rawurlencode((string)$_GET['offer_id']) : '';
     $redirectUrl = 'index.php?page=offre';
     if ($targetOffer !== '') {
@@ -361,6 +401,7 @@ $selectedOfferId = $formData['offer_id'] !== ''
     ? $formData['offer_id']
     : (string) ($activeOffers[0]['id_offre'] ?? '');
 $selectedOfferTitle = findOfferTitle($activeOffers, $selectedOfferId);
+$recommendationsUserId = $userId;
 ?>
 
 <?php if (!empty($message)): ?>
@@ -496,7 +537,28 @@ document.addEventListener('DOMContentLoaded', function() {
     </form>
 
     <?php
-    $notifications = $_SESSION['offer_notifications'] ?? [];
+    $sessionNotifications = $_SESSION['offer_notifications'] ?? [];
+    $fileNotifications = loadOfferNotificationsFromFile();
+    $notifications = is_array($sessionNotifications) ? $sessionNotifications : [];
+    if (is_array($fileNotifications)) {
+        $seenIds = [];
+        foreach ($notifications as $n) {
+            $nid = (string) ($n['id'] ?? '');
+            if ($nid !== '') {
+                $seenIds[$nid] = true;
+            }
+        }
+        foreach ($fileNotifications as $n) {
+            $nid = (string) ($n['id'] ?? '');
+            if ($nid !== '' && isset($seenIds[$nid])) {
+                continue;
+            }
+            if ($nid !== '') {
+                $seenIds[$nid] = true;
+            }
+            $notifications[] = $n;
+        }
+    }
     $unreadCount = 0;
     if (is_array($notifications)) {
         foreach ($notifications as $n) {
@@ -575,8 +637,29 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
         </div>
 
+        <button
+            type="button"
+            class="outline-btn"
+            id="offreRecommendationsToggle"
+            data-text-open="<?php echo htmlspecialchars(app_text('Recommendations','Recommendations','التوصيات'), ENT_QUOTES, 'UTF-8'); ?>"
+            data-text-close="<?php echo htmlspecialchars(app_text('Masquer recommendations','Hide recommendations','إخفاء التوصيات'), ENT_QUOTES, 'UTF-8'); ?>"
+            aria-controls="offreRecommendationsPanel"
+            aria-expanded="false"
+        >
+            ⭐ <?php echo app_text('Recommendations','Recommendations','التوصيات'); ?>
+        </button>
+
         <a class="solid-btn" href="#mes-candidatures">📋 <?php echo app_text('Mes Candidatures','My applications','طلباتي'); ?></a>
     </div>
+</section>
+
+<section class="admin-panel reveal offer-recommendations-panel" id="offreRecommendationsPanel" hidden>
+    <div class="offer-recommendations-header">
+        <span class="section-badge">⭐ <?php echo app_text('Recommendations','Recommendations','التوصيات'); ?></span>
+        <p class="muted"><?php echo app_text('Offres suggérées selon votre profil et votre historique.','Suggested offers based on your profile and history.','عروض مقترحة حسب ملفك وسجلّك.'); ?></p>
+    </div>
+    <div id="offreRecommendationsState" class="offer-recommendations-state" hidden></div>
+    <div id="offreRecommendationsList" class="offer-recommendations-list"></div>
 </section>
 
 <section class="admin-stats reveal" id="offreStatsBar">
@@ -651,7 +734,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                     <div class="icon-actions offer-card-actions">
                         <a class="solid-btn postuler-btn" href="#postuler-offre" data-offer-id="<?php echo htmlspecialchars($offer['id_offre'], ENT_QUOTES, 'UTF-8'); ?>" data-offer-title="<?php echo htmlspecialchars($offer['titre'], ENT_QUOTES, 'UTF-8'); ?>">✓ <?php echo app_text('Postuler','Apply','التقديم'); ?></a>
-                        <button type="button" class="small-btn toggle-details-btn" aria-expanded="false" data-text-show="<?php echo app_text('Voir détails','View details','عرض التفاصيل'); ?>" data-text-hide="<?php echo app_text('Masquer détails','Hide details','إخفاء التفاصيل'); ?>"><?php echo app_text('Voir détails','View details','عرض التفاصيل'); ?></button>
+                        <button type="button" class="small-btn open-location-btn" data-location="<?php echo htmlspecialchars((string) ($offer['localisation'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>"><?php echo app_text('Voir localisation','View location','عرض الموقع'); ?></button>
                     </div>
 
                     <div class="offer-details">
@@ -742,6 +825,33 @@ document.addEventListener('DOMContentLoaded', function() {
         </div>
     </div>
 </section>
+
+<!-- Leaflet map modal for offer localisation -->
+<div class="modal-overlay" id="offerLocationMapModal" role="dialog" aria-modal="true" aria-labelledby="offerLocationMapTitle" hidden>
+    <div class="modal" role="document" style="max-width:940px; width:95%;">
+        <button type="button" class="modal-close top-right" aria-label="Fermer" id="offerLocationMapClose">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M18 6L6 18M6 6l12 12" stroke="#142738" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </button>
+        <header class="modal-header">
+            <div>
+                <h2 id="offerLocationMapTitle"><?php echo app_text('Localisation de l\'offre','Offer location','موقع العرض'); ?></h2>
+                <p class="muted" id="offerLocationMapSubtitle"><?php echo app_text('Localisation exacte sur la carte','Exact location on the map','الموقع الدقيق على الخريطة'); ?></p>
+            </div>
+        </header>
+        <div class="modal-body offer-location-modal-body">
+            <div id="offerLocationMapStatus" class="offer-location-map-status" hidden></div>
+            <div id="offerLocationMapContainer" class="offer-location-map-container"></div>
+        </div>
+        <footer class="modal-footer" style="justify-content:flex-end;">
+            <button type="button" class="outline-btn" id="offerLocationMapCloseBtn"><?php echo app_text('Fermer','Close','إغلاق'); ?></button>
+        </footer>
+    </div>
+</div>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <section class="admin-panel reveal my-applications-panel" id="mes-candidatures">
     <span class="section-badge">📋 <?php echo app_text('Mes Candidatures','My applications','طلباتي'); ?></span>
@@ -899,6 +1009,31 @@ document.addEventListener('DOMContentLoaded', function() {
     align-items: center;
 }
 
+.offer-location-modal-body {
+    min-height: 480px;
+    padding: 12px 18px;
+    overflow: hidden;
+}
+
+.offer-location-map-container {
+    width: 100%;
+    min-height: 460px;
+    height: 460px;
+    border-radius: 12px;
+    border: 1px solid rgba(20, 39, 56, 0.12);
+    overflow: hidden;
+    background: #e8eef5;
+}
+
+.offer-location-map-status {
+    margin-bottom: 10px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    font-size: 0.92rem;
+    background: rgba(20,39,56,0.06);
+    color: #142738;
+}
+
 .offer-details {
     display: none;
     margin-top: 15px;
@@ -1003,6 +1138,78 @@ document.addEventListener('DOMContentLoaded', function() {
 
 .my-applications-panel {
     margin-top: 22px;
+}
+
+.offer-recommendations-panel {
+    margin-top: 18px;
+}
+
+.offer-recommendations-header {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.offer-recommendations-list {
+    margin-top: 14px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+}
+
+.offer-recommendation-card {
+    border: 1px solid rgba(20,39,56,0.10);
+    border-radius: 14px;
+    background: #fff;
+    padding: 14px;
+    box-shadow: 0 8px 20px rgba(20,39,56,0.06);
+}
+
+.offer-recommendation-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.offer-recommendation-type {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 9px;
+    border-radius: 999px;
+    background: rgba(90,149,238,0.12);
+    color: #1f5eb7;
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.offer-recommendation-score {
+    font-size: 0.82rem;
+    font-weight: 800;
+    color: #EE5828;
+}
+
+.offer-recommendation-city {
+    margin: 0 0 10px;
+    font-size: 0.94rem;
+    color: #142738;
+}
+
+.offer-recommendation-card .small-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 38px;
+}
+
+.offer-recommendations-state {
+    margin-top: 12px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: rgba(20,39,56,0.06);
+    color: #142738;
+    font-size: 0.9rem;
 }
 
 .application-card-list {
@@ -1250,44 +1457,178 @@ body.dark .application-status-danger {
 
 <script>
 (function() {
-    // Direct function to toggle details for a button
-    function toggleDetails(btn) {
-        var card = btn.closest('.offer-card');
-        if (!card) return false;
-        var details = card.querySelector('.offer-details');
-        if (!details) return false;
-        
-        var isExpanded = btn.getAttribute('aria-expanded') === 'true';
-        var textShow = btn.getAttribute('data-text-show');
-        var textHide = btn.getAttribute('data-text-hide');
-        
-        if (isExpanded) {
-            details.style.display = 'none';
-            btn.setAttribute('aria-expanded', 'false');
-            btn.textContent = textShow;
-        } else {
-            details.style.display = 'block';
-            btn.setAttribute('aria-expanded', 'true');
-            btn.textContent = textHide;
-        }
-        return true;
+    var locationModal = document.getElementById('offerLocationMapModal');
+    var locationMapContainer = document.getElementById('offerLocationMapContainer');
+    var locationMapStatus = document.getElementById('offerLocationMapStatus');
+    var locationMapClose = document.getElementById('offerLocationMapClose');
+    var locationMapCloseBtn = document.getElementById('offerLocationMapCloseBtn');
+    var locationMapSubtitle = document.getElementById('offerLocationMapSubtitle');
+    var locationMap = null;
+    var locationMarker = null;
+
+    function showMapStatus(message) {
+        if (!locationMapStatus) return;
+        locationMapStatus.textContent = message;
+        locationMapStatus.removeAttribute('hidden');
     }
-    
-    // Attach listeners to toggle details buttons
-    var detailsBtns = document.querySelectorAll('.toggle-details-btn');
-    for (var i = 0; i < detailsBtns.length; i++) {
+
+    function hideMapStatus() {
+        if (!locationMapStatus) return;
+        locationMapStatus.setAttribute('hidden', '');
+        locationMapStatus.textContent = '';
+    }
+
+    function openLocationModal() {
+        if (!locationModal) return;
+        locationModal.removeAttribute('hidden');
+        document.body.classList.add('modal-open');
+    }
+
+    function closeLocationModal() {
+        if (!locationModal) return;
+        locationModal.setAttribute('hidden', '');
+        document.body.classList.remove('modal-open');
+    }
+
+    function ensureLocationMap() {
+        if (locationMap || !locationMapContainer || typeof L === 'undefined') {
+            return;
+        }
+        locationMap = L.map(locationMapContainer, {
+            center: [33.8869, 9.5375],
+            zoom: 9,
+            zoomControl: true,
+            scrollWheelZoom: true
+        });
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(locationMap);
+    }
+
+    function parseCoordinates(rawLocation) {
+        var value = String(rawLocation || '').trim();
+        var match = value.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/);
+        if (!match) return null;
+        var lat = parseFloat(match[1]);
+        var lng = parseFloat(match[2]);
+        if (isNaN(lat) || isNaN(lng)) return null;
+        if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+        return { lat: lat, lng: lng };
+    }
+
+    function setLocationMarker(lat, lng) {
+        if (!locationMap) return;
+        if (!locationMarker) {
+            locationMarker = L.marker([lat, lng]).addTo(locationMap);
+        } else {
+            locationMarker.setLatLng([lat, lng]);
+        }
+        locationMap.setView([lat, lng], 13);
+        setTimeout(function() {
+            if (locationMap) locationMap.invalidateSize(true);
+        }, 120);
+    }
+
+    function showLocationOnMap(rawLocation) {
+        if (typeof L === 'undefined') {
+            showMapStatus('<?php echo addslashes(app_text('La carte est indisponible pour le moment.','Map is currently unavailable.','الخريطة غير متاحة حالياً.')); ?>');
+            return;
+        }
+
+        ensureLocationMap();
+        if (!locationMap) {
+            showMapStatus('<?php echo addslashes(app_text('Impossible d\'initialiser la carte.','Unable to initialize map.','تعذر تهيئة الخريطة.')); ?>');
+            return;
+        }
+
+        var locationText = String(rawLocation || '').trim();
+        if (locationMapSubtitle) {
+            locationMapSubtitle.textContent = locationText || '<?php echo addslashes(app_text('Localisation non spécifiée','Location not specified','الموقع غير محدد')); ?>';
+        }
+
+        var coords = parseCoordinates(locationText);
+        if (coords) {
+            hideMapStatus();
+            setLocationMarker(coords.lat, coords.lng);
+            return;
+        }
+
+        if (!locationText) {
+            showMapStatus('<?php echo addslashes(app_text('Cette offre ne contient pas de localisation.','This offer has no location.','هذا العرض لا يحتوي على موقع.')); ?>');
+            locationMap.setView([33.8869, 9.5375], 7);
+            return;
+        }
+
+        showMapStatus('<?php echo addslashes(app_text('Recherche de l\'adresse...','Searching address...','جاري البحث عن العنوان...')); ?>');
+        if (typeof fetch !== 'function') {
+            showMapStatus('<?php echo addslashes(app_text('Votre navigateur ne prend pas en charge la recherche d\'adresse automatique.','Your browser does not support automatic address lookup.','متصفحك لا يدعم البحث التلقائي عن العنوان.')); ?>');
+            locationMap.setView([33.8869, 9.5375], 7);
+            return;
+        }
+
+        fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(locationText), {
+            headers: { 'Accept': 'application/json' }
+        })
+            .then(function(response) { return response.json(); })
+            .then(function(results) {
+                if (Array.isArray(results) && results.length > 0) {
+                    var first = results[0];
+                    var lat = parseFloat(first.lat);
+                    var lon = parseFloat(first.lon);
+                    if (!isNaN(lat) && !isNaN(lon)) {
+                        hideMapStatus();
+                        setLocationMarker(lat, lon);
+                        return;
+                    }
+                }
+                showMapStatus('<?php echo addslashes(app_text('Adresse introuvable sur la carte.','Address not found on map.','تعذر العثور على العنوان على الخريطة.')); ?>');
+                locationMap.setView([33.8869, 9.5375], 7);
+            })
+            .catch(function() {
+                showMapStatus('<?php echo addslashes(app_text('Erreur lors de la recherche de l\'adresse.','Error while searching for address.','حدث خطأ أثناء البحث عن العنوان.')); ?>');
+                locationMap.setView([33.8869, 9.5375], 7);
+            });
+    }
+
+    var locationBtns = document.querySelectorAll('.open-location-btn');
+    for (var i = 0; i < locationBtns.length; i++) {
         (function(btn) {
             btn.addEventListener('click', function(e) {
-                console.log('>>> Toggle button clicked! <<<');
                 e.preventDefault();
-                e.stopPropagation();
-                console.log('About to toggle...');
-                toggleDetails(btn);
-                console.log('Toggle complete');
+                var rawLocation = btn.getAttribute('data-location') || '';
+                openLocationModal();
+                showLocationOnMap(rawLocation);
+                setTimeout(function() {
+                    if (locationMapContainer && typeof locationMapContainer.scrollIntoView === 'function') {
+                        locationMapContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                    if (locationMap) {
+                        locationMap.invalidateSize(true);
+                    }
+                }, 180);
             }, false);
-        })(detailsBtns[i]);
+        })(locationBtns[i]);
     }
-    
+
+    if (locationMapClose) {
+        locationMapClose.addEventListener('click', closeLocationModal);
+    }
+    if (locationMapCloseBtn) {
+        locationMapCloseBtn.addEventListener('click', closeLocationModal);
+    }
+    if (locationModal) {
+        locationModal.addEventListener('click', function(e) {
+            if (e.target === locationModal) closeLocationModal();
+        });
+        document.addEventListener('keydown', function(e) {
+            if (!locationModal.hasAttribute('hidden') && (e.key === 'Escape' || e.key === 'Esc')) {
+                closeLocationModal();
+            }
+        });
+    }
+
     // Client-side search + service filter (no reload); sort still submits the form
     var offreToolbarForm = document.getElementById('offreToolbarForm');
     var offreSearchInput = document.getElementById('offreSearchInput');
@@ -1424,6 +1765,120 @@ body.dark .application-status-danger {
                 }
             }, false);
         })(postulerBtns[j]);
+    }
+
+    var recommendationsToggle = document.getElementById('offreRecommendationsToggle');
+    var recommendationsPanel = document.getElementById('offreRecommendationsPanel');
+    var recommendationsList = document.getElementById('offreRecommendationsList');
+    var recommendationsState = document.getElementById('offreRecommendationsState');
+    var recommendationsLoaded = false;
+    var recommendationsUserId = <?php echo (int) $recommendationsUserId; ?>;
+
+    function showRecommendationsState(message) {
+        if (!recommendationsState) return;
+        recommendationsState.textContent = message;
+        recommendationsState.removeAttribute('hidden');
+    }
+
+    function hideRecommendationsState() {
+        if (!recommendationsState) return;
+        recommendationsState.setAttribute('hidden', '');
+        recommendationsState.textContent = '';
+    }
+
+    function renderRecommendations(items) {
+        if (!recommendationsList) return;
+        recommendationsList.innerHTML = '';
+        if (!Array.isArray(items) || items.length === 0) {
+            showRecommendationsState('<?php echo addslashes(app_text('Aucune recommandation disponible pour le moment.','No recommendations available at the moment.','لا توجد توصيات متاحة حالياً.')); ?>');
+            return;
+        }
+
+        hideRecommendationsState();
+        var viewLabel = '<?php echo addslashes(app_text('Voir condidature','View applications','عرض الطلبات')); ?>';
+        for (var i = 0; i < items.length; i++) {
+            var item = items[i] || {};
+            var id = Number(item.id || 0);
+            if (!id) continue;
+            var card = document.createElement('article');
+            card.className = 'offer-recommendation-card';
+
+            var typeService = String(item.type_service || '<?php echo addslashes(app_text('Service','Service','خدمة')); ?>');
+            var city = String(item.localisation || '<?php echo addslashes(app_text('Non spécifiée','Not specified','غير محدد')); ?>');
+            var score = Number(item.score || 0);
+
+            card.innerHTML =
+                '<div class="offer-recommendation-head">' +
+                    '<span class="offer-recommendation-type">' + typeService + '</span>' +
+                    '<span class="offer-recommendation-score">Score: ' + score + '</span>' +
+                '</div>' +
+                '<p class="offer-recommendation-city">📍 ' + city + '</p>' +
+                '<a class="small-btn" href="index.php?page=offre&offer_id=' + encodeURIComponent(String(id)) + '#offer-' + encodeURIComponent(String(id)) + '">' + viewLabel + '</a>';
+
+            recommendationsList.appendChild(card);
+        }
+    }
+
+    function loadRecommendations() {
+        if (recommendationsLoaded || recommendationsUserId <= 0) {
+            return Promise.resolve();
+        }
+        showRecommendationsState('<?php echo addslashes(app_text('Chargement des recommandations...','Loading recommendations...','جار تحميل التوصيات...')); ?>');
+
+        // Build robust URLs relative to current front route.
+        var endpoints = [
+            '../../api/recommendations.php?userId=' + encodeURIComponent(String(recommendationsUserId)),
+            '../../api/recommendations/' + encodeURIComponent(String(recommendationsUserId))
+        ];
+
+        var fetchAttempt = function(index) {
+            if (index >= endpoints.length) {
+                throw new Error('all_endpoints_failed');
+            }
+            return fetch(endpoints[index], { credentials: 'same-origin' })
+                .then(function(resp) {
+                    if (!resp.ok) throw new Error('http_' + resp.status);
+                    return resp.json();
+                })
+                .catch(function() {
+                    return fetchAttempt(index + 1);
+                });
+        };
+
+        return fetchAttempt(0)
+            .then(function(payload) {
+                recommendationsLoaded = true;
+                renderRecommendations(payload);
+            })
+            .catch(function() {
+                showRecommendationsState('<?php echo addslashes(app_text('Impossible de charger les recommandations pour le moment.','Unable to load recommendations right now.','تعذر تحميل التوصيات حالياً.')); ?>');
+            });
+    }
+
+    function openRecommendationsPanel() {
+        if (!recommendationsPanel || !recommendationsToggle) return;
+        recommendationsPanel.removeAttribute('hidden');
+        recommendationsToggle.textContent = recommendationsToggle.getAttribute('data-text-close') || 'Masquer recommendations';
+        recommendationsToggle.setAttribute('aria-expanded', 'true');
+        loadRecommendations();
+    }
+
+    function closeRecommendationsPanel() {
+        if (!recommendationsPanel || !recommendationsToggle) return;
+        recommendationsPanel.setAttribute('hidden', '');
+        recommendationsToggle.textContent = recommendationsToggle.getAttribute('data-text-open') || 'Recommendations';
+        recommendationsToggle.setAttribute('aria-expanded', 'false');
+    }
+
+    if (recommendationsToggle && recommendationsPanel) {
+        closeRecommendationsPanel();
+        recommendationsToggle.addEventListener('click', function() {
+            if (recommendationsPanel.hasAttribute('hidden')) {
+                openRecommendationsPanel();
+            } else {
+                closeRecommendationsPanel();
+            }
+        });
     }
 })();
 </script>

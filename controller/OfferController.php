@@ -11,6 +11,48 @@ class OfferController {
     public function __construct($unused = null) {
     }
 
+    private function pushOfferNotificationToFile(array $note): void {
+        $dir = __DIR__ . '/../storage';
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0755, true);
+        }
+        $file = $dir . '/offer_notifications.json';
+
+        $list = [];
+        if (is_file($file)) {
+            $content = @file_get_contents($file);
+            if ($content !== false) {
+                $decoded = json_decode($content, true);
+                if (is_array($decoded)) {
+                    $list = $decoded;
+                }
+            }
+        }
+
+        array_unshift($list, $note);
+        if (count($list) > 300) {
+            $list = array_slice($list, 0, 300);
+        }
+
+        @file_put_contents($file, json_encode($list, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
+    }
+
+    private function addOfferNotification(array $note): void {
+        if (session_status() === PHP_SESSION_NONE) {
+            @session_start();
+        }
+        if (!isset($_SESSION['offer_notifications']) || !is_array($_SESSION['offer_notifications'])) {
+            $_SESSION['offer_notifications'] = [];
+        }
+        array_unshift($_SESSION['offer_notifications'], $note);
+
+        try {
+            $this->pushOfferNotificationToFile($note);
+        } catch (Exception $e) {
+            // ignore persistence errors
+        }
+    }
+
     private function resolveStatusFromExpiration(?DateTime $dateExpiration): string {
         $today = new DateTime('today');
         $isExpired = false;
@@ -222,10 +264,7 @@ class OfferController {
                     'time' => (new DateTimeImmutable('now'))->format('c'),
                     'read' => false,
                 ];
-                if (!isset($_SESSION['offer_notifications']) || !is_array($_SESSION['offer_notifications'])) {
-                    $_SESSION['offer_notifications'] = [];
-                }
-                array_unshift($_SESSION['offer_notifications'], $note);
+                $this->addOfferNotification($note);
             }
 
             return $ok;
@@ -412,10 +451,7 @@ class OfferController {
                                 'time' => (new DateTimeImmutable('now'))->format('c'),
                                 'read' => false,
                             ];
-                            if (!isset($_SESSION['offer_notifications']) || !is_array($_SESSION['offer_notifications'])) {
-                                $_SESSION['offer_notifications'] = [];
-                            }
-                            array_unshift($_SESSION['offer_notifications'], $note);
+                            $this->addOfferNotification($note);
                         }
                     }
                 }
@@ -487,10 +523,7 @@ class OfferController {
                             'time' => (new DateTimeImmutable('now'))->format('c'),
                             'read' => false,
                         ];
-                        if (!isset($_SESSION['offer_notifications']) || !is_array($_SESSION['offer_notifications'])) {
-                            $_SESSION['offer_notifications'] = [];
-                        }
-                        array_unshift($_SESSION['offer_notifications'], $note);
+                        $this->addOfferNotification($note);
                     }
                 }
             }

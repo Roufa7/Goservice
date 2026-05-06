@@ -1,0 +1,12 @@
+{
+    "name": "tayssir/goservice-new",
+    "description": "GoService PHP project",
+    "type": "project",
+    "authors": [
+        {
+            "name": "tayssir-3",
+            "email": "tayssirbenkhaled90@gmail.com"
+        }
+    ],
+    "require": {}
+}

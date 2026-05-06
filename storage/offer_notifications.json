@@ -1,0 +1,46 @@
+[
+    {
+        "id": "notif_69fb64ad16c836.53771473",
+        "offer_id": 14,
+        "type": "suppression",
+        "headline": {
+            "fr": "Offre supprimée",
+            "en": "Offer deleted",
+            "ar": "تم حذف العرض"
+        },
+        "message": "fe ew",
+        "details": {
+            "type_service": "juridique",
+            "localisation": "34.244304,9.854452",
+            "prix": "14.00"
+        },
+        "link": "index.php?page=offre",
+        "time": "2026-05-06T15:56:29+00:00",
+        "read": false
+    },
+    {
+        "id": "notif_69fb60969cce46.01598577",
+        "offer_id": 12,
+        "type": "modification",
+        "headline": {
+            "fr": "Offre modifiée",
+            "en": "Offer updated",
+            "ar": "تم تعديل العرض"
+        },
+        "message": "swd",
+        "details": {
+            "type_service": "plomberie",
+            "localisation": "35.087230,10.271499",
+            "prix": "10.00 TND"
+        },
+        "changes": {
+            "titre": {
+                "from": "swdf",
+                "to": "swd"
+            }
+        },
+        "link": "index.php?page=offre&offer_id=12",
+        "time": "2026-05-06T15:39:02+00:00",
+        "read": false
+    }
+]

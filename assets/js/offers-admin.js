@@ -115,10 +115,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (localisation.trim() === '') {
                 errors.localisation = 'La localisation est obligatoire.';
-            } else if (!textRegex.test(localisation)) {
-                errors.localisation = 'La localisation doit contenir uniquement des lettres.';
-            } else if (localisation.length > 150) {
-                errors.localisation = 'La localisation ne doit pas depasser 150 caracteres.';
+            } else {
+                // Accept either address text or coordinates (lat,lng format)
+                const coordinateRegex = /^\s*-?\d+(?:\.\d+)?\s*,\s*-?\d+(?:\.\d+)?\s*$/;
+                const isCoordinates = coordinateRegex.test(localisation);
+                const isAddress = textRegex.test(localisation);
+                
+                if (!isCoordinates && !isAddress) {
+                    errors.localisation = 'La localisation doit être une adresse ou des coordonnées valides.';
+                } else if (localisation.length > 150) {
+                    errors.localisation = 'La localisation ne doit pas depasser 150 caracteres.';
+                }
             }
 
             if (dateExpiration) {
@@ -231,4 +238,5 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
+
 });

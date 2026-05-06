@@ -6,6 +6,7 @@ require_once __DIR__ . '/../../../model/Candidature.php';
 require_once __DIR__ . '/../../../controller/OfferController.php';
 require_once __DIR__ . '/../../../controller/CandidatureController.php';
 require_once __DIR__ . '/../../../controller/OfferPdfExporter.php';
+require_once __DIR__ . '/../../../controller/PredictionController.php';
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
@@ -73,10 +74,16 @@ function validateOfferPayload(array $input, array $typeServiceOptions): array {
 
    if ($localisation === '') {
     $errors['localisation'] = 'La localisation est obligatoire.';
-    } elseif (!preg_match('/^[a-zA-ZÀ-ÿ\s]+$/u', $localisation)) {
-        $errors['localisation'] = 'La localisation ne doit contenir que des lettres.';
-    } elseif (mb_strlen($localisation) > 150) {
-        $errors['localisation'] = 'La localisation ne doit pas depasser 150 caracteres.';
+    } else {
+        // Accept either address text (letters, numbers, spaces, punctuation) or coordinates (lat,lng format)
+        $isCoordinates = preg_match('/^\s*-?\d+(?:\.\d+)?\s*,\s*-?\d+(?:\.\d+)?\s*$/', $localisation);
+        $isAddress = preg_match('/^[a-zA-ZÀ-ÿ0-9\.,\-\s]+$/u', $localisation);
+        
+        if (!$isCoordinates && !$isAddress) {
+            $errors['localisation'] = 'La localisation doit être une adresse ou des coordonnées valides (ex: Tunis ou 36.806389,10.182778).';
+        } elseif (mb_strlen($localisation) > 250) {
+            $errors['localisation'] = 'La localisation ne doit pas depasser 250 caracteres.';
+        }
     }
     if ($dateExpiration !== '') {
         $date = DateTime::createFromFormat('Y-m-d', $dateExpiration);
@@ -383,6 +390,62 @@ if (!empty($applicationCountPerOffer)) {
     }
 }
 
+// PREDICTION SYSTEM: Uses PredictionController for trending analysis
+$predictionWindowDays = 30;
+$predictedTop = [];
+$predictionData = [];
+$predictionInsight = '';
+
+try {
+    $predictionController = new PredictionController();
+    $predictions = $predictionController->getPredictions($predictionWindowDays);
+    
+    if ($predictions['success'] && !empty($predictions['trendingOffers'])) {
+        // Convert API response to display format
+        foreach (array_slice($predictions['trendingOffers'], 0, 3) as $trend) {
+            $predictedTop[] = [
+                'id_offre' => (int)$trend['id'],
+                'titre' => $trend['title'],
+                'type_service' => $trend['service'],
+                'localisation' => $trend['service'], // Use service as fallback
+                'recent_count' => (int)$trend['candidatureCount'],
+                'trending_score' => (float)$trend['trendingScore'],
+                'days_since_post' => (int)$trend['daysSincePost'],
+            ];
+        }
+        $predictionInsight = $predictions['insight'] ?? '';
+    }
+} catch (Exception $e) {
+    // Fallback: Use basic logic if controller fails
+    error_log("Prediction error: " . $e->getMessage());
+    $recentCounts = [];
+    $nowTs = time();
+    $windowStart = $nowTs - ($predictionWindowDays * 24 * 3600);
+    foreach ($allApplications as $appItem) {
+        $offerId = (int) ($appItem['offer_id'] ?? $appItem['offre_id'] ?? $appItem['id_offre'] ?? 0);
+        if ($offerId <= 0) continue;
+        $dateStr = $appItem['date_candidature'] ?? $appItem['created_at'] ?? null;
+        $ts = $dateStr ? strtotime((string)$dateStr) : 0;
+        if ($ts >= $windowStart) {
+            $recentCounts[$offerId] = ($recentCounts[$offerId] ?? 0) + 1;
+        }
+    }
+    arsort($recentCounts);
+    foreach (array_slice($recentCounts, 0, 3, true) as $oid => $count) {
+        $found = array_values(array_filter($offers, static fn($o) => (int)($o['id_offre'] ?? 0) === (int)$oid));
+        if (!empty($found)) {
+            $it = reset($found);
+            $predictedTop[] = [
+                'id_offre' => (int)$oid,
+                'titre' => $it['titre'] ?? '—',
+                'type_service' => $it['type_service'] ?? '—',
+                'localisation' => $it['localisation'] ?? '—',
+                'recent_count' => (int)$count,
+            ];
+        }
+    }
+}
+
 if (isset($_GET['export']) && $_GET['export'] === 'pdf') {
     OfferPdfExporter::download($exportOffers, [
         'generatedAt' => new DateTimeImmutable('now'),
@@ -618,6 +681,7 @@ if ($currentOffer) {
         </div>
 
 <script>
+    try {
     document.addEventListener('DOMContentLoaded', function() {
         var toggle = document.getElementById('adminNotifToggle');
         var dropdown = document.getElementById('adminNotifDropdown');
@@ -744,6 +808,9 @@ if ($currentOffer) {
             });
         });
     });
+    } catch (e) {
+        console.error('Offers notifications/lang script error:', e);
+    }
     </script>
 
 <section class="action-bar reveal offers-page-toolbar" style="position:relative; z-index:20; overflow:visible;"> 
@@ -787,6 +854,95 @@ if ($currentOffer) {
     </div>
 </section>
 
+<?php $viewApplicationsLabel = app_text('Voir condidature','View applications','عرض الطلبات'); ?>
+<!-- Predictions: offers likely to receive most applications based on recent activity -->
+<section class="admin-stats reveal offers-predictions-launcher" id="offersPredictionsLauncher">
+    <button type="button" class="outline-btn" id="offersPredictionsToggle" data-text-open="<?php echo app_text('Voir prédictions','View predictions','عرض التنبؤات'); ?>" data-text-close="<?php echo app_text('Masquer prédictions','Hide predictions','إخفاء التنبؤات'); ?>" aria-controls="offersPredictions" aria-expanded="false">
+        <?php echo app_text('Voir prédictions','View predictions','عرض التنبؤات'); ?>
+    </button>
+</section>
+
+<section class="admin-stats reveal offers-predictions-panel" id="offersPredictions" hidden>
+    <header style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+        <div>
+            <h3 style="margin:0; font-size:1rem;">🔥 <?php echo app_text('Prédictions (tendances)','Predictions (trending)','التنبؤات (الاتجاهات)'); ?></h3>
+            <small class="muted"><?php echo sprintf(app_text('Offres les plus demandées — %d derniers jours','Most trending offers — last %d days','أكثر العروض طلبًا — آخر %d يومًا'), $predictionWindowDays); ?></small>
+        </div>
+    </header>
+    <div style="margin-top:12px; display:flex; gap:12px; flex-wrap:wrap;">
+        <?php if (empty($predictedTop)): ?>
+            <div style="padding:14px; border-radius:12px; background:#fff; border:1px solid rgba(20,39,56,.06); width:100%;">
+                <?php if (isset($totalRecentApplications) && $totalRecentApplications === 0): ?>
+                    <p style="margin:0; color:#666;"><?php echo app_text('Pas de candidatures dans la période sélectionnée.','No candidatures in the selected period.','لا توجد طلبات في الفترة المحددة.'); ?></p>
+                    <p style="margin:8px 0 0 0; font-size:0.9rem; color:#777;"><?php echo sprintf(app_text('Total candidatures (dernier %d jours): %d','Total candidatures (last %d days): %d','إجمالي الطلبات (آخر %d يومًا): %d'), $predictionWindowDays, $totalRecentApplications); ?></p>
+                    <p style="margin:8px 0 0 0; font-size:0.9rem; color:#777;"><?php echo app_text('Vous pouvez ajouter des candidatures de test via','You can add test candidatures via','يمكنك إضافة طلبات اختبار عبر'); ?> <a href="/goservice/test-predictions.php">test-predictions.php</a></p>
+                <?php else: ?>
+                    <p style="margin:0; color:#666;"><?php echo app_text('Des candidatures existent mais aucune offre n a été identifiée comme tendance.','There are candidatures but no trending offers were identified.','هناك طلبات ولكن لم يتم تحديد أي عروض شائعة.'); ?></p>
+                    <p style="margin:8px 0 0 0; font-size:0.9rem; color:#777;"><?php echo sprintf(app_text('Total candidatures (dernier %d jours): %d','Total candidatures (last %d days): %d','إجمالي الطلبات (آخر %d يومًا): %d'), $predictionWindowDays, $totalRecentApplications); ?></p>
+                    <?php if (isset($_GET['pred_debug']) && $_GET['pred_debug'] === '1'): ?>
+                        <div style="margin-top:8px;">
+                            <strong><?php echo app_text('Détails par offre','Details per offer','تفاصيل لكل عرض'); ?>:</strong>
+                            <ul style="margin:6px 0 0 16px; color:#444;">
+                                <?php foreach ($recentCountsPerOffer as $oid => $cnt): ?>
+                                    <li><?php echo htmlspecialchars((string)$oid); ?>: <?php echo (int)$cnt; ?> <?php echo app_text('candidatures','applications','الطلبات'); ?></li>
+                                <?php endforeach; ?>
+                            </ul>
+                        </div>
+                    <?php else: ?>
+                        <p style="margin:8px 0 0 0; font-size:0.85rem; color:#666;"><?php echo app_text('Pour plus de détails, ajoutez ?pred_debug=1 à l URL','For more details, add ?pred_debug=1 to the URL','لمزيد من التفاصيل، أضف ?pred_debug=1 إلى عنوان URL'); ?></p>
+                    <?php endif; ?>
+                <?php endif; ?>
+            </div>
+        <?php else: ?>
+            <?php foreach ($predictedTop as $index => $p): ?>
+                <div style="flex:1; min-width:240px; padding:16px; border-radius:12px; background:linear-gradient(135deg, #fff 0%, #f8fafb 100%); border:1px solid rgba(20,39,56,.08); position:relative; overflow:hidden;">
+                    <!-- Rank Badge -->
+                    <div style="position:absolute; top:8px; right:8px; width:32px; height:32px; display:flex; align-items:center; justify-content:center; border-radius:50%; background:<?php echo $index === 0 ? '#FFD700' : ($index === 1 ? '#C0C0C0' : '#CD7F32'); ?>; color:#fff; font-weight:bold; font-size:16px;">
+                        <?php echo match($index) { 0 => '🥇', 1 => '🥈', 2 => '🥉', default => $index + 1 }; ?>
+                    </div>
+                    
+                    <!-- Content -->
+                    <div style="font-weight:700; font-size:0.98rem; margin-bottom:6px; margin-right:40px; color:#142738;"><?php echo htmlspecialchars($p['titre'], ENT_QUOTES, 'UTF-8'); ?></div>
+                    
+                    <div style="font-size:0.85rem; color:#666; margin-bottom:10px;">
+                        <span style="display:inline-block; margin-right:8px; padding:2px 6px; background:#e8eef5; border-radius:4px; font-size:0.8rem;"><?php echo htmlspecialchars($p['type_service'] ?? '—', ENT_QUOTES, 'UTF-8'); ?></span>
+                    </div>
+                    
+                    <!-- Stats Row -->
+                    <div style="display:flex; gap:12px; margin-bottom:10px;">
+                        <div>
+                            <div style="font-weight:700; color:#142738; font-size:1.2rem;"><?php echo (int)$p['recent_count']; ?></div>
+                            <div style="font-size:0.75rem; color:#999;"><?php echo app_text('candidatures','applications','الطلبات'); ?></div>
+                        </div>
+                        <?php if (isset($p['trending_score'])): ?>
+                        <div>
+                            <div style="font-weight:700; color:#007bff; font-size:1.2rem;"><?php echo number_format((float)$p['trending_score'], 2); ?></div>
+                            <div style="font-size:0.75rem; color:#999;"><?php echo app_text('score/jour','score/day','النقاط/اليوم'); ?></div>
+                        </div>
+                        <?php endif; ?>
+                        <?php if (isset($p['days_since_post'])): ?>
+                        <div>
+                            <div style="font-weight:700; color:#666; font-size:1.2rem;"><?php echo (int)$p['days_since_post']; ?></div>
+                            <div style="font-size:0.75rem; color:#999;"><?php echo app_text('jours','days','الأيام'); ?></div>
+                        </div>
+                        <?php endif; ?>
+                    </div>
+                    
+                    <!-- Action Button -->
+                    <a class="small-btn" href="?page=offer_applications&offer_id=<?php echo urlencode((string)$p['id_offre']); ?>" style="display:inline-block; margin-top:8px;"><?php echo $viewApplicationsLabel; ?></a>
+                </div>
+            <?php endforeach; ?>
+        <?php endif; ?>
+    </div>
+    
+    <?php if (!empty($predictionInsight)): ?>
+    <div style="margin-top:16px; padding:12px 14px; border-radius:10px; background:#f0f8ff; border-left:3px solid #007bff;">
+        <strong style="color:#0056b3; font-size:0.9rem;">💡 <?php echo app_text('Insight','Insight','رؤية'); ?>:</strong>
+        <p style="margin:4px 0 0 0; color:#0056b3; font-size:0.85rem;"><?php echo htmlspecialchars($predictionInsight, ENT_QUOTES, 'UTF-8'); ?></p>
+    </div>
+    <?php endif; ?>
+</section>
+
 <style>
 .offers-page-toolbar,
 .action-bar.reveal,
@@ -798,6 +954,29 @@ if ($currentOffer) {
 
 .offers-page-toolbar .lang-switch-menu {
     z-index: 10000 !important;
+}
+
+.offers-predictions-launcher {
+    display: flex;
+    justify-content: flex-start;
+}
+
+#offersPredictions[hidden] {
+    display: none !important;
+}
+
+#offersPredictions .small-btn {
+    display: inline-flex;
+    width: auto;
+    min-width: 200px;
+    min-height: 40px;
+    padding: 10px 14px 0;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    line-height: 1.2;
+    font-size: 0.95rem;
+    margin-top: 8px;
 }
 </style>
 
@@ -932,7 +1111,21 @@ if ($currentOffer) {
                             <td><?php echo htmlspecialchars(formatDate($offer['date_expiration']), ENT_QUOTES, 'UTF-8'); ?></td>
                             <td><?php echo htmlspecialchars(ucfirst($offer['statut']), ENT_QUOTES, 'UTF-8'); ?></td>
                             <td class="admin-tools">
-                                <a href="?page=offer_applications&offer_id=<?php echo urlencode((string) ($offer['id_offre'] ?? '')); ?>" class="small-btn"><?php echo app_text('Voir candidatures','View applications','عرض الطلبات'); ?></a>
+                                <a href="?page=offer_applications&offer_id=<?php echo urlencode((string) ($offer['id_offre'] ?? '')); ?>" class="small-btn"><?php echo $viewApplicationsLabel; ?></a>
+                                <?php
+                                    // Use front-office URL (remove /view/back from the path)
+                                    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+                                    $host = $_SERVER['HTTP_HOST'] ?? ($_SERVER['SERVER_NAME'] ?? '');
+                                    // Navigate to root and then to index.php (front office entry point)
+                                    $rootPath = rtrim(dirname(dirname(dirname(__DIR__))), '\\/');
+                                    $base =  $host;
+                                    $offerUrl = 'http://localhost/goservice/view/front/index.php?page=offre&sort=date_des&q=' . urlencode((string)($offer['titre'] ?? ''));
+                                    $offerTitle = htmlspecialchars((string)($offer['titre'] ?? ''), ENT_QUOTES, 'UTF-8');
+                                    $offerType = htmlspecialchars((string)($offer['type_service'] ?? 'Service'), ENT_QUOTES, 'UTF-8');
+                                    $offerLocation = htmlspecialchars((string)($offer['localisation'] ?? 'N/A'), ENT_QUOTES, 'UTF-8');
+                                    $offerPrice = isset($offer['prix']) ? number_format((float)$offer['prix'], 2, '.', '') : 'N/A';
+                                ?>
+                                <button type="button" class="small-btn" onclick="openLinkedinShareModal('<?php echo addslashes($offerTitle); ?>', '<?php echo addslashes($offerType); ?>', '<?php echo addslashes($offerLocation); ?>', '<?php echo $offerPrice; ?>', '<?php echo addslashes($offerUrl); ?>');"><?php echo app_text('Partager','Share','مشاركة'); ?></button>
                                 <form method="GET" style="display:inline;">
                                     <input type="hidden" name="page" value="offers">
                                     <input type="hidden" name="edit" value="<?php echo htmlspecialchars($offer['id_offre'], ENT_QUOTES, 'UTF-8'); ?>">
@@ -984,7 +1177,10 @@ if ($currentOffer) {
 
         <div class="field-block form-field localisation-field-block">
             <label for="localisationField"><?php echo app_text('Localisation','Location','الموقع'); ?></label>
-            <input type="text" name="localisation" id="localisationField" placeholder="<?php echo app_text('Localisation','Location','الموقع'); ?>" value="<?php echo htmlspecialchars($formData['localisation'], ENT_QUOTES, 'UTF-8'); ?>" aria-invalid="<?php echo $fieldErrors['localisation'] !== '' ? 'true' : 'false'; ?>">
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <input type="text" name="localisation" id="localisationField" placeholder="<?php echo app_text('Localisation','Location','الموقع'); ?>" value="<?php echo htmlspecialchars($formData['localisation'], ENT_QUOTES, 'UTF-8'); ?>" aria-invalid="<?php echo $fieldErrors['localisation'] !== '' ? 'true' : 'false'; ?>" style="flex:1;">
+                        <button type="button" id="chooseOnMapBtn" class="outline-btn" title="<?php echo app_text('Choisir sur la carte','Choose on map','اختر على الخريطة'); ?>"><?php echo app_text('Carte','Map','خريطة'); ?></button>
+                    </div>
             <small class="field-error" data-error-for="localisation"><?php echo htmlspecialchars($fieldErrors['localisation'], ENT_QUOTES, 'UTF-8'); ?></small>
         </div>
 
@@ -1021,7 +1217,70 @@ if ($currentOffer) {
     </form>
 </section>
 
+<!-- Leaflet for map-based localisation picker -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- LinkedIn Share Modal -->
+<div class="modal-overlay" id="linkedinShareModal" role="dialog" aria-modal="true" aria-labelledby="linkedinShareTitle" hidden>
+    <div class="modal" role="document" style="max-width:720px;">
+        <button type="button" class="modal-close top-right" aria-label="Fermer" id="linkedinShareClose">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M18 6L6 18M6 6l12 12" stroke="#142738" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </button>
+        <header class="modal-header">
+            <div>
+                <h2 id="linkedinShareTitle"><?php echo app_text('Partager sur LinkedIn','Share on LinkedIn','مشاركة على لينكدإن'); ?></h2>
+                <p class="muted" style="margin-top:6px;"><?php echo app_text('Partagez cette offre professionnellement sur LinkedIn','Share this offer professionally on LinkedIn','شارك هذا العرض بشكل احترافي على لينكدإن'); ?></p>
+            </div>
+        </header>
+        <div class="modal-body" style="padding:18px;">
+            <div style="background:#f5f7fa; padding:16px; border-radius:12px; border:1px solid rgba(20,39,56,.1); margin-bottom:16px;">
+                <textarea id="linkedinMessageText" style="width:100%; min-height:240px; padding:12px; border-radius:10px; border:1px solid rgba(148,163,184,.42); font-family:inherit; font-size:0.95rem; resize:vertical;" readonly></textarea>
+            </div>
+            <div style="display:flex; gap:12px; margin-bottom:16px;">
+                <button type="button" id="linkedinCopyBtn" class="outline-btn" style="flex:1;"><?php echo app_text('Copier le message','Copy message','نسخ الرسالة'); ?></button>
+                <button type="button" id="linkedinCopyLinkBtn" class="outline-btn" style="flex:1;"><?php echo app_text('Copier le lien','Copy link','نسخ الرابط'); ?></button>
+            </div>
+            <div style="text-align:center; margin-top:16px;">
+                <button type="button" id="linkedinOpenBtn" class="solid-btn" style="display:inline-block; font-size:1rem;"><?php echo app_text('🔗 Ouvrir LinkedIn & Copier','🔗 Open LinkedIn & Copy','🔗 فتح لينكدإن والنسخ'); ?></button>
+            </div>
+            <div id="linkedinCopyFeedback" style="margin-top:12px; padding:10px; border-radius:8px; background:rgba(76,175,80,0.1); color:#4CAF50; text-align:center; display:none; font-weight:600;" hidden></div>
+        </div>
+    </div>
+</div>
+
+<!-- Map picker modal (Leaflet) -->
+<div class="modal-overlay" id="localisationMapModal" role="dialog" aria-modal="true" aria-labelledby="localisationMapTitle" hidden>
+    <div class="modal" role="document" style="max-width:920px; width:95%;">
+        <button type="button" class="modal-close top-right" aria-label="Fermer" id="localisationMapClose">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M18 6L6 18M6 6l12 12" stroke="#142738" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </button>
+        <header class="modal-header">
+            <div>
+                <h2 id="localisationMapTitle" style="font-size:2rem; line-height:1.15;"><?php echo app_text('Choisir la localisation','Choose localisation','اختر الموقع'); ?></h2>
+                <p class="muted" style="font-size:1.2rem; line-height:1.45;"><?php echo app_text('Cliquez sur la carte pour définir la localisation. Enregistrez pour appliquer aux coordonnées du champ.','Click on the map to pick a location. Save to apply coordinates to the field.','انقر على الخريطة لتحديد الموقع. احفظ لتطبيق الإحداثيات على الحقل.'); ?></p>
+            </div>
+            <div class="modal-meta"><small style="font-size:1rem;"><?php echo (new DateTimeImmutable('now'))->format('d/m/Y H:i'); ?></small></div>
+        </header>
+        <div class="modal-body" style="padding:12px 18px; flex:1; overflow:hidden; min-height:480px;">
+            <div style="display:flex; gap:10px; align-items:center; margin:0 0 12px 0;">
+                <input type="text" id="localisationMapSearchInput" placeholder="<?php echo app_text('Rechercher un lieu, une ville, une adresse...','Search a place, city, address...','ابحث عن مكان أو مدينة أو عنوان...'); ?>" style="flex:1; min-height:46px; font-size:1.04rem; padding:0 14px; border-radius:10px; border:1px solid rgba(20,39,56,.2);">
+                <button type="button" class="outline-btn" id="localisationMapSearchBtn" style="min-height:46px; font-size:1rem; padding:0 14px;"><?php echo app_text('Rechercher','Search','بحث'); ?></button>
+            </div>
+            <div id="localisationMapSearchStatus" class="muted" style="min-height:24px; margin:0 0 10px 2px; font-size:0.98rem;"></div>
+            <div id="localisationMapContainer" style="width:100%; height:100%; min-height:480px; border-radius:12px; overflow:hidden; border:1px solid rgba(20,39,56,.06); background:#e8eef5; position:relative; z-index:1;"></div>
+        </div>
+        <footer class="modal-footer" style="display:flex; gap:8px; justify-content:flex-end;">
+            <button type="button" class="outline-btn" id="localisationMapCancel" style="font-size:1rem; min-height:44px;"><?php echo app_text('Annuler','Cancel','إلغاء'); ?></button>
+            <button type="button" class="solid-btn" id="localisationMapSave" style="font-size:1rem; min-height:44px;"><?php echo app_text('Enregistrer la localisation','Save location','حفظ الموقع'); ?></button>
+        </footer>
+    </div>
+</div>
 <script>
 (function(){
     try{
@@ -1046,6 +1305,8 @@ if ($currentOffer) {
         }
 
             var statsToggle = document.getElementById('offersStatsToggle') || document.querySelector('#offersStatsToggle');
+            var predictionsToggle = document.getElementById('offersPredictionsToggle') || document.querySelector('#offersPredictionsToggle');
+            var predictionsPanel = document.getElementById('offersPredictions') || document.querySelector('#offersPredictions');
             var statsModal = document.getElementById('offersStatsModal') || document.querySelector('#offersStatsModal');
             var statsModalClose = document.getElementById('offersStatsModalClose') || document.querySelector('#offersStatsModalClose');
             var statsModalCloseBtn = document.getElementById('offersStatsModalCloseBtn') || document.querySelector('#offersStatsModalCloseBtn');
@@ -1233,6 +1494,31 @@ if ($currentOffer) {
 
                 if (statsModalClose) statsModalClose.addEventListener('click', closeStatsModal);
                 if (statsModalCloseBtn) statsModalCloseBtn.addEventListener('click', closeStatsModal);
+            }
+
+            if (predictionsToggle && predictionsPanel) {
+                function openPredictionsPanel() {
+                    predictionsPanel.removeAttribute('hidden');
+                    predictionsToggle.textContent = predictionsToggle.getAttribute('data-text-close') || 'Masquer prédictions';
+                    predictionsToggle.setAttribute('aria-expanded', 'true');
+                    try { predictionsPanel.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) {}
+                }
+
+                function closePredictionsPanel() {
+                    predictionsPanel.setAttribute('hidden', 'hidden');
+                    predictionsToggle.textContent = predictionsToggle.getAttribute('data-text-open') || 'Voir prédictions';
+                    predictionsToggle.setAttribute('aria-expanded', 'false');
+                }
+
+                closePredictionsPanel();
+
+                predictionsToggle.addEventListener('click', function() {
+                    if (predictionsPanel.hasAttribute('hidden')) {
+                        openPredictionsPanel();
+                    } else {
+                        closePredictionsPanel();
+                    }
+                });
             }
 
         var sortSelect = document.getElementById('offerSortSelect');
@@ -1462,6 +1748,30 @@ if ($currentOffer) {
     letter-spacing: 0.01em;
     border-bottom: 2px solid #142738;
     color: #000000;
+}
+
+/* Ensure action buttons in the Actions column appear on a single row */
+.admin-tools {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: nowrap;
+}
+.admin-tools form {
+    margin: 0;
+    display: inline-flex;
+}
+.admin-tools .small-btn,
+.admin-tools .danger-btn,
+.admin-tools .outline-btn,
+.admin-tools .solid-btn,
+.admin-tools .success-btn,
+.admin-tools .action-pill {
+    margin: 0;
+    padding: 8px 12px !important;
+    font-size: 12px !important;
+    min-height: 36px !important;
+    white-space: nowrap;
 }
 
 .module-table tbody tr {
@@ -2267,3 +2577,318 @@ body.modal-open {
   }
 }
 </style>
+
+<script>
+(function(){
+    var chooseBtn = document.getElementById('chooseOnMapBtn');
+    var modal = document.getElementById('localisationMapModal');
+    var mapContainer = document.getElementById('localisationMapContainer');
+    var closeBtn = document.getElementById('localisationMapClose');
+    var saveBtn = document.getElementById('localisationMapSave');
+    var cancelBtn = document.getElementById('localisationMapCancel');
+    var searchInput = document.getElementById('localisationMapSearchInput');
+    var searchBtn = document.getElementById('localisationMapSearchBtn');
+    var searchStatus = document.getElementById('localisationMapSearchStatus');
+    var locField = document.getElementById('localisationField');
+
+    if (!chooseBtn || !modal || !mapContainer || !locField) return;
+
+    var mapInstance = null;
+    var marker = null;
+    var selectedLatLng = null;
+    var mapInitialized = false;
+
+    function setSearchStatus(msg, isError) {
+        if (!searchStatus) return;
+        searchStatus.textContent = msg || '';
+        searchStatus.style.color = isError ? '#b42318' : '#516173';
+    }
+
+    function setMarkerAt(lat, lng, zoom) {
+        if (!mapInstance) return;
+        var target = L.latLng(lat, lng);
+        if (marker) {
+            marker.setLatLng(target);
+        } else {
+            marker = L.marker(target, { draggable: false }).addTo(mapInstance);
+        }
+        selectedLatLng = { lat: lat, lng: lng };
+        mapInstance.setView(target, zoom || 13);
+    }
+
+    function initMap() {
+        if (mapInitialized || mapInstance) return;
+        mapInitialized = true;
+        
+        try {
+            if (typeof L === 'undefined') {
+                console.error('Leaflet not loaded');
+                return;
+            }
+            
+            // Clear any previous map
+            if (mapContainer.innerHTML) {
+                mapContainer.innerHTML = '';
+            }
+            
+            // Force container dimensions
+            mapContainer.style.width = '100%';
+            mapContainer.style.height = '480px';
+            mapContainer.style.minHeight = '480px';
+            mapContainer.style.display = 'block';
+            
+            // Small delay to ensure CSS is applied
+            setTimeout(function(){
+                try {
+                    // Initialize map centered on Tunisia
+                    mapInstance = L.map(mapContainer, {
+                        center: [33.8869, 9.5375],
+                        zoom: 9,
+                        zoomControl: true,
+                        scrollWheelZoom: true
+                    });
+                    
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        maxZoom: 19,
+                        attribution: '&copy; OpenStreetMap contributors',
+                        detectRetina: true,
+                        crossOrigin: 'anonymous'
+                    }).addTo(mapInstance);
+                    
+                    // Ensure tiles are visible
+                    mapInstance.on('tileerror', function(e) {
+                        console.warn('Tile error:', e);
+                    });
+
+                    mapInstance.on('click', function(e){
+                        var lat = e.latlng.lat;
+                        var lng = e.latlng.lng;
+                        setMarkerAt(lat, lng, mapInstance.getZoom() < 13 ? 13 : mapInstance.getZoom());
+                        setSearchStatus('<?php echo addslashes(app_text('Position sélectionnée sur la carte.','Position selected on map.','تم تحديد الموقع على الخريطة.')); ?>', false);
+                    });
+                    
+                    // If localisation field already has coordinates, show marker
+                    var val = (locField.value || '').trim();
+                    if (val && val.match(/^\s*-?\d+(?:\.\d+)?\s*,\s*-?\d+(?:\.\d+)?\s*$/)) {
+                        var parts = val.split(',');
+                        var lat = parseFloat(parts[0]);
+                        var lng = parseFloat(parts[1]);
+                        if (!isNaN(lat) && !isNaN(lng)) {
+                            setMarkerAt(lat, lng, 13);
+                        }
+                    }
+                    
+                    // Trigger resize to render properly
+                    mapInstance.invalidateSize(true);
+                } catch(e) {
+                    console.error('Map init error 2:', e);
+                }
+            }, 100);
+        } catch(e) {
+            console.error('Map init error:', e);
+        }
+    }
+
+    function openModal() {
+        modal.removeAttribute('hidden');
+        document.body.classList.add('modal-open');
+        
+        // Initialize map with proper timing
+        setTimeout(function(){
+            initMap();
+            // Call invalidateSize again after a delay to ensure tiles render
+            setTimeout(function(){
+                if (mapInstance) {
+                    mapInstance.invalidateSize(true);
+                }
+            }, 300);
+        }, 200);
+    }
+
+    function closeModal() {
+        modal.setAttribute('hidden','');
+        document.body.classList.remove('modal-open');
+    }
+
+    function searchPlace() {
+        var q = (searchInput && searchInput.value ? searchInput.value : '').trim();
+        if (!q) {
+            setSearchStatus('<?php echo addslashes(app_text('Entrez un lieu à rechercher.','Enter a place to search.','اكتب مكانًا للبحث.')); ?>', true);
+            return;
+        }
+        if (typeof fetch !== 'function') {
+            setSearchStatus('<?php echo addslashes(app_text('Recherche indisponible sur ce navigateur.','Search unavailable in this browser.','البحث غير متاح في هذا المتصفح.')); ?>', true);
+            return;
+        }
+
+        setSearchStatus('<?php echo addslashes(app_text('Recherche en cours...','Searching...','جاري البحث...')); ?>', false);
+        var url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(q);
+        fetch(url, { headers: { 'Accept': 'application/json' } })
+            .then(function(resp){ return resp.json(); })
+            .then(function(items){
+                if (!Array.isArray(items) || items.length === 0) {
+                    setSearchStatus('<?php echo addslashes(app_text('Aucun résultat trouvé.','No result found.','لم يتم العثور على نتائج.')); ?>', true);
+                    return;
+                }
+                var first = items[0];
+                var lat = parseFloat(first.lat);
+                var lon = parseFloat(first.lon);
+                if (isNaN(lat) || isNaN(lon)) {
+                    setSearchStatus('<?php echo addslashes(app_text('Résultat invalide reçu.','Invalid result received.','تم استلام نتيجة غير صالحة.')); ?>', true);
+                    return;
+                }
+                setMarkerAt(lat, lon, 14);
+                setSearchStatus('<?php echo addslashes(app_text('Lieu trouvé. Vous pouvez ajuster en cliquant sur la carte.','Place found. You can adjust by clicking on map.','تم العثور على المكان. يمكنك التعديل بالنقر على الخريطة.')); ?>', false);
+            })
+            .catch(function(){
+                setSearchStatus('<?php echo addslashes(app_text('Erreur pendant la recherche.','Search error.','حدث خطأ أثناء البحث.')); ?>', true);
+            });
+    }
+
+    chooseBtn.addEventListener('click', function(){ openModal(); });
+    if (closeBtn) closeBtn.addEventListener('click', closeModal);
+    if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+    if (searchBtn) searchBtn.addEventListener('click', searchPlace);
+    if (searchInput) {
+        searchInput.addEventListener('keydown', function(e){
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                searchPlace();
+            }
+        });
+    }
+
+    if (saveBtn) saveBtn.addEventListener('click', function(){
+        if (selectedLatLng) {
+            locField.value = (selectedLatLng.lat.toFixed(6) + ',' + selectedLatLng.lng.toFixed(6));
+        } else if (marker && marker.getLatLng) {
+            var p = marker.getLatLng();
+            locField.value = (p.lat.toFixed(6) + ',' + p.lng.toFixed(6));
+        }
+        closeModal();
+    });
+})();
+</script>
+
+<script>
+// LinkedIn Share Modal Handler
+function openLinkedinShareModal(offerTitle, offerType, offerLocation, offerPrice, offerUrl) {
+    var modal = document.getElementById('linkedinShareModal');
+    var messageText = document.getElementById('linkedinMessageText');
+    var copyBtn = document.getElementById('linkedinCopyBtn');
+    var copyLinkBtn = document.getElementById('linkedinCopyLinkBtn');
+    var openBtn = document.getElementById('linkedinOpenBtn');
+    var feedback = document.getElementById('linkedinCopyFeedback');
+    var closeBtn = document.getElementById('linkedinShareClose');
+    
+    if (!modal || !messageText) return;
+    
+    // Generate professional message
+    var message = "🎯 Nous recrutons !\n\n" +
+        "Poste : " + offerTitle + "\n" +
+        "Type : " + offerType + "\n" +
+        "Localisation : " + offerLocation + "\n" +
+        "Budget : " + offerPrice + " TND\n\n" +
+        "Rejoignez notre équipe ! Consultez l'offre complète et postulez via le lien ci-dessous.\n\n" +
+        "👉 " + offerUrl + "\n\n" +
+        "#Recrutement #Embauche #Offre #Emploi";
+    
+    messageText.value = message;
+    messageText.textContent = message;
+    
+    // Auto copy message to clipboard and open LinkedIn
+    function copyToClipboardAndOpen() {
+        var textarea = document.createElement('textarea');
+        textarea.value = message;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        try {
+            document.execCommand('copy');
+            feedback.textContent = "✓ Message copié ! LinkedIn s'ouvre...";
+            feedback.removeAttribute('hidden');
+            feedback.style.display = 'block';
+        } catch(e) {
+            console.log('Copy failed, but opening LinkedIn anyway');
+        }
+        document.body.removeChild(textarea);
+        
+        // Open LinkedIn after copying
+        setTimeout(function(){
+            var linkedinShareUrl = 'https://www.linkedin.com/sharing/share-offsite/?url=' + encodeURIComponent(offerUrl);
+            window.open(linkedinShareUrl, 'linkedin_share', 'width=600,height=600');
+        }, 300);
+    }
+    
+    // Set LinkedIn share link
+    openBtn.href = 'javascript:void(0)';
+    openBtn.onclick = function(e){
+        e.preventDefault();
+        copyToClipboardAndOpen();
+        return false;
+    };
+    
+    // Copy message to clipboard
+    copyBtn.onclick = function() {
+        var textarea = document.createElement('textarea');
+        textarea.value = message;
+        document.body.appendChild(textarea);
+        textarea.select();
+        try {
+            document.execCommand('copy');
+            feedback.textContent = "✓ Message copié !";
+            feedback.removeAttribute('hidden');
+            feedback.style.display = 'block';
+            setTimeout(function() { feedback.setAttribute('hidden', ''); feedback.style.display = 'none'; }, 3000);
+        } catch(e) {
+            alert('Erreur lors de la copie');
+        }
+        document.body.removeChild(textarea);
+    };
+    
+    // Copy link to clipboard
+    copyLinkBtn.onclick = function() {
+        var textarea = document.createElement('textarea');
+        textarea.value = offerUrl;
+        document.body.appendChild(textarea);
+        textarea.select();
+        try {
+            document.execCommand('copy');
+            feedback.textContent = "✓ Lien copié !";
+            feedback.removeAttribute('hidden');
+            feedback.style.display = 'block';
+            setTimeout(function() { feedback.setAttribute('hidden', ''); feedback.style.display = 'none'; }, 3000);
+        } catch(e) {
+            alert('Erreur lors de la copie');
+        }
+        document.body.removeChild(textarea);
+    };
+    
+    // Close modal
+    function closeModal() {
+        modal.setAttribute('hidden', '');
+        document.body.classList.remove('modal-open');
+    }
+    
+    if (closeBtn) closeBtn.onclick = closeModal;
+    
+    // Open modal
+    modal.removeAttribute('hidden');
+    document.body.classList.add('modal-open');
+    
+    // Auto-focus on the primary action
+    setTimeout(function(){
+        if (openBtn) openBtn.focus();
+    }, 100);
+}
+
+// Close modal when clicking overlay
+document.addEventListener('click', function(e) {
+    var modal = document.getElementById('linkedinShareModal');
+    if (modal && !modal.hasAttribute('hidden') && e.target === modal.parentElement) {
+        modal.setAttribute('hidden', '');
+        document.body.classList.remove('modal-open');
+    }
+});
+</script>
