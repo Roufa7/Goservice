@@ -1,0 +1,28 @@
+{
+    "name": "goservice/evenements",
+    "type": "project",
+    "require": {
+        "php": "^8.2",
+        "chillerlan/php-qrcode": "^5.0",
+        "dompdf/dompdf": "^3.1",
+        "eluceo/ical": "^0.16",
+        "phpmailer/phpmailer": "^7.0",
+        "openai-php/client": "^0.19.2",
+        "guzzlehttp/guzzle": "^7.10",
+        "vlucas/phpdotenv": "^5.6"
+    },
+    "authors": [
+        {
+            "name": "Raef Merghad",
+            "email": "raef.merghad@esprit.tn"
+        }
+    ],
+    "config": {
+        "platform": {
+            "php": "8.2.12"
+        },
+        "allow-plugins": {
+            "php-http/discovery": true
+        }
+    }
+}
