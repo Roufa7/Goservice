@@ -38,27 +38,12 @@ $candidatureController = new CandidatureController();
 
 $activeOffers = $offerController->listActiveOffers(); //recupere les donnees depuis BD
 
-// Get search and sort parameters
+// Get search, service filter, and sort parameters (search + service applied client-side; sort uses GET reload)
 $searchTerm = cleanInput((string) ($_GET['q'] ?? ''));
+$selectedServiceFront = cleanInput((string) ($_GET['type'] ?? ''));
 $sortOption = cleanInput((string) ($_GET['sort'] ?? 'date_desc'));
 
-// Helper functions for filtering and sorting
-function filterOffersBySearchFront(array $offers, string $searchTerm): array {
-    $searchTerm = trim(mb_strtolower($searchTerm, 'UTF-8'));
-    if ($searchTerm === '') {
-        return array_values($offers);
-    }
-    return array_values(array_filter($offers, function (array $offer) use ($searchTerm): bool {
-        $haystack = mb_strtolower(implode(' ', [
-            (string) ($offer['titre'] ?? ''),
-            (string) ($offer['type_service'] ?? ''),
-            (string) ($offer['localisation'] ?? ''),
-            (string) ($offer['description'] ?? ''),
-        ]), 'UTF-8');
-        return strpos($haystack, $searchTerm) !== false;
-    }));
-}
-
+// Helper functions for sorting (search + service filter are client-side on the offers list)
 function offerSortKeyFront(array $offer, string $sort): mixed {
     return match ($sort) {
         'titre_asc', 'titre_desc' => mb_strtolower(trim((string) ($offer['titre'] ?? '')), 'UTF-8'),
@@ -100,8 +85,13 @@ function sortOffersFront(array $offers, string $sort): array {
     return array_values($offers);
 }
 
-// Apply filters and sorting
-$displayedOffers = sortOffersFront(filterOffersBySearchFront($activeOffers, $searchTerm), $sortOption);
+// All active offers for the list (sorted); search and service filter run in the browser without reload
+$sortedOffersForList = sortOffersFront($activeOffers, $sortOption);
+$typeServiceOptionsFront = array_values(array_unique(array_filter(array_map(
+    static fn (array $o): string => trim((string) ($o['type_service'] ?? '')),
+    $activeOffers
+), static fn (string $s): bool => $s !== '')));
+natcasesort($typeServiceOptionsFront);
 
 $message = '';
 $messageType = '';
@@ -483,11 +473,18 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <section class="action-bar reveal" style="position:relative; z-index:20; overflow:visible;">
-    <form class="search-box" method="GET" action="index.php">
+    <form class="search-box" id="offreToolbarForm" method="GET" action="index.php">
         <input type="hidden" name="page" value="offre">
-        <input type="text" name="q" value="<?php echo htmlspecialchars($searchTerm, ENT_QUOTES, 'UTF-8'); ?>" placeholder="<?php echo app_text('Rechercher une offre...','Search offers...','ابحث عن عرض...'); ?>">
-        <button type="submit" class="outline-btn"><?php echo app_text('Rechercher','Search','بحث'); ?></button>
-        <select name="sort" id="offerSortSelect" onchange="this.form.submit()">
+        <input type="search" id="offreSearchInput" name="q" value="<?php echo htmlspecialchars($searchTerm, ENT_QUOTES, 'UTF-8'); ?>" placeholder="<?php echo app_text('Rechercher une offre...','Search offers...','ابحث عن عرض...'); ?>" autocomplete="off" aria-label="<?php echo app_text('Rechercher une offre','Search an offer','ابحث عن عرض'); ?>">
+        <select id="offreServiceFilter" name="type" aria-label="<?php echo app_text('Filtrer par service','Filter by service','تصفية حسب الخدمة'); ?>">
+            <option value=""><?php echo app_text('Tous les services','All services','كل الخدمات'); ?></option>
+            <?php foreach ($typeServiceOptionsFront as $svc): ?>
+                <option value="<?php echo htmlspecialchars($svc, ENT_QUOTES, 'UTF-8'); ?>" <?php echo strcasecmp($selectedServiceFront, $svc) === 0 ? 'selected' : ''; ?>>
+                    <?php echo htmlspecialchars($svc, ENT_QUOTES, 'UTF-8'); ?>
+                </option>
+            <?php endforeach; ?>
+        </select>
+        <select name="sort" id="offerSortSelect">
             <option value="date_desc" <?php echo $sortOption === 'date_desc' ? 'selected' : ''; ?>><?php echo app_text('Plus Récentes','Most recent','الأحدث'); ?></option>
             <option value="date_asc" <?php echo $sortOption === 'date_asc' ? 'selected' : ''; ?>><?php echo app_text('Plus Anciennes','Oldest','الأقدم'); ?></option>
             <option value="titre_asc" <?php echo $sortOption === 'titre_asc' ? 'selected' : ''; ?>><?php echo app_text('Titre: A à Z','Title: A to Z','العنوان: أ إلى ي'); ?></option>
@@ -496,7 +493,6 @@ document.addEventListener('DOMContentLoaded', function() {
             <option value="prix_desc" <?php echo $sortOption === 'prix_desc' ? 'selected' : ''; ?>><?php echo app_text('Prix: Décroissant','Price: High to Low','السعر: من الأعلى للأقل'); ?></option>
             <option value="type_asc" <?php echo $sortOption === 'type_asc' ? 'selected' : ''; ?>><?php echo app_text('Type: A à Z','Type: A to Z','النوع: أ إلى ي'); ?></option>
         </select>
-        <noscript><button type="submit" class="outline-btn">Trier</button></noscript>
     </form>
 
     <?php
@@ -583,31 +579,38 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
 </section>
 
-<section class="admin-stats reveal">
+<section class="admin-stats reveal" id="offreStatsBar">
     <article class="admin-stat">
-        <strong><?php echo htmlspecialchars(count($displayedOffers), ENT_QUOTES, 'UTF-8'); ?></strong>
-        <span><?php echo count($displayedOffers) === count($activeOffers) ? app_text('Offres Actives','Active Offers','العروض النشطة') : app_text('Résultats','Results','النتائج'); ?></span>
+        <strong id="offreStatCount"><?php echo htmlspecialchars((string) count($sortedOffersForList), ENT_QUOTES, 'UTF-8'); ?></strong>
+        <span id="offreStatCountLabel" data-label-all="<?php echo htmlspecialchars(app_text('Offres Actives','Active Offers','العروض النشطة'), ENT_QUOTES, 'UTF-8'); ?>" data-label-results="<?php echo htmlspecialchars(app_text('Résultats','Results','النتائج'), ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars(app_text('Offres Actives','Active Offers','العروض النشطة'), ENT_QUOTES, 'UTF-8'); ?></span>
     </article>
     <article class="admin-stat">
-        <strong><?php echo htmlspecialchars(count(array_filter($displayedOffers, fn($o) => !empty($o['localisation']))), ENT_QUOTES, 'UTF-8'); ?></strong>
+        <strong id="offreStatLocalized"><?php echo htmlspecialchars((string) count(array_filter($sortedOffersForList, static fn ($o) => !empty($o['localisation']))), ENT_QUOTES, 'UTF-8'); ?></strong>
         <span><?php echo app_text('Offres Localisées','Localized Offers','العروض المحلية'); ?></span>
     </article>
     <article class="admin-stat">
-        <strong><?php echo htmlspecialchars(count(array_unique(array_column($displayedOffers, 'type_service'))), ENT_QUOTES, 'UTF-8'); ?></strong>
+        <strong id="offreStatTypes"><?php echo htmlspecialchars((string) count(array_unique(array_column($sortedOffersForList, 'type_service'))), ENT_QUOTES, 'UTF-8'); ?></strong>
         <span><?php echo app_text('Types de Services','Service Types','أنواع الخدمات'); ?></span>
     </article>
 </section>
 
 <section class="module-split reveal">
-    <div class="offers-column">
-        <?php if (empty($displayedOffers)): ?>
+    <div class="offers-column" id="offresOffersColumn">
+        <?php if (empty($activeOffers)): ?>
             <article class="card offers-empty-state">
-                <h3><?php echo !empty($searchTerm) ? app_text('Aucune offre ne correspond à votre recherche','No offers match your search','لا توجد عروض تطابق بحثك') : app_text('Aucune offre disponible pour le moment','No offers available at the moment','لا توجد عروض متاحة حالياً'); ?></h3>
-                <p><?php echo !empty($searchTerm) ? app_text('Essayez avec d\'autres mots clés.','Try different keywords.','جرّب كلمات رئيسية أخرى.') : app_text('Revenez bientôt pour découvrir de nouvelles offres exclusives !','Check back soon for new exclusive offers!','عد لاحقاً لاكتشاف عروض حصرية جديدة!'); ?></p>
+                <h3><?php echo app_text('Aucune offre disponible pour le moment','No offers available at the moment','لا توجد عروض متاحة حالياً'); ?></h3>
+                <p><?php echo app_text('Revenez bientôt pour découvrir de nouvelles offres exclusives !','Check back soon for new exclusive offers!','عد لاحقاً لاكتشاف عروض حصرية جديدة!'); ?></p>
             </article>
         <?php else: ?>
-            <?php foreach ($displayedOffers as $offer): ?>
-                <article class="card offer-card">
+            <article class="card offers-empty-state js-offres-filter-empty" id="offresFilterEmpty" hidden>
+                <h3><?php echo app_text('Aucune offre ne correspond à votre recherche','No offers match your search','لا توجد عروض تطابق بحثك'); ?></h3>
+                <p><?php echo app_text('Essayez un autre mot-clé ou un autre service.','Try another keyword or another service.','جرّب كلمة مفتاحية أخرى أو خدمة أخرى.'); ?></p>
+            </article>
+            <?php foreach ($sortedOffersForList as $offer): ?>
+                <?php
+                    $searchBlob = (string) ($offer['titre'] ?? '');
+                ?>
+                <article class="card offer-card" data-offer-searchable="1" data-offer-service="<?php echo htmlspecialchars((string) ($offer['type_service'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>" data-search-text="<?php echo htmlspecialchars($searchBlob, ENT_QUOTES, 'UTF-8'); ?>" data-offer-has-loc="<?php echo !empty($offer['localisation']) ? '1' : '0'; ?>">
                     <div class="offer-card-head">
                         <span class="section-badge"><?php echo htmlspecialchars($offer['type_service'] ?: 'Service', ENT_QUOTES, 'UTF-8'); ?></span>
                         <span class="badge <?php echo htmlspecialchars(getOfferBadgeClass($offer['statut']), ENT_QUOTES, 'UTF-8'); ?> offer-status-badge">
@@ -1285,6 +1288,116 @@ body.dark .application-status-danger {
         })(detailsBtns[i]);
     }
     
+    // Client-side search + service filter (no reload); sort still submits the form
+    var offreToolbarForm = document.getElementById('offreToolbarForm');
+    var offreSearchInput = document.getElementById('offreSearchInput');
+    var offreServiceFilter = document.getElementById('offreServiceFilter');
+    var offresColumn = document.getElementById('offresOffersColumn');
+    var offresFilterEmpty = document.getElementById('offresFilterEmpty');
+
+    function normalizeOfferSearchValue(value) {
+        return String(value || '')
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .trim();
+    }
+
+    function syncOffreToolbarUrl(searchValue, serviceValue) {
+        var params = new URLSearchParams(window.location.search);
+        params.set('page', 'offre');
+        var sortSelectEl = document.getElementById('offerSortSelect');
+        if (sortSelectEl && sortSelectEl.value) {
+            params.set('sort', sortSelectEl.value);
+        }
+        if (searchValue) {
+            params.set('q', searchValue);
+        } else {
+            params.delete('q');
+        }
+        if (serviceValue) {
+            params.set('type', serviceValue);
+        } else {
+            params.delete('type');
+        }
+        window.history.replaceState({}, document.title, window.location.pathname + '?' + params.toString() + window.location.hash);
+    }
+
+    function updateOffreStatsFromVisible(cards) {
+        var n = cards.length;
+        var countEl = document.getElementById('offreStatCount');
+        var labelEl = document.getElementById('offreStatCountLabel');
+        var locEl = document.getElementById('offreStatLocalized');
+        var typesEl = document.getElementById('offreStatTypes');
+        if (countEl) countEl.textContent = String(n);
+
+        var searchVal = offreSearchInput ? offreSearchInput.value : '';
+        var serviceVal = offreServiceFilter ? offreServiceFilter.value : '';
+        var filtersActive = normalizeOfferSearchValue(searchVal) !== '' || (serviceVal && String(serviceVal).trim() !== '');
+        if (labelEl) {
+            labelEl.textContent = filtersActive
+                ? (labelEl.getAttribute('data-label-results') || '')
+                : (labelEl.getAttribute('data-label-all') || '');
+        }
+
+        var loc = 0;
+        var types = {};
+        for (var i = 0; i < cards.length; i++) {
+            var c = cards[i];
+            if (c.getAttribute('data-offer-has-loc') === '1') loc++;
+            var t = (c.getAttribute('data-offer-service') || '').trim();
+            if (t) types[t] = true;
+        }
+        if (locEl) locEl.textContent = String(loc);
+        if (typesEl) typesEl.textContent = String(Object.keys(types).length);
+    }
+
+    function applyOffreListFilters() {
+        if (!offresColumn) return;
+
+        var searchValue = offreSearchInput ? offreSearchInput.value : '';
+        var serviceValue = offreServiceFilter ? offreServiceFilter.value : '';
+        var query = normalizeOfferSearchValue(searchValue);
+        var serviceQuery = normalizeOfferSearchValue(serviceValue);
+
+        var cards = offresColumn.querySelectorAll('.offer-card[data-offer-searchable="1"]');
+        var visible = [];
+        cards.forEach(function(card) {
+            var hay = normalizeOfferSearchValue(card.getAttribute('data-search-text') || '');
+            var svc = normalizeOfferSearchValue(card.getAttribute('data-offer-service') || '');
+            var matchesSearch = query === '' || hay.indexOf(query) !== -1;
+            var matchesService = serviceQuery === '' || svc === serviceQuery;
+            var show = matchesSearch && matchesService;
+            card.hidden = !show;
+            if (show) visible.push(card);
+        });
+
+        if (offresFilterEmpty) {
+            offresFilterEmpty.hidden = cards.length === 0 || visible.length > 0;
+        }
+
+        syncOffreToolbarUrl(searchValue, serviceValue);
+        updateOffreStatsFromVisible(visible);
+    }
+
+    if (offreToolbarForm) {
+        offreToolbarForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+        });
+    }
+
+    if (offreSearchInput) {
+        offreSearchInput.addEventListener('input', applyOffreListFilters);
+        offreSearchInput.addEventListener('search', applyOffreListFilters);
+    }
+    if (offreServiceFilter) {
+        offreServiceFilter.addEventListener('change', applyOffreListFilters);
+    }
+
+    if (offresColumn && offresColumn.querySelector('.offer-card[data-offer-searchable="1"]')) {
+        applyOffreListFilters();
+    }
+
     // Auto-submit sort select
     var sortSelect = document.getElementById('offerSortSelect');
     if (sortSelect && sortSelect.form) {

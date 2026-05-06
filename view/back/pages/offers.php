@@ -301,23 +301,19 @@ if (isset($_GET['edit'])) {
 
 $offers = $offerController->listOffers(); // tgoutes les offres
 $searchTerm = cleanInput((string) ($_GET['q'] ?? ''));
-$sortOption = cleanInput((string) ($_GET['sort'] ?? 'date_publication_desc'));
+$selectedService = cleanInput((string) ($_GET['type'] ?? ''));
+$sortOption = cleanInput((string) ($_GET['sort'] ?? 'date_desc'));
 $sortLabels = [
-    'date_publication_desc' => 'Publication: plus recentes',
-    'date_publication_asc' => 'Publication: plus anciennes',
-    'date_expiration_desc' => 'Expiration: plus recentes',
-    'date_expiration_asc' => 'Expiration: plus anciennes',
+    'date_desc' => 'Plus recentes',
+    'date_asc' => 'Plus anciennes',
     'titre_asc' => 'Titre: A a Z',
     'titre_desc' => 'Titre: Z a A',
     'type_asc' => 'Type: A a Z',
-    'type_desc' => 'Type: Z a A',
-    'localisation_asc' => 'Localisation: A a Z',
-    'localisation_desc' => 'Localisation: Z a A',
     'prix_asc' => 'Prix: croissant',
     'prix_desc' => 'Prix: décroissant',
 ];
-$visibleOffers = sortOffers(filterOffersBySearch($offers, $searchTerm), $sortOption);
-$exportOffers = sortOffers(filterOffersBySearch($offers, $searchTerm), 'date_publication_desc');
+$visibleOffers = sortOffers($offers, $sortOption);
+$exportOffers = sortOffers(filterOffersByService(filterOffersBySearch($offers, $searchTerm), $selectedService), 'date_desc');
 $offerPrices = array_values(array_filter(array_map(static function (array $offer): ?float {
     return isset($offer['prix']) && $offer['prix'] !== '' ? (float) $offer['prix'] : null;
 }, $offers), static fn (?float $price): bool => $price !== null));
@@ -392,7 +388,7 @@ if (isset($_GET['export']) && $_GET['export'] === 'pdf') {
         'generatedAt' => new DateTimeImmutable('now'),
         'title' => 'Gestion des offres',
         'searchLabel' => $searchTerm,
-        'sortLabel' => 'Publication: plus recentes',
+        'sortLabel' => $sortLabels[$sortOption] ?? 'Plus recentes',
     ]);
 }
 
@@ -414,8 +410,6 @@ function offerSortKey(array $offer, string $sort): mixed {
     return match ($sort) {
         'titre_asc', 'titre_desc' => mb_strtolower(trim((string) ($offer['titre'] ?? '')), 'UTF-8'),
         'type_asc', 'type_desc' => mb_strtolower(trim((string) ($offer['type_service'] ?? '')), 'UTF-8'),
-        'localisation_asc', 'localisation_desc' => mb_strtolower(trim((string) ($offer['localisation'] ?? '')), 'UTF-8'),
-        'date_expiration_asc', 'date_expiration_desc' => !empty($offer['date_expiration']) ? strtotime((string) $offer['date_expiration']) : null,
         'prix_asc', 'prix_desc' => isset($offer['prix']) && $offer['prix'] !== '' ? (float) $offer['prix'] : null,
         default => !empty($offer['date_publication']) ? strtotime((string) $offer['date_publication']) : null,
     };
@@ -423,19 +417,17 @@ function offerSortKey(array $offer, string $sort): mixed {
 
 function sortOffers(array $offers, string $sort): array {
     $sort = in_array($sort, [
+        'date_asc',
+        'date_desc',
         'date_publication_asc',
         'date_publication_desc',
-        'date_expiration_asc',
-        'date_expiration_desc',
         'titre_asc',
         'titre_desc',
         'type_asc',
         'type_desc',
-        'localisation_asc',
-        'localisation_desc',
         'prix_asc',
         'prix_desc',
-    ], true) ? $sort : 'date_publication_desc';
+    ], true) ? $sort : 'date_desc';
 
     usort($offers, function (array $left, array $right) use ($sort): int {
         $leftKey = offerSortKey($left, $sort);
@@ -457,7 +449,7 @@ function sortOffers(array $offers, string $sort): array {
             ? strcasecmp($leftKey, $rightKey)
             : ($leftKey <=> $rightKey);
 
-        return str_ends_with($sort, '_desc') ? -$comparison : $comparison;
+        return (str_ends_with($sort, '_desc') || $sort === 'date_desc') ? -$comparison : $comparison;
     });
 
     return array_values($offers);
@@ -483,7 +475,20 @@ function filterOffersBySearch(array $offers, string $searchTerm): array {
     }));
 }
 
-function buildOfferExportUrl(string $searchTerm, string $sortOption): string {
+function filterOffersByService(array $offers, string $service): array {
+    $service = trim(mb_strtolower($service, 'UTF-8'));
+
+    if ($service === '') {
+        return array_values($offers);
+    }
+
+    return array_values(array_filter($offers, function (array $offer) use ($service): bool {
+        $offerService = trim(mb_strtolower((string) ($offer['type_service'] ?? ''), 'UTF-8'));
+        return $offerService === $service;
+    }));
+}
+
+function buildOfferExportUrl(string $searchTerm, string $sortOption, string $selectedService = ''): string {
     $params = [
         'page' => 'offers',
         'export' => 'pdf',
@@ -495,6 +500,10 @@ function buildOfferExportUrl(string $searchTerm, string $sortOption): string {
 
     if ($sortOption !== '') {
         $params['sort'] = $sortOption;
+    }
+
+    if ($selectedService !== '') {
+        $params['type'] = $selectedService;
     }
 
     return '?' . http_build_query($params);
@@ -738,26 +747,32 @@ if ($currentOffer) {
     </script>
 
 <section class="action-bar reveal offers-page-toolbar" style="position:relative; z-index:20; overflow:visible;"> 
-    <form class="search-box" method="GET" action="index.php">
+    <form class="search-box offers-toolbar-form" id="offersToolbarForm" method="GET" action="index.php">
         <input type="hidden" name="page" value="offers">
-        <input type="text" name="q" value="<?php echo htmlspecialchars($searchTerm, ENT_QUOTES, 'UTF-8'); ?>" placeholder="<?php echo app_text('...Rechercher une offre','...Search offers','...ابحث عن عرض'); ?>" style="min-width: 220px; max-width: 320px; min-height: 44px; padding: 0 14px; font-size: 0.95rem;">
-        <button type="submit" class="outline-btn" style="min-height: 44px; padding: 0 16px; font-size: 0.92rem;"><?php echo app_text('Rechercher','Search','بحث'); ?></button>
-        <select name="sort" id="offerSortSelect" onchange="this.form.submit()" style="min-width: 230px; max-width: 280px; min-height: 44px; padding-right: 34px; font-size: 0.92rem;">
-            <option value="date_publication_desc" <?php echo $sortOption === 'date_publication_desc' ? 'selected' : ''; ?>><?php echo app_text('Date publication: récentes','Publication date: recent','تاريخ النشر: الأحدث'); ?></option>
-            <option value="date_publication_asc" <?php echo $sortOption === 'date_publication_asc' ? 'selected' : ''; ?>><?php echo app_text('Date publication: anciennes','Publication date: oldest','تاريخ النشر: الأقدم'); ?></option>
-            <option value="date_expiration_desc" <?php echo $sortOption === 'date_expiration_desc' ? 'selected' : ''; ?>><?php echo app_text('Date expiration: récentes','Expiration date: recent','تاريخ الانتهاء: الأحدث'); ?></option>
-            <option value="date_expiration_asc" <?php echo $sortOption === 'date_expiration_asc' ? 'selected' : ''; ?>><?php echo app_text('Date expiration: anciennes','Expiration date: oldest','تاريخ الانتهاء: الأقدم'); ?></option>
-            <option value="titre_asc" <?php echo $sortOption === 'titre_asc' ? 'selected' : ''; ?>><?php echo app_text('Titre: A à Z','Title: A to Z','العنوان: من الألف إلى الياء'); ?></option>
-            <option value="titre_desc" <?php echo $sortOption === 'titre_desc' ? 'selected' : ''; ?>><?php echo app_text('Titre: Z à A','Title: Z to A','العنوان: من الياء إلى الألف'); ?></option>
-            <option value="prix_asc" <?php echo $sortOption === 'prix_asc' ? 'selected' : ''; ?>><?php echo app_text('Prix: croissant','Price: ascending','السعر: تصاعدي'); ?></option>
-            <option value="prix_desc" <?php echo $sortOption === 'prix_desc' ? 'selected' : ''; ?>><?php echo app_text('Prix: décroissant','Price: descending','السعر: تنازلي'); ?></option>
+        <input type="search" id="offersSearchInput" name="q" value="<?php echo htmlspecialchars($searchTerm, ENT_QUOTES, 'UTF-8'); ?>" placeholder="<?php echo app_text('Rechercher une offre...','...Search offers','...ابحث عن عرض'); ?>" autocomplete="off" aria-label="<?php echo app_text('Rechercher une offre','Search an offer','ابحث عن عرض'); ?>" style="min-width: 220px; max-width: 320px; min-height: 44px; padding: 0 14px; font-size: 0.95rem;">
+        <select id="offersServiceFilter" name="type" aria-label="<?php echo app_text('Filtrer par service','Filter by service','تصفية حسب الخدمة'); ?>" style="min-width: 230px; max-width: 280px; min-height: 44px; padding-right: 34px; font-size: 0.92rem;">
+            <option value=""><?php echo app_text('Tous les services','All services','كل الخدمات'); ?></option>
+            <?php foreach ($typeServiceOptions as $option): ?>
+                <option value="<?php echo htmlspecialchars((string) $option, ENT_QUOTES, 'UTF-8'); ?>" <?php echo strcasecmp($selectedService, (string) $option) === 0 ? 'selected' : ''; ?>>
+                    <?php echo htmlspecialchars(ucfirst((string) $option), ENT_QUOTES, 'UTF-8'); ?>
+                </option>
+            <?php endforeach; ?>
+        </select>
+        <select name="sort" id="offerSortSelect" style="min-width: 230px; max-width: 280px; min-height: 44px; padding-right: 34px; font-size: 0.92rem;">
+            <option value="date_desc" <?php echo $sortOption === 'date_desc' ? 'selected' : ''; ?>><?php echo app_text('Plus Récentes','Most recent','الأحدث'); ?></option>
+            <option value="date_asc" <?php echo $sortOption === 'date_asc' ? 'selected' : ''; ?>><?php echo app_text('Plus Anciennes','Oldest','الأقدم'); ?></option>
+            <option value="titre_asc" <?php echo $sortOption === 'titre_asc' ? 'selected' : ''; ?>><?php echo app_text('Titre: A à Z','Title: A to Z','العنوان: أ إلى ي'); ?></option>
+            <option value="titre_desc" <?php echo $sortOption === 'titre_desc' ? 'selected' : ''; ?>><?php echo app_text('Titre: Z à A','Title: Z to A','العنوان: ي إلى أ'); ?></option>
+            <option value="prix_asc" <?php echo $sortOption === 'prix_asc' ? 'selected' : ''; ?>><?php echo app_text('Prix: Croissant','Price: Low to High','السعر: من الأقل للأعلى'); ?></option>
+            <option value="prix_desc" <?php echo $sortOption === 'prix_desc' ? 'selected' : ''; ?>><?php echo app_text('Prix: Décroissant','Price: High to Low','السعر: من الأعلى للأقل'); ?></option>
+            <option value="type_asc" <?php echo $sortOption === 'type_asc' ? 'selected' : ''; ?>><?php echo app_text('Type: A à Z','Type: A to Z','النوع: أ إلى ي'); ?></option>
         </select>
         <noscript><button type="submit" class="outline-btn"><?php echo app_text('Trier','Sort','ترتيب'); ?></button></noscript>
     </form>
 
     <div class="export-bar" style="position:relative; z-index:30; overflow:visible; gap:10px; flex-wrap:nowrap;">
         <button type="button" class="outline-btn" id="offersStatsToggle" style="min-height: 44px; padding: 0 16px; font-size: 0.92rem;" data-text-open="<?php echo app_text('Statistiques','Statistics','الإحصاءات'); ?>" data-text-close="<?php echo app_text('Masquer les statistiques','Hide statistics','إخفاء الإحصاءات'); ?>"><?php echo app_text('Statistiques','Statistics','الإحصاءات'); ?></button>
-        <a class="solid-btn" href="<?php echo htmlspecialchars(buildOfferExportUrl($searchTerm, $sortOption), ENT_QUOTES, 'UTF-8'); ?>" style="min-height: 44px; padding: 0 16px; font-size: 0.92rem;"><?php echo app_text('Exporter PDF','Export PDF','تصدير PDF'); ?></a>
+        <a class="solid-btn" href="<?php echo htmlspecialchars(buildOfferExportUrl($searchTerm, $sortOption, $selectedService), ENT_QUOTES, 'UTF-8'); ?>" style="min-height: 44px; padding: 0 16px; font-size: 0.92rem;"><?php echo app_text('Exporter PDF','Export PDF','تصدير PDF'); ?></a>
         <div class="lang-switch lang-switch-dropdown" style="display:inline-block; margin-right:12px; position:relative; z-index:40;">
             <button type="button" class="ghost-btn lang-switch-toggle" aria-haspopup="true" aria-expanded="false" aria-label="<?php echo app_text('Choisir la langue','Choose language','اختر اللغة'); ?>">🌐</button>
             <div class="lang-switch-menu" hidden style="position:fixed; min-width:132px; background:#ffffff; border:1px solid rgba(20,39,56,.12); border-radius:16px; box-shadow:0 16px 30px rgba(20,39,56,.16); padding:8px; z-index:99999; backdrop-filter: blur(8px);">
@@ -899,14 +914,17 @@ if ($currentOffer) {
                     <th><?php echo app_text('Actions','Actions','الإجراءات'); ?></th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="offersTableBody">
                 <?php if (empty($visibleOffers)): ?>
                     <tr>
                         <td colspan="7">Aucune offre trouvée.</td>
                     </tr>
                 <?php else: ?>
                     <?php foreach ($visibleOffers as $offer): ?>
-                        <tr>
+                        <?php
+                            $searchBlob = (string) ($offer['titre'] ?? '');
+                        ?>
+                        <tr data-offer-searchable="1" data-offer-service="<?php echo htmlspecialchars((string) ($offer['type_service'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>" data-search-text="<?php echo htmlspecialchars($searchBlob, ENT_QUOTES, 'UTF-8'); ?>">
                             <td><?php echo htmlspecialchars($offer['titre'], ENT_QUOTES, 'UTF-8'); ?></td>
                             <td><?php echo htmlspecialchars($offer['type_service'] ?: 'N/A', ENT_QUOTES, 'UTF-8'); ?></td>
                             <td><?php echo htmlspecialchars($offer['localisation'] ?: 'N/A', ENT_QUOTES, 'UTF-8'); ?></td>
@@ -928,66 +946,14 @@ if ($currentOffer) {
                             </td>
                         </tr>
                     <?php endforeach; ?>
-                <?php endif; ?>
-            </tbody>
-        </table>
-    </div>
-</section>
-
-<?php if (!empty($_GET['type'])):
-    $filterType = trim((string) ($_GET['type'] ?? ''));
-    $filteredOffers = array_filter($offers, function($o) use ($filterType) {
-        return isset($o['type_service']) && strcasecmp(trim((string)$o['type_service']), $filterType) === 0;
-    });
-?>
-<section class="admin-panel reveal offers-table-panel">
-    <span class="section-badge">Offres similaires — Type: <?php echo htmlspecialchars($filterType, ENT_QUOTES, 'UTF-8'); ?></span>
-
-    <div class="table-wrap">
-        <table class="module-table">
-            <thead>
-                <tr>
-                    <th>Titre</th>
-                    <th>Localisation</th>
-                    <th>Publication</th>
-                    <th>Expiration</th>
-                    <th>Statut</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php if (empty($filteredOffers)): ?>
-                    <tr>
-                        <td colspan="6">Aucune offre trouvée pour ce type de service.</td>
+                    <tr id="offersFilterEmpty" hidden>
+                        <td colspan="7"><?php echo app_text('Aucune offre trouvée pour ce filtre.','No offers match this filter.','لا توجد عروض مطابقة لهذا الفلتر.'); ?></td>
                     </tr>
-                <?php else: ?>
-                    <?php foreach ($filteredOffers as $fo): ?>
-                        <tr>
-                            <td><?php echo htmlspecialchars($fo['titre'] ?? '', ENT_QUOTES, 'UTF-8'); ?></td>
-                            <td><?php echo htmlspecialchars($fo['localisation'] ?? '', ENT_QUOTES, 'UTF-8'); ?></td>
-                            <td><?php echo htmlspecialchars(formatDate($fo['date_publication'] ?? null), ENT_QUOTES, 'UTF-8'); ?></td>
-                            <td><?php echo htmlspecialchars(formatDate($fo['date_expiration'] ?? null), ENT_QUOTES, 'UTF-8'); ?></td>
-                            <td><?php echo htmlspecialchars(ucfirst($fo['statut'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
-                            <td>
-                                <a href="?page=offers&edit=<?php echo htmlspecialchars($fo['id_offre'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" class="small-btn">Voir</a>
-                                <a href="?page=offers&edit=<?php echo htmlspecialchars($fo['id_offre'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" class="small-btn">Editer</a>
-                            </td>
-                        </tr>
-                        <tr class="offer-details-row">
-                            <td colspan="6">
-                                <div class="offer-details">
-                                    <strong><?php echo app_text('Description:','Description:','الوصف:'); ?></strong>
-                                    <p><?php echo nl2br(htmlspecialchars($fo['description'] ?? '', ENT_QUOTES, 'UTF-8')); ?></p>
-                                </div>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
                 <?php endif; ?>
             </tbody>
         </table>
     </div>
 </section>
-<?php endif; ?>
 <section class="admin-panel reveal offers-form-panel">
     <span class="section-badge"><?php echo $currentOffer ? app_text("Modifier l\'offre","Edit offer","تعديل العرض") : app_text('Publier une offre','Publish an offer','نشر عرض'); ?></span>
 
@@ -1130,7 +1096,7 @@ if ($currentOffer) {
                         // Chart 1: Type Distribution (Doughnut)
                         var ctxType = document.getElementById('chartTypeDistribution');
                         if (ctxType && !chartsInstances.typeChart) {
-                            var colors = ['#EE5828', '#142738', '#4CAF50', '#000000', '#EE5828', '#142738', '#4CAF50', '#000000'];
+                            var colors = ['#1F2937', '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#EC4899', '#6366F1', '#14B8A6', '#F97316', '#6B7280', '#0EA5E9', '#D97706', '#DC2626', '#7C3AED', '#059669', '#64748B'];
                             chartsInstances.typeChart = new Chart(ctxType, {
                                 type: 'doughnut',
                                 data: {
@@ -1164,7 +1130,7 @@ if ($currentOffer) {
                                     labels: chartDataFromServer.statusLabels,
                                     datasets: [{
                                         data: chartDataFromServer.statusCounts,
-                                        backgroundColor: ['#4CAF50', '#EE5828'],
+                                        backgroundColor: ['#10B981', '#EF4444'],
                                         borderColor: '#FFFFFF',
                                         borderWidth: 3
                                     }]
@@ -1192,7 +1158,7 @@ if ($currentOffer) {
                                     datasets: [{
                                         label: 'Prix moyen (DT)',
                                         data: chartDataFromServer.priceValues,
-                                        backgroundColor: '#EE5828',
+                                        backgroundColor: '#3B82F6',
                                         borderRadius: 6,
                                         borderSkipped: false
                                     }]
@@ -1276,6 +1242,96 @@ if ($currentOffer) {
             });
         }
     } catch(e){}
+})();
+</script>
+
+<script>
+(function() {
+    var offersToolbarForm = document.getElementById('offersToolbarForm');
+    var offersSearchInput = document.getElementById('offersSearchInput');
+    var offersServiceFilter = document.getElementById('offersServiceFilter');
+    var offersTableBody = document.getElementById('offersTableBody');
+    var offersFilterEmpty = document.getElementById('offersFilterEmpty');
+
+    function normalizeOfferSearchValue(value) {
+        return String(value || '')
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .trim();
+    }
+
+    function syncOffersToolbarUrl(searchValue, serviceValue) {
+        var params = new URLSearchParams(window.location.search);
+        params.set('page', 'offers');
+
+        var sortSelectEl = document.getElementById('offerSortSelect');
+        if (sortSelectEl && sortSelectEl.value) {
+            params.set('sort', sortSelectEl.value);
+        }
+
+        if (searchValue) {
+            params.set('q', searchValue);
+        } else {
+            params.delete('q');
+        }
+
+        if (serviceValue) {
+            params.set('type', serviceValue);
+        } else {
+            params.delete('type');
+        }
+
+        window.history.replaceState({}, document.title, window.location.pathname + '?' + params.toString() + window.location.hash);
+    }
+
+    function applyOffersTableFilters() {
+        if (!offersTableBody) return;
+
+        var searchValue = offersSearchInput ? offersSearchInput.value : '';
+        var serviceValue = offersServiceFilter ? offersServiceFilter.value : '';
+        var query = normalizeOfferSearchValue(searchValue);
+        var serviceQuery = normalizeOfferSearchValue(serviceValue);
+
+        var rows = offersTableBody.querySelectorAll('tr[data-offer-searchable="1"]');
+        var visible = 0;
+
+        rows.forEach(function(row) {
+            var hay = normalizeOfferSearchValue(row.getAttribute('data-search-text') || '');
+            var svc = normalizeOfferSearchValue(row.getAttribute('data-offer-service') || '');
+            var matchesSearch = query === '' || hay.indexOf(query) !== -1;
+            var matchesService = serviceQuery === '' || svc === serviceQuery;
+            var show = matchesSearch && matchesService;
+
+            row.hidden = !show;
+            if (show) visible++;
+        });
+
+        if (offersFilterEmpty) {
+            offersFilterEmpty.hidden = rows.length === 0 || visible > 0;
+        }
+
+        syncOffersToolbarUrl(searchValue, serviceValue);
+    }
+
+    if (offersToolbarForm) {
+        offersToolbarForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+        });
+    }
+
+    if (offersSearchInput) {
+        offersSearchInput.addEventListener('input', applyOffersTableFilters);
+        offersSearchInput.addEventListener('search', applyOffersTableFilters);
+    }
+
+    if (offersServiceFilter) {
+        offersServiceFilter.addEventListener('change', applyOffersTableFilters);
+    }
+
+    if (offersTableBody && offersTableBody.querySelector('tr[data-offer-searchable="1"]')) {
+        applyOffersTableFilters();
+    }
 })();
 </script>
 
