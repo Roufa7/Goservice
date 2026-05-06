@@ -19,6 +19,7 @@ $eventAdminData = [];
 if ($page === 'events') {
     require_once __DIR__ . '/../../controller/EventAdminController.php';
     $eventAdminController = new EventAdminController();
+    $eventAdminController->handleViewActions($_GET);
     $eventAdminController->handleRequest();
     $eventAdminData = $eventAdminController->getPageData($_GET);
 }

@@ -27,6 +27,10 @@ $selectedEventParticipationStats = $data['selectedEventParticipationStats'] ?? [
 $selectedEventHighlights = $data['selectedEventHighlights'] ?? [];
 $selectedEventSummaryChart = $data['selectedEventSummaryChart'] ?? [];
 $selectedCapacityChart = $data['selectedCapacityChart'] ?? [];
+$selectedEventCalendarUrl = (string) ($data['selectedEventCalendarUrl'] ?? '');
+$selectedEventMapUrl = (string) ($data['selectedEventMapUrl'] ?? '');
+$registrationQr = (string) ($data['registrationQr'] ?? '');
+$registrationQrReference = (string) ($data['registrationQrReference'] ?? '');
 
 $oldValue = static function (string $key, string $default = '') use ($formValues): string {
     return (string) ($formValues[$key] ?? $default);
@@ -498,6 +502,20 @@ $renderSummaryBar = static function (array $chart, string $title, string $subtit
                     <div class="feature-item">Urgence : <?php echo $escape($selectedEvent['countdown_text']); ?></div>
                     <div class="feature-item">Dynamique : <?php echo $escape($selectedEvent['demand_text']); ?></div>
                 </div>
+
+                <?php if ($selectedEventCalendarUrl !== '' || $selectedEventMapUrl !== ''): ?>
+                    <div class="icon-actions">
+                        <?php if ($selectedEventCalendarUrl !== ''): ?>
+                            <a class="outline-btn" data-no-loader="true" href="<?php echo $escape($selectedEventCalendarUrl); ?>">T&eacute;l&eacute;charger le calendrier (.ics)</a>
+                        <?php endif; ?>
+                        <?php if ($selectedEventMapUrl !== ''): ?>
+                            <a class="solid-btn" target="_blank" rel="noopener noreferrer" href="<?php echo $escape($selectedEventMapUrl); ?>">Voir sur la carte</a>
+                        <?php endif; ?>
+                    </div>
+                    <?php if ($selectedEventCalendarUrl !== ''): ?>
+                        <small class="event-export-note">Sous Windows, ce fichier peut s'ouvrir dans Outlook. Basculez ensuite vers l'onglet Calendrier pour finaliser l'ajout.</small>
+                    <?php endif; ?>
+                <?php endif; ?>
             </div>
         </article>
 
@@ -515,6 +533,30 @@ $renderSummaryBar = static function (array $chart, string $title, string $subtit
                     <span><?php echo $escape($registrationReceipt['titre'] ?? ''); ?></span>
                     <small><?php echo $escape($registrationReceipt['start_display'] ?? ''); ?> - <?php echo $escape($registrationReceipt['lieu'] ?? ''); ?></small>
                     <small>Statut initial : <?php echo $escape($registrationReceipt['status_label'] ?? 'En attente'); ?></small>
+                    <?php if (!empty($registrationReceipt['email_message'])): ?>
+                        <small><?php echo $escape($registrationReceipt['email_message']); ?></small>
+                    <?php endif; ?>
+                    <?php if ($registrationQr !== ''): ?>
+                        <div class="event-receipt-qr">
+                            <img src="<?php echo $escape($registrationQr); ?>" alt="QR code de participation">
+                        </div>
+                        <?php if ($registrationQrReference !== ''): ?>
+                            <small class="event-qr-reference">R&eacute;f&eacute;rence QR : <?php echo $escape($registrationQrReference); ?></small>
+                        <?php endif; ?>
+                    <?php endif; ?>
+                    <?php if ($selectedEventCalendarUrl !== '' || $selectedEventMapUrl !== ''): ?>
+                        <div class="icon-actions">
+                            <?php if ($selectedEventCalendarUrl !== ''): ?>
+                                <a class="outline-btn" data-no-loader="true" href="<?php echo $escape($selectedEventCalendarUrl); ?>">T&eacute;l&eacute;charger le rappel calendrier (.ics)</a>
+                            <?php endif; ?>
+                            <?php if ($selectedEventMapUrl !== ''): ?>
+                                <a class="solid-btn" target="_blank" rel="noopener noreferrer" href="<?php echo $escape($selectedEventMapUrl); ?>">Voir sur la carte</a>
+                            <?php endif; ?>
+                        </div>
+                        <?php if ($selectedEventCalendarUrl !== ''): ?>
+                            <small class="event-export-note">Le rappel calendrier peut s'ouvrir dans Outlook selon votre configuration Windows.</small>
+                        <?php endif; ?>
+                    <?php endif; ?>
                 </article>
             <?php endif; ?>
 
@@ -623,3 +665,10 @@ $renderSummaryBar = static function (array $chart, string $title, string $subtit
         <?php endforeach; ?>
     </div>
 </section>
+
+
+
+
+
+
+

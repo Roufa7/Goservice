@@ -28,6 +28,13 @@ $activeEventFilterCount = (int) ($data['activeEventFilterCount'] ?? 0);
 $activeParticipationFilterCount = (int) ($data['activeParticipationFilterCount'] ?? 0);
 $eventPagination = $data['eventPagination'] ?? ['page' => 1, 'total_pages' => 1, 'has_previous' => false, 'has_next' => false, 'from' => 0, 'to' => 0, 'total_items' => 0];
 $participationPagination = $data['participationPagination'] ?? ['page' => 1, 'total_pages' => 1, 'has_previous' => false, 'has_next' => false, 'from' => 0, 'to' => 0, 'total_items' => 0];
+$selectedEventCalendarUrl = (string) ($data['selectedEventCalendarUrl'] ?? '');
+$selectedEventMapUrl = (string) ($data['selectedEventMapUrl'] ?? '');
+$selectedEventFrontUrl = (string) ($data['selectedEventFrontUrl'] ?? '');
+$participationRecordQr = (string) ($data['participationRecordQr'] ?? '');
+$participationRecordQrReference = (string) ($data['participationRecordQrReference'] ?? '');
+$mailConfigured = (bool) ($data['mailConfigured'] ?? false);
+$ollamaModel = (string) ($data['ollamaModel'] ?? 'qwen2.5:3b');
 
 $eventRecord = $eventForm['record'] ?? null;
 $eventValues = $eventForm['values'] ?? [];
@@ -217,7 +224,7 @@ if (!empty($selectedEventParticipationStats['latest_registration'])) {
     <div class="event-page-loader-card">
         <span class="event-page-loader-spinner"></span>
         <strong>Chargement du back office</strong>
-        <span>Preparation des evenements, participations et statistiques.</span>
+        <span>Preparation des evenements, participants et indicateurs.</span>
     </div>
 </div>
 
@@ -354,7 +361,7 @@ if (!empty($selectedEventParticipationStats['latest_registration'])) {
 
         <form method="post" action="<?php echo $escape($buildAdminUrl([], '#event-form')); ?>" enctype="multipart/form-data" class="event-admin-form-grid">
             <input type="hidden" name="csrf_token" value="<?php echo $escape($csrfToken); ?>">
-            <input type="hidden" name="event_action" value="<?php echo $eventMode === 'edit' ? 'update_event' : 'create_event'; ?>">
+            <input type="hidden" name="event_action" id="event_action_field" value="<?php echo $eventMode === 'edit' ? 'update_event' : 'create_event'; ?>">
             <input type="hidden" name="return_to" value="<?php echo $escape($buildAdminUrl($eventMode === 'edit' && $eventRecord ? ['edit_event' => $eventRecord['id_evenement']] : [])); ?>">
             <?php if ($eventMode === 'edit' && $eventRecord): ?>
                 <input type="hidden" name="id_evenement" value="<?php echo $escape($eventRecord['id_evenement']); ?>">
@@ -437,8 +444,28 @@ if (!empty($selectedEventParticipationStats['latest_registration'])) {
                 </div>
             <?php endif; ?>
 
+            <input type="hidden" name="ai_feedback" value="<?php echo $escape($eventValue('ai_feedback')); ?>">
+
+            <div class="field-block field-span-2 event-ai-panel">
+                <label>Assistant de redaction</label>
+                <p class="event-ai-copy">Affinez la fiche avant publication : reformulation, version promotionnelle et lecture rapide des points forts a mettre en avant.</p>
+                <div class="icon-actions event-ai-actions">
+                    <button type="submit" class="small-btn" data-event-action="ai_improve_description">Ameliorer la description</button>
+                    <button type="submit" class="small-btn" data-event-action="ai_generate_promo">Generer une version promo</button>
+                    <button type="submit" class="small-btn" data-event-action="ai_suggest_title">Proposer un meilleur titre</button>
+
+                    <button type="submit" class="small-btn" data-event-action="ai_analyze_event">Analyser l'evenement</button>
+                </div>
+                <?php if ($eventValue('ai_feedback') !== ''): ?>
+                    <article class="event-ai-insight">
+                        <strong>Analyse et recommandations</strong>
+                        <p><?php echo nl2br($escape($eventValue('ai_feedback'))); ?></p>
+                    </article>
+                <?php endif; ?>
+            </div>
+
             <div class="icon-actions field-span-2">
-                <button type="submit" class="solid-btn"><?php echo $eventMode === 'edit' ? 'Mettre &agrave; jour' : 'Cr&eacute;er l\'&eacute;v&eacute;nement'; ?></button>
+                <button type="submit" class="solid-btn" data-event-action="<?php echo $eventMode === 'edit' ? 'update_event' : 'create_event'; ?>"><?php echo $eventMode === 'edit' ? 'Mettre &agrave; jour' : 'Cr&eacute;er l\'&eacute;v&eacute;nement'; ?></button>
                 <a class="outline-btn" href="<?php echo $escape($buildAdminUrl(['edit_event' => null], '#event-form')); ?>">Nouveau formulaire</a>
                 <?php if ($eventMode === 'edit' && $eventRecord): ?>
                     <a class="outline-btn" href="../front/index.php?page=events&amp;event_id=<?php echo $escape($eventRecord['id_evenement']); ?>#event-focus">Voir en front</a>
@@ -647,10 +674,19 @@ if (!empty($selectedEventParticipationStats['latest_registration'])) {
     <?php endif; ?>
 
     <div class="icon-actions event-admin-table-actions">
-        <a class="small-btn" href="<?php echo $escape($buildAdminUrl(['export' => 'participations_csv'])); ?>">Exporter CSV</a>
+        <?php if ($selectedEventFrontUrl !== ''): ?>
+            <a class="small-btn" href="<?php echo $escape($selectedEventFrontUrl); ?>">Voir en front</a>
+        <?php endif; ?>
+        <?php if ($selectedEventCalendarUrl !== ''): ?>
+            <a class="small-btn" data-no-loader="true" href="<?php echo $escape($selectedEventCalendarUrl); ?>">T&eacute;l&eacute;charger le calendrier (.ics)</a>
+        <?php endif; ?>
+        <?php if ($selectedEventMapUrl !== ''): ?>
+            <a class="small-btn" target="_blank" rel="noopener noreferrer" href="<?php echo $escape($selectedEventMapUrl); ?>">Voir sur la carte</a>
+        <?php endif; ?>
+        <a class="small-btn" data-no-loader="true" href="<?php echo $escape($buildAdminUrl(['export' => 'participations_csv'])); ?>">Exporter CSV</a>
         <a class="small-btn" href="<?php echo $escape($buildAdminUrl(['print' => 'participations'])); ?>" target="_blank" rel="noopener noreferrer">Version imprimable</a>
         <a class="small-btn" href="<?php echo $escape($buildAdminUrl(['participant_status' => 'en attente', 'participant_page' => null], '#participations-table')); ?>">Voir seulement en attente</a>
-        <a class="small-btn" href="<?php echo $escape($buildAdminUrl(['participant_status' => 'confirme', 'participant_page' => null], '#participations-table')); ?>">Voir seulement confirme</a>
+        <a class="small-btn" href="<?php echo $escape($buildAdminUrl(['participant_status' => 'confirme', 'participant_page' => null], '#participations-table')); ?>">Voir seulement confirm&eacute;es</a>
         <a class="small-btn" href="<?php echo $escape($buildAdminUrl(['participant_status' => null, 'participant_search' => null, 'participant_date_from' => null, 'participant_date_to' => null, 'participant_page' => null], '#participations-table')); ?>">Voir tout</a>
     </div>
 
@@ -784,6 +820,14 @@ if (!empty($selectedEventParticipationStats['latest_registration'])) {
                                     </form>
                                 <?php endif; ?>
 
+                                <form method="post" action="<?php echo $escape($buildAdminUrl([], '#participations-table')); ?>">
+                                    <input type="hidden" name="csrf_token" value="<?php echo $escape($csrfToken); ?>">
+                                    <input type="hidden" name="event_action" value="send_participation_email">
+                                    <input type="hidden" name="id_participation" value="<?php echo $escape($participation['id_participation']); ?>">
+                                    <input type="hidden" name="return_to" value="<?php echo $escape($buildAdminUrl(['manage_event' => $selectedManagementEventId, 'edit_participation' => $participation['id_participation']])); ?>">
+                                    <button type="submit" class="small-btn">Email</button>
+                                </form>
+
                                 <form method="post" action="<?php echo $escape($buildAdminUrl([], '#participations-table')); ?>" onsubmit="return confirm('Supprimer cette participation ?');">
                                     <input type="hidden" name="csrf_token" value="<?php echo $escape($csrfToken); ?>">
                                     <input type="hidden" name="event_action" value="delete_participation">
@@ -871,6 +915,27 @@ if (!empty($selectedEventParticipationStats['latest_registration'])) {
                 <?php if ($participationError('telephone')): ?><small class="event-field-error"><?php echo $escape($participationError('telephone')); ?></small><?php endif; ?>
             </div>
 
+            <div class="field-block field-span-2">
+                <label>Fonctions avancees</label>
+                <div class="feature-list">
+                    <?php if ($participationRecordQr !== ''): ?>
+                        <div class="event-receipt-qr event-receipt-qr-admin">
+                            <img src="<?php echo $escape($participationRecordQr); ?>" alt="QR code du participant">
+                        </div>
+                        <?php if ($participationRecordQrReference !== ''): ?>
+                            <div class="feature-item">Reference QR : <strong><?php echo $escape($participationRecordQrReference); ?></strong></div>
+                        <?php endif; ?>
+                    <?php endif; ?>
+                    <div class="feature-item">
+                        Email automatique :
+                        <?php echo $mailConfigured ? 'SMTP configure, le renvoi peut etre effectue depuis le tableau.' : 'SMTP non configure sur cette machine.'; ?>
+                    </div>
+                    <?php if ($selectedEventCalendarUrl !== ''): ?>
+                        <div class="feature-item">Le calendrier de l'evenement peut etre telecharge depuis le bloc "Jointure evenement - participation".</div>
+                    <?php endif; ?>
+                </div>
+            </div>
+
             <div class="icon-actions field-span-2">
                 <button type="submit" class="solid-btn">Enregistrer les changements</button>
                 <a class="outline-btn" href="<?php echo $escape($buildAdminUrl(['edit_participation' => null], '#participations-table')); ?>">Fermer l'&eacute;dition</a>
@@ -881,6 +946,12 @@ if (!empty($selectedEventParticipationStats['latest_registration'])) {
             <div class="feature-item">Cliquez sur "Participations" depuis un evenement pour afficher la jointure de maniere logique.</div>
             <div class="feature-item">Le tableau ne montre que les participants de l'&eacute;v&eacute;nement s&eacute;lectionn&eacute;.</div>
             <div class="feature-item">La version imprimable et l'export CSV reprennent exactement ces m&ecirc;mes filtres.</div>
+            <div class="feature-item">Le calendrier (.ics), les emails et les QR codes enrichissent l'evenement sans modifier la structure SQL.</div>
         </div>
     <?php endif; ?>
 </section>
+
+
+
+
+

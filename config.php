@@ -1,6 +1,18 @@
 <?php
-class config {
-    public static function getConnexion() {
+
+$autoload = __DIR__ . '/vendor/autoload.php';
+if (file_exists($autoload)) {
+    require_once $autoload;
+}
+
+if (class_exists(\Dotenv\Dotenv::class) && file_exists(__DIR__ . '/.env')) {
+    \Dotenv\Dotenv::createImmutable(__DIR__)->safeLoad();
+}
+
+class config
+{
+    public static function getConnexion()
+    {
         try {
             $pdo = new PDO(
                 'mysql:host=localhost;dbname=goservice;charset=utf8',
@@ -12,6 +24,33 @@ class config {
         } catch (Exception $e) {
             die('Erreur de connexion : ' . $e->getMessage());
         }
+    }
+
+    public static function env(string $key, ?string $default = null): ?string
+    {
+        $value = $_ENV[$key] ?? $_SERVER[$key] ?? getenv($key);
+
+        if ($value === false || $value === null || $value === '') {
+            return $default;
+        }
+
+        return (string) $value;
+    }
+
+    public static function hasMailConfiguration(): bool
+    {
+        foreach (['MAIL_HOST', 'MAIL_PORT', 'MAIL_USERNAME', 'MAIL_PASSWORD', 'MAIL_FROM'] as $key) {
+            if (self::env($key) === null) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public static function appName(): string
+    {
+        return self::env('APP_NAME', 'GoService Events') ?? 'GoService Events';
     }
 }
 ?>

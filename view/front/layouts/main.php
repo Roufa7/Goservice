@@ -20,6 +20,15 @@ $mainNav = [
     'Événements' => 'index.php?page=events',
     'Profil' => 'index.php?page=profile',
 ];
+
+$eventsBackOfficeLink = '../back/index.php?page=dashboard';
+if (($page ?? '') === 'events') {
+    $selectedEventId = (int) (($eventFrontData['selectedEventId'] ?? 0));
+    $eventsBackOfficeLink = '../back/index.php?page=events';
+    if ($selectedEventId > 0) {
+        $eventsBackOfficeLink .= '&manage_event=' . $selectedEventId;
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -52,7 +61,7 @@ $mainNav = [
             <nav class="main-nav">
                 <?php foreach ($mainNav as $label => $link): ?>
                     <a href="<?php echo $link; ?>" class="<?php echo $link === 'index.php?page=' . $page ? 'active' : ''; ?>">
-                        <?php echo $label; ?>
+                        <?php echo htmlspecialchars($label, ENT_QUOTES, 'UTF-8'); ?>
                     </a>
                 <?php endforeach; ?>
             </nav>
@@ -60,7 +69,7 @@ $mainNav = [
             <div class="nav-actions">
                 <button id="themeToggle" class="theme-btn" type="button">☾</button>
                 <a href="#" class="ghost-btn" id="openLoginModal">Connexion</a>
-                <a href="index.php?page=register" class="solid-btn">S’inscrire</a>
+                <a href="index.php?page=register" class="solid-btn">S'inscrire</a>
             </div>
         </div>
     </header>
@@ -87,7 +96,7 @@ $mainNav = [
             <div>
                 <h4>Espaces</h4>
                 <a href="index.php?page=profile">Profil</a>
-                <a href="../back/index.php?page=dashboard">Back Office</a>
+                <a href="<?php echo htmlspecialchars($eventsBackOfficeLink, ENT_QUOTES, 'UTF-8'); ?>">Back Office</a>
             </div>
         </div>
     </footer>
@@ -149,5 +158,4 @@ if (openLoginModal2) {
 }
 </script>
 </body>
-
 </html>

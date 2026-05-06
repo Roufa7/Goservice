@@ -20,6 +20,7 @@ $eventFrontData = [];
 if ($page === 'events') {
     require_once __DIR__ . '/../../controller/EventFrontController.php';
     $eventFrontController = new EventFrontController();
+    $eventFrontController->handleViewActions($_GET);
     $eventFrontController->handleRequest();
     $eventFrontData = $eventFrontController->getPageData($_GET);
 }

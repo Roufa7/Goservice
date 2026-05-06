@@ -4,6 +4,23 @@ require_once __DIR__ . '/AbstractEventController.php';
 
 class EventAdminController extends AbstractEventController
 {
+    public function handleViewActions(array $query): void
+    {
+        if (($query['download'] ?? '') !== 'calendar') {
+            return;
+        }
+
+        $eventId = (int) ($query['manage_event'] ?? $query['event_id'] ?? 0);
+        $event = $eventId > 0 ? $this->eventRepository->findById($eventId) : null;
+
+        if (!$event) {
+            $this->flash('error', 'L\'evenement demande pour le calendrier est introuvable.', 'admin');
+            $this->redirect($this->buildEventUrl());
+        }
+
+        $this->calendarService->streamDownload($this->normalizeEvent($event));
+    }
+
     public function handleRequest(): void
     {
         if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
@@ -48,6 +65,26 @@ class EventAdminController extends AbstractEventController
 
             case 'bulk_participation_status':
                 $this->bulkParticipationStatus($returnTo);
+                break;
+
+            case 'send_participation_email':
+                $this->sendParticipationEmail($returnTo);
+                break;
+
+            case 'ai_improve_description':
+                $this->assistEventDraft($returnTo, 'improve_description');
+                break;
+
+            case 'ai_generate_promo':
+                $this->assistEventDraft($returnTo, 'generate_promo');
+                break;
+
+            case 'ai_suggest_title':
+                $this->assistEventDraft($returnTo, 'suggest_title');
+                break;
+
+            case 'ai_analyze_event':
+                $this->assistEventDraft($returnTo, 'analyze_event');
                 break;
         }
     }
@@ -191,6 +228,12 @@ class EventAdminController extends AbstractEventController
             ], (string) ($selectedEventParticipationStats['total_participations'] ?? 0), 'Demandes')
             : $this->buildDonutChart([], '0', 'Demandes');
 
+        $participationRecordEvent = null;
+        if ($participationBeingEdited) {
+            $participationRecordEvent = $this->eventRepository->findById((int) ($participationBeingEdited['id_evenement'] ?? 0));
+            $participationRecordEvent = $participationRecordEvent ? $this->normalizeEvent($participationRecordEvent) : null;
+        }
+
         return [
             'filters' => $eventFilters,
             'participationFilters' => $participationFilters,
@@ -221,9 +264,16 @@ class EventAdminController extends AbstractEventController
             'activeParticipationFilterCount' => $this->countActiveFilters($participationFilters, ['sort', 'event_id']),
             'pendingByEvent' => $pendingByEvent,
             'selectedManagementEvent' => $selectedManagementEvent,
+            'selectedEventCalendarUrl' => $selectedManagementEvent ? $this->buildCalendarDownloadUrl((int) $selectedManagementEvent['id_evenement']) : '',
+            'selectedEventMapUrl' => $selectedManagementEvent && trim((string) ($selectedManagementEvent['lieu'] ?? '')) !== '' ? $this->buildMapUrl((string) $selectedManagementEvent['lieu']) : '',
+            'selectedEventFrontUrl' => $selectedManagementEvent ? $this->buildFrontEventsUrl((int) $selectedManagementEvent['id_evenement'], '#event-focus') : $this->buildFrontEventsUrl(),
             'selectedEventParticipationStats' => $selectedEventParticipationStats,
             'eventPagination' => $eventPagination['meta'],
             'participationPagination' => $participationPagination['meta'],
+            'participationRecordQr' => $this->buildParticipationQr($participationBeingEdited, $participationRecordEvent),
+            'participationRecordQrReference' => $this->buildParticipationQrReference($participationBeingEdited, $participationRecordEvent),
+            'mailConfigured' => $this->emailService->canSend(),
+            'ollamaModel' => $this->ollamaAssistant->model(),
             'charts' => [
                 'eventLifecycle' => $eventLifecycleChart,
                 'participationStatus' => $participationStatusChart,
@@ -412,6 +462,88 @@ class EventAdminController extends AbstractEventController
         $this->redirect($this->buildReturnUrl($returnTo, ['manage_event' => $eventId, 'participant_event_id' => $eventId], '#participations-table'));
     }
 
+    private function sendParticipationEmail(string $returnTo): void
+    {
+        $participationId = (int) ($_POST['id_participation'] ?? 0);
+        $participation = $participationId > 0 ? $this->participationRepository->findById($participationId) : null;
+
+        if (!$participation) {
+            $this->flash('error', 'La participation ciblee pour l\'email est introuvable.', 'admin');
+            $this->redirect($this->buildReturnUrl($returnTo, [], '#participations-table'));
+        }
+
+        $participation = $this->normalizeParticipation($participation);
+        $event = $this->eventRepository->findById((int) ($participation['id_evenement'] ?? 0));
+
+        if (!$event) {
+            $this->flash('error', 'L\'evenement associe a cette participation est introuvable.', 'admin');
+            $this->redirect($this->buildReturnUrl($returnTo, [], '#participations-table'));
+        }
+
+        $event = $this->normalizeEvent($event);
+        $delivery = $this->emailService->sendConfirmation($participation, $event);
+        $type = !empty($delivery['sent'])
+            ? 'success'
+            : (!empty($delivery['configured']) ? 'error' : 'info');
+        $this->flash($type, (string) ($delivery['message'] ?? 'Action email terminee.'), 'admin');
+        $this->redirect($this->buildReturnUrl($returnTo, [], '#participations-table'));
+    }
+
+    private function assistEventDraft(string $returnTo, string $mode): void
+    {
+        $draft = $this->extractEventDraft($_POST);
+        $result = $this->ollamaAssistant->generate($mode, $draft);
+
+        if (!$result['success']) {
+            $flashType = !empty($result['available']) ? 'error' : 'info';
+            $this->rememberForm('admin_event_form', $draft, []);
+            $this->flash($flashType, (string) ($result['message'] ?? 'L\'assistant IA n\'est pas disponible.'), 'admin');
+            $this->redirect($this->buildReturnUrl($returnTo, $this->draftEditContext($draft), '#event-form'));
+        }
+
+        if ($mode === 'suggest_title') {
+            $draft['titre'] = (string) $result['text'];
+            $message = 'Le titre a ete propose par l\'assistant IA et injecte dans le formulaire.';
+        } elseif ($mode === 'analyze_event') {
+            $draft['ai_feedback'] = (string) $result['text'];
+            $message = 'Une analyse rapide avec recommandations a ete ajoutee au formulaire.';
+        } else {
+            $draft['description'] = (string) $result['text'];
+            $message = match ($mode) {
+                'generate_promo' => 'Une version promotionnelle de la description a ete generee.',
+
+                default => 'La description a ete amelioree par l\'assistant IA.',
+            };
+        }
+
+        $this->rememberForm('admin_event_form', $draft, []);
+        $this->flash('success', $message, 'admin');
+        $this->redirect($this->buildReturnUrl($returnTo, $this->draftEditContext($draft), '#event-form'));
+    }
+
+    private function extractEventDraft(array $input): array
+    {
+        return [
+            'id_evenement' => (int) ($input['id_evenement'] ?? 0),
+            'titre' => trim((string) ($input['titre'] ?? '')),
+            'description' => trim((string) ($input['description'] ?? '')),
+            'lieu' => trim((string) ($input['lieu'] ?? '')),
+            'date_debut' => trim((string) ($input['date_debut'] ?? '')),
+            'date_fin' => trim((string) ($input['date_fin'] ?? '')),
+            'type_evenement' => trim((string) ($input['type_evenement'] ?? '')),
+            'statut' => trim((string) ($input['statut'] ?? '')),
+            'nb_places' => trim((string) ($input['nb_places'] ?? '')),
+            'ai_feedback' => trim((string) ($input['ai_feedback'] ?? '')),
+        ];
+    }
+
+    private function draftEditContext(array $draft): array
+    {
+        $eventId = (int) ($draft['id_evenement'] ?? 0);
+
+        return $eventId > 0 ? ['edit_event' => $eventId] : [];
+    }
+
     private function pickNextUpcomingEvent(array $events): ?array
     {
         foreach ($events as $event) {
@@ -542,3 +674,5 @@ class EventAdminController extends AbstractEventController
         exit;
     }
 }
+
+

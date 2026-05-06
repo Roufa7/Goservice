@@ -3,11 +3,19 @@
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../model/EventRepository.php';
 require_once __DIR__ . '/../model/ParticipationRepository.php';
+require_once __DIR__ . '/../service/EventCalendarService.php';
+require_once __DIR__ . '/../service/ParticipationQrService.php';
+require_once __DIR__ . '/../service/ParticipationEmailService.php';
+require_once __DIR__ . '/../service/OllamaEventAssistantService.php';
 
 abstract class AbstractEventController
 {
     protected EventRepository $eventRepository;
     protected ParticipationRepository $participationRepository;
+    protected EventCalendarService $calendarService;
+    protected ParticipationQrService $qrService;
+    protected ParticipationEmailService $emailService;
+    protected OllamaEventAssistantService $ollamaAssistant;
 
     protected array $eventTypes = [
         'atelier' => 'Atelier',
@@ -65,6 +73,10 @@ abstract class AbstractEventController
 
         $this->eventRepository = new EventRepository($pdo);
         $this->participationRepository = new ParticipationRepository($pdo);
+        $this->calendarService = new EventCalendarService();
+        $this->qrService = new ParticipationQrService();
+        $this->emailService = new ParticipationEmailService($this->calendarService);
+        $this->ollamaAssistant = new OllamaEventAssistantService();
 
         $this->ensureUploadDirectory();
     }
@@ -154,6 +166,44 @@ abstract class AbstractEventController
     {
         $query = array_merge(['page' => 'events'], $params);
         return 'index.php?' . http_build_query($query);
+    }
+
+    protected function buildCalendarDownloadUrl(int $eventId): string
+    {
+        return $this->buildEventUrl([
+            'event_id' => $eventId,
+            'download' => 'calendar',
+        ]);
+    }
+
+    protected function buildAdminEventsUrl(?int $eventId = null): string
+    {
+        $query = ['page' => 'events'];
+        if ($eventId !== null && $eventId > 0) {
+            $query['manage_event'] = $eventId;
+        }
+
+        return '../back/index.php?' . http_build_query($query);
+    }
+
+    protected function buildFrontEventsUrl(?int $eventId = null, string $hash = ''): string
+    {
+        $query = ['page' => 'events'];
+        if ($eventId !== null && $eventId > 0) {
+            $query['event_id'] = $eventId;
+        }
+
+        $url = '../front/index.php?' . http_build_query($query);
+        if ($hash !== '') {
+            $url .= str_starts_with($hash, '#') ? $hash : '#' . $hash;
+        }
+
+        return $url;
+    }
+
+    protected function buildMapUrl(string $location): string
+    {
+        return 'https://www.google.com/maps/search/?api=1&query=' . rawurlencode(trim($location));
     }
 
     protected function buildReturnUrl(?string $returnTo, array $overrides = [], string $hash = ''): string
@@ -825,6 +875,24 @@ abstract class AbstractEventController
         return is_array($payload) ? $payload : null;
     }
 
+    protected function buildParticipationQr(?array $participation, ?array $event): ?string
+    {
+        if (!$participation || !$event) {
+            return null;
+        }
+
+        return $this->qrService->renderDataUri($participation, $event);
+    }
+
+    protected function buildParticipationQrReference(?array $participation, ?array $event): ?string
+    {
+        if (!$participation || !$event) {
+            return null;
+        }
+
+        return $this->qrService->buildReferenceCode($participation, $event);
+    }
+
     protected function validateEventInput(array $input, array $files, ?array $existingEvent = null): array
     {
         $data = [
@@ -989,3 +1057,6 @@ abstract class AbstractEventController
         return ['path' => 'assets/uploads/events/' . $fileName];
     }
 }
+
+
+

@@ -4,6 +4,23 @@ require_once __DIR__ . '/AbstractEventController.php';
 
 class EventFrontController extends AbstractEventController
 {
+    public function handleViewActions(array $query): void
+    {
+        if (($query['download'] ?? '') !== 'calendar') {
+            return;
+        }
+
+        $eventId = (int) ($query['event_id'] ?? 0);
+        $event = $eventId > 0 ? $this->eventRepository->findById($eventId) : null;
+
+        if (!$event) {
+            $this->flash('error', 'L\'evenement demande pour le calendrier est introuvable.', 'front');
+            $this->redirect($this->buildEventUrl());
+        }
+
+        $this->calendarService->streamDownload($this->normalizeEvent($event));
+    }
+
     public function handleRequest(): void
     {
         if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
@@ -51,15 +68,34 @@ class EventFrontController extends AbstractEventController
         }
 
         $validation['data']['statut_participation'] = 'en attente';
-        $this->participationRepository->create($validation['data']);
+        $participationId = $this->participationRepository->create($validation['data']);
+        $createdParticipation = $this->participationRepository->findById($participationId);
+        $createdParticipation = $createdParticipation ? $this->normalizeParticipation($createdParticipation) : null;
+        $emailDelivery = $createdParticipation
+            ? $this->emailService->sendConfirmation($createdParticipation, $event)
+            : [
+                'sent' => false,
+                'configured' => false,
+                'message' => 'L\'inscription a ete enregistree, mais le recu avance n\'a pas pu etre finalise.',
+            ];
+
         $this->rememberTransientData('front_registration_receipt', [
             'titre' => $event['titre'],
             'lieu' => $event['lieu'],
             'start_display' => $event['start_display'],
             'status_label' => 'En attente',
+            'event_id' => (int) $event['id_evenement'],
+            'participation_id' => $participationId,
+            'email_sent' => (bool) ($emailDelivery['sent'] ?? false),
+            'email_message' => (string) ($emailDelivery['message'] ?? ''),
         ]);
 
-        $this->flash('success', 'Votre demande d\'inscription a bien ete envoyee.', 'front');
+        $successMessage = 'Votre demande d\'inscription a bien ete envoyee.';
+        if (!empty($emailDelivery['sent'])) {
+            $successMessage .= ' Un email de confirmation a aussi ete envoye.';
+        }
+
+        $this->flash('success', $successMessage, 'front');
         $this->redirect($this->buildReturnUrl($returnTo, ['event_id' => $eventId], '#participation-form'));
     }
 
@@ -109,6 +145,7 @@ class EventFrontController extends AbstractEventController
 
         $typeHighlights = $this->buildTypeHighlights($allFilteredEvents);
         $formState = $this->pullForm('front_participation');
+        $registrationReceipt = $this->pullTransientData('front_registration_receipt');
         $openEvents = count(array_filter($allFilteredEvents, static fn(array $event): bool => (bool) ($event['is_registration_open'] ?? false)));
         $fullEvents = count(array_filter($allFilteredEvents, static fn(array $event): bool => (bool) ($event['is_full'] ?? false)));
         $timelineGroups = $this->buildTimelineGroups(array_values(array_filter(
@@ -142,17 +179,36 @@ class EventFrontController extends AbstractEventController
             ], (string) ($selectedEvent['fill_rate'] ?? 0) . '%', 'Occupation')
             : $this->buildDonutChart([], '0%', 'Occupation');
 
+        $registrationQr = null;
+        $registrationQrReference = null;
+        if (
+            $registrationReceipt
+            && $selectedEvent
+            && (int) ($registrationReceipt['event_id'] ?? 0) === (int) ($selectedEvent['id_evenement'] ?? 0)
+        ) {
+            $participation = $this->participationRepository->findById((int) ($registrationReceipt['participation_id'] ?? 0));
+            if ($participation) {
+                $participation = $this->normalizeParticipation($participation);
+                $registrationQr = $this->buildParticipationQr($participation, $selectedEvent);
+                $registrationQrReference = $this->buildParticipationQrReference($participation, $selectedEvent);
+            }
+        }
+
         return [
             'filters' => $filters,
             'events' => $events,
             'allFilteredEvents' => $allFilteredEvents,
             'selectedEvent' => $selectedEvent,
             'selectedEventId' => $selectedEventId,
+            'selectedEventCalendarUrl' => $selectedEvent ? $this->buildCalendarDownloadUrl((int) $selectedEvent['id_evenement']) : '',
+            'selectedEventMapUrl' => $selectedEvent && trim((string) ($selectedEvent['lieu'] ?? '')) !== '' ? $this->buildMapUrl((string) $selectedEvent['lieu']) : '',
             'featuredEvent' => $featuredEvent,
             'flashes' => $this->pullFlashes('front'),
             'formValues' => $formState['values'],
             'formErrors' => $formState['errors'],
-            'registrationReceipt' => $this->pullTransientData('front_registration_receipt'),
+            'registrationReceipt' => $registrationReceipt,
+            'registrationQr' => $registrationQr,
+            'registrationQrReference' => $registrationQrReference,
             'csrfToken' => $this->getCsrfToken(),
             'eventTypes' => $this->eventTypes,
             'eventStatuses' => $this->eventStatuses,
@@ -217,3 +273,5 @@ class EventFrontController extends AbstractEventController
         return array_values($counts);
     }
 }
+
+

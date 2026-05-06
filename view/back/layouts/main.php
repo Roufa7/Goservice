@@ -20,6 +20,15 @@ $adminNav = [
     'Réclamations' => 'index.php?page=reclamation',
     'Événements' => 'index.php?page=events',
 ];
+
+$frontSiteLink = '../front/index.php?page=home';
+if (($page ?? '') === 'events') {
+    $selectedEventId = (int) (($eventAdminData['selectedManagementEvent']['id_evenement'] ?? 0));
+    $frontSiteLink = '../front/index.php?page=events';
+    if ($selectedEventId > 0) {
+        $frontSiteLink .= '&event_id=' . $selectedEventId . '#event-focus';
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -35,7 +44,7 @@ $adminNav = [
 <body class="admin-body dark">
     <div class="admin-shell">
         <aside class="admin-sidebar">
-            <a href="../front/index.php?page=home" class="admin-brand">
+            <a href="<?php echo htmlspecialchars($frontSiteLink, ENT_QUOTES, 'UTF-8'); ?>" class="admin-brand">
                 <img
                     id="siteLogo"
                     src="../../assets/images/logo-white.png"
@@ -45,11 +54,10 @@ $adminNav = [
                 >
             </a>
 
-
             <nav class="admin-nav">
                 <?php foreach ($adminNav as $label => $link): ?>
                     <a href="<?php echo $link; ?>" class="<?php echo $link === 'index.php?page=' . $page ? 'active' : ''; ?>">
-                        <?php echo $label; ?>
+                        <?php echo htmlspecialchars($label, ENT_QUOTES, 'UTF-8'); ?>
                     </a>
                 <?php endforeach; ?>
             </nav>
@@ -62,7 +70,7 @@ $adminNav = [
 
         <div class="admin-topbar-actions">
             <button id="themeToggle" class="theme-btn" type="button">☀</button>
-            <a class="ghost-btn" href="../front/index.php?page=home">Voir le site</a>
+            <a class="ghost-btn" href="<?php echo htmlspecialchars($frontSiteLink, ENT_QUOTES, 'UTF-8'); ?>">Voir le site</a>
         </div>
     </div>
 

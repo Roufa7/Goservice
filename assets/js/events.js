@@ -58,9 +58,80 @@ if (firstErrorField) {
 }
 
 const pageLoader = document.getElementById("eventPageLoader");
+const pageLoaderTitle = pageLoader?.querySelector(".event-page-loader-card strong");
+const pageLoaderMessage = pageLoader?.querySelector(".event-page-loader-card span:last-of-type");
+const defaultLoaderCopy = {
+    title: pageLoaderTitle?.textContent?.trim() || "Chargement",
+    message: pageLoaderMessage?.textContent?.trim() || "Preparation en cours.",
+};
 
-const showLoader = () => {
+const loaderMessages = {
+    create_event: {
+        title: "Enregistrement de l'evenement",
+        message: "Creation de la fiche evenement et mise a jour des indicateurs.",
+    },
+    update_event: {
+        title: "Mise a jour de l'evenement",
+        message: "Enregistrement des modifications et actualisation du tableau.",
+    },
+    delete_event: {
+        title: "Suppression de l'evenement",
+        message: "Suppression de la fiche et nettoyage des donnees liees.",
+    },
+    create_participation: {
+        title: "Envoi de l'inscription",
+        message: "Verification de la demande et preparation du recu participant.",
+    },
+    update_participation: {
+        title: "Mise a jour du participant",
+        message: "Enregistrement des changements sur la participation en cours.",
+    },
+    delete_participation: {
+        title: "Suppression de la participation",
+        message: "Retrait de l'inscription et actualisation de la liste.",
+    },
+    set_participation_status: {
+        title: "Mise a jour du statut",
+        message: "Application du nouveau statut de participation.",
+    },
+    bulk_participation_status: {
+        title: "Traitement en lot",
+        message: "Mise a jour des participations de cet evenement en cours.",
+    },
+    send_participation_email: {
+        title: "Envoi de l'email",
+        message: "Preparation et envoi du message de confirmation.",
+    },
+    ai_improve_description: {
+        title: "Assistant IA local",
+        message: "Reformulation de la description en cours avec Ollama.",
+    },
+    ai_generate_promo: {
+        title: "Assistant IA local",
+        message: "Generation de la version promotionnelle avec Ollama.",
+    },
+    ai_suggest_title: {
+        title: "Assistant IA local",
+        message: "Recherche d'un meilleur titre avec Ollama.",
+    },
+    ai_analyze_event: {
+        title: "Assistant IA local",
+        message: "Analyse de la fiche evenement en cours avec Ollama.",
+    },
+};
+
+const setLoaderCopy = (copy) => {
+    if (pageLoaderTitle) {
+        pageLoaderTitle.textContent = copy.title || defaultLoaderCopy.title;
+    }
+    if (pageLoaderMessage) {
+        pageLoaderMessage.textContent = copy.message || defaultLoaderCopy.message;
+    }
+};
+
+const showLoader = (copy = defaultLoaderCopy) => {
     if (pageLoader) {
+        setLoaderCopy(copy);
         pageLoader.hidden = false;
         pageLoader.classList.add("event-page-loader-visible");
         pageLoader.setAttribute("aria-hidden", "false");
@@ -73,29 +144,35 @@ const hideLoader = () => {
         pageLoader.setAttribute("aria-hidden", "true");
         window.setTimeout(() => {
             pageLoader.hidden = true;
+            setLoaderCopy(defaultLoaderCopy);
         }, 220);
     }
+};
+
+const getLoaderAction = (form, submitter) => {
+    if (submitter?.dataset.eventAction) {
+        return submitter.dataset.eventAction;
+    }
+
+    const hiddenAction = form.querySelector("input[name='event_action']");
+    return hiddenAction?.value || "";
 };
 
 if (pageLoader) {
     window.addEventListener("pageshow", hideLoader);
 
     document.querySelectorAll("form").forEach((form) => {
-        form.addEventListener("submit", showLoader);
-    });
-
-    document.querySelectorAll("a[href]").forEach((link) => {
-        link.addEventListener("click", () => {
-            const href = link.getAttribute("href") || "";
-            if (href.startsWith("#") || link.target === "_blank") {
+        form.addEventListener("submit", (event) => {
+            const method = (form.getAttribute("method") || "get").toLowerCase();
+            if (method !== "post") {
                 return;
             }
 
-            showLoader();
+            const action = getLoaderAction(form, event.submitter);
+            showLoader(loaderMessages[action] || defaultLoaderCopy);
         });
     });
 }
-
 const liveRules = {
     titre: (value) => value.trim().length >= 3 && value.trim().length <= 150
         ? { valid: true, message: "Titre correct." }
@@ -186,3 +263,13 @@ document.querySelectorAll(".event-form-grid input, .event-form-grid select, .eve
     field.addEventListener("input", validate);
     field.addEventListener("change", validate);
 });
+
+const eventActionField = document.getElementById("event_action_field");
+if (eventActionField) {
+    document.querySelectorAll("[data-event-action]").forEach((button) => {
+        button.addEventListener("click", () => {
+            eventActionField.value = button.getAttribute("data-event-action") || eventActionField.value;
+        });
+    });
+}
+
