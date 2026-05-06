@@ -3,6 +3,13 @@ require_once dirname(__DIR__) . '/model/Avis.php';
 require_once dirname(__DIR__) . '/model/Reclamation.php';
 
 class AvisController {
+    private $db;
+
+    public function __construct() {
+        $database = new Database();
+        $this->db = $database->getConnection();
+    }
+
     public function handleRequest() {
         $action = $_GET['action'] ?? ($_POST['action'] ?? '');
         $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest';
@@ -11,10 +18,41 @@ class AvisController {
         if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             if ($action === 'get_all_global') {
                 try {
-                    $avisModel = new Avis();
-                    $avisList = $avisModel->readAll();
+                    $page = isset($_GET['p']) ? (int)$_GET['p'] : 1;
+                    $limit = 5;
+                    $offset = ($page - 1) * $limit;
+
+                    // Count total
+                    $countQuery = "SELECT COUNT(*) FROM avis";
+                    $countStmt = $this->db->prepare($countQuery);
+                    $countStmt->execute();
+                    $totalItems = $countStmt->fetchColumn();
+                    $totalPages = ceil($totalItems / $limit);
+
+                    $query = "SELECT a.*, u.nom, u.prenom 
+                              FROM avis a
+                              JOIN reclamation r ON a.id_reclamation = r.id_reclamation
+                              JOIN users u ON r.id_user = u.id_user
+                              ORDER BY a.created_at DESC
+                              LIMIT :limit OFFSET :offset";
+                    
+                    $stmt = $this->db->prepare($query);
+                    $stmt->bindParam(":limit", $limit, PDO::PARAM_INT);
+                    $stmt->bindParam(":offset", $offset, PDO::PARAM_INT);
+                    $stmt->execute();
+                    $avisList = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
                     header('Content-Type: application/json');
-                    echo json_encode(['success' => true, 'avis' => $avisList]);
+                    echo json_encode([
+                        'success' => true, 
+                        'avis' => $avisList,
+                        'pagination' => [
+                            'currentPage' => $page,
+                            'totalPages' => $totalPages,
+                            'totalItems' => $totalItems,
+                            'limit' => $limit
+                        ]
+                    ]);
                     exit;
                 } catch (Exception $e) {
                     header('Content-Type: application/json');
@@ -23,8 +61,16 @@ class AvisController {
                 }
             } elseif ($action === 'get_my_avis') {
                 try {
-                    $avisModel = new Avis();
-                    $avisList = $avisModel->readAllByUserId($userId);
+                    $query = "SELECT a.*, r.subject as reclamation_subject 
+                              FROM avis a
+                              JOIN reclamation r ON a.id_reclamation = r.id_reclamation
+                              WHERE r.id_user = :id_user
+                              ORDER BY a.created_at DESC";
+                    $stmt = $this->db->prepare($query);
+                    $stmt->bindParam(":id_user", $userId);
+                    $stmt->execute();
+                    $avisList = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
                     header('Content-Type: application/json');
                     echo json_encode(['success' => true, 'avis' => $avisList]);
                     exit;
@@ -43,10 +89,11 @@ class AvisController {
                     $id = $data['id'] ?? null;
                     if (!$id) throw new Exception("ID d'avis manquant.");
                     
-                    $avisModel = new Avis();
-                    $avisModel->id_avis = $id;
+                    $query = "DELETE FROM avis WHERE id_avis = :id_avis";
+                    $stmt = $this->db->prepare($query);
+                    $stmt->bindParam(":id_avis", $id);
 
-                    if ($avisModel->delete()) {
+                    if ($stmt->execute()) {
                         header('Content-Type: application/json');
                         echo json_encode(['success' => true, 'message' => 'Avis supprimé.']);
                         exit;
@@ -63,15 +110,15 @@ class AvisController {
             if (isset($_POST['submit_avis'])) {
                 $avis = new Avis();
                 $id_avis = trim($_POST['id_avis'] ?? '');
-                $avis->id_reclamation = trim($_POST['id_reclamation'] ?? '');
-                $avis->rating = (int)trim($_POST['rating'] ?? 5);
-                $avis->commentaire = trim($_POST['commentaire'] ?? '');
+                $avis->setIdReclamation(trim($_POST['id_reclamation'] ?? ''));
+                $avis->setRating((int)trim($_POST['rating'] ?? 5));
+                $avis->setCommentaire(trim($_POST['commentaire'] ?? ''));
 
                 $errors = [];
-                if (empty($avis->id_reclamation)) {
+                if (empty($avis->getIdReclamation())) {
                     $errors[] = "Veuillez sélectionner une réclamation associée.";
                 }
-                if (empty($avis->commentaire)) {
+                if (empty($avis->getCommentaire())) {
                     $errors[] = "Le commentaire est obligatoire.";
                 }
 
@@ -80,19 +127,29 @@ class AvisController {
                         $success = false;
                         $msg = "";
                         if (!empty($id_avis)) {
-                            $avis->id_avis = $id_avis;
-                            if ($avis->update()) {
+                            $query = "UPDATE avis SET rating = :rating, commentaire = :commentaire WHERE id_avis = :id_avis";
+                            $stmt = $this->db->prepare($query);
+                            $rating = $avis->getRating();
+                            $commentaire = $avis->getCommentaire();
+                            $stmt->bindParam(":rating", $rating);
+                            $stmt->bindParam(":commentaire", $commentaire);
+                            $stmt->bindParam(":id_avis", $id_avis);
+                            if ($stmt->execute()) {
                                 $success = true;
                                 $msg = "Avis modifié avec succès !";
-                            } else {
-                                throw new Exception("La modification a échoué.");
                             }
                         } else {
-                            if ($avis->create()) {
+                            $query = "INSERT INTO avis (id_reclamation, rating, commentaire) VALUES (:id_reclamation, :rating, :commentaire)";
+                            $stmt = $this->db->prepare($query);
+                            $id_rec = $avis->getIdReclamation();
+                            $rating = $avis->getRating();
+                            $commentaire = $avis->getCommentaire();
+                            $stmt->bindParam(":id_reclamation", $id_rec);
+                            $stmt->bindParam(":rating", $rating);
+                            $stmt->bindParam(":commentaire", $commentaire);
+                            if ($stmt->execute()) {
                                 $success = true;
                                 $msg = "Avis ajouté avec succès !";
-                            } else {
-                                throw new Exception("L'insertion a échoué.");
                             }
                         }
 
@@ -105,6 +162,8 @@ class AvisController {
                             $_SESSION['success_message'] = $msg;
                             header("Location: index.php?page=reclamation");
                             exit;
+                        } else {
+                            throw new Exception("L'opération a échoué.");
                         }
                     } catch (Exception $e) {
                         $msg = "Erreur : " . $e->getMessage();

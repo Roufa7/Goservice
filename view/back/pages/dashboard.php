@@ -1,46 +1,71 @@
 <section class="admin-stats reveal">
     <article class="admin-stat">
-        <strong>1 284</strong>
+        <strong><?php echo $adminStats['users'] ?? 0; ?></strong>
         <span>Utilisateurs</span>
     </article>
     <article class="admin-stat">
-        <strong>324</strong>
+        <strong><?php echo $adminStats['services'] ?? 0; ?></strong>
         <span>Services</span>
     </article>
     <article class="admin-stat">
-        <strong>86</strong>
+        <strong><?php echo $adminStats['posts'] ?? 0; ?></strong>
         <span>Posts forum</span>
     </article>
     <article class="admin-stat">
-        <strong>41</strong>
+        <strong><?php echo $adminStats['reclamations'] ?? 0; ?></strong>
         <span>Réclamations</span>
     </article>
 </section>
 
 <section class="admin-grid reveal">
-    <article class="admin-panel">
+    <article class="admin-panel" style="flex: 1;">
         <span class="section-badge">Vue globale</span>
-        <h3>Évolution hebdomadaire</h3>
-        <p>Visualisation rapide de l’activité par module.</p>
-
-        <div class="chart-box">
-            <div class="bar" style="height: 52%;"><span>Lun</span></div>
-            <div class="bar" style="height: 68%;"><span>Mar</span></div>
-            <div class="bar" style="height: 74%;"><span>Mer</span></div>
-            <div class="bar" style="height: 58%;"><span>Jeu</span></div>
-            <div class="bar" style="height: 86%;"><span>Ven</span></div>
-            <div class="bar" style="height: 62%;"><span>Sam</span></div>
-            <div class="bar" style="height: 48%;"><span>Dim</span></div>
+        <h3>Activité du site</h3>
+        <p>Aperçu rapide des modules principaux.</p>
+        <div style="height: 300px; display: flex; align-items: center; justify-content: center;">
+             <canvas id="moduleDonut"></canvas>
         </div>
     </article>
 
-    <article class="admin-panel">
-        <span class="section-badge">Répartition</span>
-        <h3>Poids des modules</h3>
-        <p>Services, communauté et événements dans une vue synthétique.</p>
-        <div class="donut"></div>
+    <article class="admin-panel" style="flex: 1;">
+        <span class="section-badge">Accès rapide</span>
+        <div class="feature-list">
+            <div class="feature-item">Valider les nouveaux services</div>
+            <div class="feature-item">Contrôler les réclamations urgentes</div>
+            <div class="feature-item">Modérer les publications forum</div>
+            <div class="feature-item">Gérer les événements à venir</div>
+        </div>
     </article>
 </section>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ctxDonut = document.getElementById('moduleDonut').getContext('2d');
+    new Chart(ctxDonut, {
+        type: 'doughnut',
+        data: {
+            labels: ['Users', 'Services', 'Forum', 'Réclamations'],
+            datasets: [{
+                data: [
+                    <?php echo $adminStats['users'] ?? 0; ?>, 
+                    <?php echo $adminStats['services'] ?? 0; ?>, 
+                    <?php echo $adminStats['posts'] ?? 0; ?>, 
+                    <?php echo $adminStats['reclamations'] ?? 0; ?>
+                ],
+                backgroundColor: ['#007bff', '#28a745', '#ffc107', '#dc3545'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom', labels: { color: '#888' } }
+            }
+        }
+    });
+});
+</script>
 
 <section class="admin-grid reveal">
     <article class="admin-panel">

@@ -1,17 +1,50 @@
 <?php
 require_once dirname(__DIR__) . '/model/Reclamation.php';
 
-class ReclamationController {
-    public function handleRequest() {
+class ReclamationController
+{
+    private $db;
+
+    public function __construct()
+    {
+        $database = new Database();
+        $this->db = $database->getConnection();
+    }
+
+    public function handleRequest()
+    {
         $action = $_GET['action'] ?? ($_POST['action'] ?? '');
         $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest';
         $userId = $_SESSION['user_id'] ?? 1;
 
+        // Fetch data for the view if it's a normal page load
+        if ($_SERVER['REQUEST_METHOD'] === 'GET' && empty($action)) {
+            $query = "SELECT r.*, a.rating, a.commentaire as avis_commentaire, rep.content as reponse_content 
+                      FROM reclamation r 
+                      LEFT JOIN avis a ON r.id_reclamation = a.id_reclamation 
+                      LEFT JOIN reponse rep ON r.id_reclamation = rep.id_reclamation
+                      WHERE r.id_user = :id_user 
+                      ORDER BY r.created_at DESC";
+            $stmt = $this->db->prepare($query);
+            $stmt->bindParam(":id_user", $userId);
+            $stmt->execute();
+            $GLOBALS['userReclamations'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
+
         if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             if ($action === 'get_all') {
                 try {
-                    $reclamationModel = new Reclamation();
-                    $reclamations = $reclamationModel->readAllByUserId($userId);
+                    $query = "SELECT r.*, a.rating, a.commentaire as avis_commentaire, rep.content as reponse_content 
+                              FROM reclamation r 
+                              LEFT JOIN avis a ON r.id_reclamation = a.id_reclamation 
+                              LEFT JOIN reponse rep ON r.id_reclamation = rep.id_reclamation
+                              WHERE r.id_user = :id_user 
+                              ORDER BY r.created_at DESC";
+                    $stmt = $this->db->prepare($query);
+                    $stmt->bindParam(":id_user", $userId);
+                    $stmt->execute();
+                    $reclamations = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
                     header('Content-Type: application/json');
                     echo json_encode(['success' => true, 'reclamations' => $reclamations]);
                     exit;
@@ -28,14 +61,16 @@ class ReclamationController {
                 try {
                     $data = json_decode(file_get_contents('php://input'), true);
                     $id = $data['id'] ?? null;
-                    
-                    if (!$id) throw new Exception("ID manquant.");
-                    
-                    $r = new Reclamation();
-                    $r->id_user = $userId;
-                    $r->id_reclamation = $id;
 
-                    if ($r->delete()) {
+                    if (!$id)
+                        throw new Exception("ID manquant.");
+
+                    $query = "DELETE FROM reclamation WHERE id_reclamation = :id_reclamation AND id_user = :id_user";
+                    $stmt = $this->db->prepare($query);
+                    $stmt->bindParam(":id_reclamation", $id);
+                    $stmt->bindParam(":id_user", $userId);
+
+                    if ($stmt->execute()) {
                         header('Content-Type: application/json');
                         echo json_encode(['success' => true, 'message' => 'Supprimé avec succès.']);
                         exit;
@@ -52,28 +87,53 @@ class ReclamationController {
             if (isset($_POST['submit_reclamation'])) {
                 $r = new Reclamation();
                 $id_rec = trim($_POST['id_reclamation'] ?? '');
-                $r->id_user = $userId;
-                $r->subject = trim($_POST['subject'] ?? '');
-                $r->description = trim($_POST['description'] ?? '');
-                $r->status = 'pending';
+                $r->setIdUser($userId);
+                $r->setSubject(trim($_POST['subject'] ?? ''));
+                $r->setDescription(trim($_POST['description'] ?? ''));
+                $r->setStatus('pending');
 
                 $errors = [];
-                if (empty($r->subject)) {
+                if (empty($r->getSubject())) {
                     $errors[] = "Le sujet est obligatoire.";
                 }
-                if (empty($r->description)) {
+                if (empty($r->getDescription())) {
                     $errors[] = "La description est obligatoire.";
                 }
 
                 if (empty($errors)) {
                     try {
                         if (!empty($id_rec)) {
-                            $r->id_reclamation = $id_rec;
-                            $r->update();
+                            $query = "UPDATE reclamation SET subject = :subject, description = :description WHERE id_reclamation = :id_reclamation AND id_user = :id_user";
+                            $stmt = $this->db->prepare($query);
+                            $subject = $r->getSubject();
+                            $description = $r->getDescription();
+                            $stmt->bindParam(":subject", $subject);
+                            $stmt->bindParam(":description", $description);
+                            $stmt->bindParam(":id_reclamation", $id_rec);
+                            $stmt->bindParam(":id_user", $userId);
+                            $stmt->execute();
                             $msg = "Réclamation modifiée avec succès!";
                         } else {
-                            $r->create();
+                            $query = "INSERT INTO reclamation (id_user, subject, description, status) VALUES (:id_user, :subject, :description, :status)";
+                            $stmt = $this->db->prepare($query);
+                            $id_user = $r->getIdUser();
+                            $subject = $r->getSubject();
+                            $description = $r->getDescription();
+                            $status = $r->getStatus();
+                            $stmt->bindParam(":id_user", $id_user);
+                            $stmt->bindParam(":subject", $subject);
+                            $stmt->bindParam(":description", $description);
+                            $stmt->bindParam(":status", $status);
+                            $stmt->execute();
                             $msg = "Réclamation ajoutée avec succès!";
+
+                            // Envoyer notification mail à l'admin
+                            require_once dirname(__DIR__) . '/model/MailService.php';
+                            MailService::sendAdminNotification([
+                                'id_user' => $userId,
+                                'subject' => $subject,
+                                'description' => $description
+                            ]);
                         }
                         if ($isAjax) {
                             header('Content-Type: application/json');

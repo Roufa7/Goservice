@@ -45,6 +45,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     errorMsg.style.display = 'none';
                     cancelAvisEdit();
                     window.loadGlobalAvis();
+                    if (window.loadUserReclamations) window.loadUserReclamations();
                     setTimeout(() => successMsg.style.display = 'none', 3000);
                 } else {
                     errorMsg.innerHTML = "<strong>Erreur :</strong><br>" + data.message;
@@ -70,11 +71,12 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-window.loadGlobalAvis = function() {
+window.loadGlobalAvis = function(page = 1) {
     const container = document.getElementById('avis-list');
+    const paginationContainer = document.getElementById('avis-pagination');
     if (!container) return;
 
-    fetch('index.php?page=avis&action=get_all_global')
+    fetch(`index.php?page=avis&action=get_all_global&p=${page}`)
         .then(res => res.json())
         .then(data => {
             container.innerHTML = '';
@@ -111,11 +113,50 @@ window.loadGlobalAvis = function() {
                     `;
                     container.appendChild(item);
                 });
+                renderAvisPagination(data.pagination);
             } else {
                 container.innerHTML = '<p class="page-intro">Aucun avis pour le moment.</p>';
+                if (paginationContainer) paginationContainer.innerHTML = '';
             }
         })
         .catch(err => console.error(err));
+}
+
+function renderAvisPagination(pagination) {
+    const container = document.getElementById('avis-pagination');
+    if (!container) return;
+    
+    container.innerHTML = '';
+    if (pagination.totalPages <= 1) return;
+
+    const { currentPage, totalPages } = pagination;
+
+    // Previous
+    const prevBtn = document.createElement('button');
+    prevBtn.innerHTML = 'Précédent';
+    prevBtn.className = 'outline-btn';
+    prevBtn.disabled = currentPage === 1;
+    prevBtn.onclick = () => window.loadGlobalAvis(currentPage - 1);
+    container.appendChild(prevBtn);
+
+    // Page numbers
+    for (let i = 1; i <= totalPages; i++) {
+        const pageBtn = document.createElement('button');
+        pageBtn.innerText = i;
+        pageBtn.className = i === currentPage ? 'solid-btn' : 'outline-btn';
+        pageBtn.style.minWidth = '40px';
+        pageBtn.style.height = '40px';
+        pageBtn.onclick = () => window.loadGlobalAvis(i);
+        container.appendChild(pageBtn);
+    }
+
+    // Next
+    const nextBtn = document.createElement('button');
+    nextBtn.innerHTML = 'Suivant';
+    nextBtn.className = 'outline-btn';
+    nextBtn.disabled = currentPage === totalPages;
+    nextBtn.onclick = () => window.loadGlobalAvis(currentPage + 1);
+    container.appendChild(nextBtn);
 }
 
 window.editAvis = function(id) {
