@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once __DIR__ . '/../model/User.php';
+require_once __DIR__ . '/../lib/MailService.php';
 
 $action = $_GET['action'] ?? '';
 
@@ -29,7 +30,11 @@ switch ($action) {
                 $fileName = time() . '_' . basename($_FILES['photo']['name']);
                 $targetFilePath = $uploadDir . $fileName;
 
-                if (move_uploaded_file($_FILES['photo']['tmp_name'], $targetFilePath)) {
+                // Validation du type de fichier (images uniquement)
+                $allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+                $fileType = mime_content_type($_FILES['photo']['tmp_name']);
+
+                if (in_array($fileType, $allowedTypes) && move_uploaded_file($_FILES['photo']['tmp_name'], $targetFilePath)) {
                     $photoPath = 'assets/uploads/' . $fileName;
                 }
             }
@@ -72,6 +77,51 @@ switch ($action) {
                 exit;
             } else {
                 header('Location: ../view/front/index.php?page=login&error=' . urlencode($result['message']));
+                exit;
+            }
+        }
+        break;
+
+    case 'forgot_password':
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $email = $_POST['email'] ?? '';
+            $rawToken = $userModel->createPasswordResetToken($email);
+
+            if ($rawToken) {
+                // Determine the protocol and host automatically
+                $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http';
+                $host = $_SERVER['HTTP_HOST'];
+                $resetLink = "$protocol://$host/view/front/index.php?page=reset_password&token=$rawToken";
+                
+                // Real Email sending
+                MailService::sendPasswordResetEmail($email, $resetLink);
+            }
+            
+            header('Location: ../view/front/index.php?page=forgot_password&status=sent');
+            exit;
+        }
+        break;
+
+    case 'reset_password':
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $token = $_POST['token'] ?? '';
+            $password = $_POST['password'] ?? '';
+            $confirmPassword = $_POST['confirm_password'] ?? '';
+
+            if ($password !== $confirmPassword) {
+                header('Location: ../view/front/index.php?page=reset_password&token=' . $token . '&error=' . urlencode('Les mots de passe ne correspondent pas.'));
+                exit;
+            }
+
+            $userId = $userModel->validateResetToken($token);
+            if ($userId) {
+                if ($userModel->resetPasswordWithToken($userId, $password)) {
+                    unset($_SESSION['mock_reset_link']);
+                    header('Location: ../view/front/index.php?page=login&success=password_reset');
+                    exit;
+                }
+            } else {
+                header('Location: ../view/front/index.php?page=login&error=' . urlencode('Le lien de réinitialisation est invalide ou a expiré.'));
                 exit;
             }
         }

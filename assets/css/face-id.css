@@ -1,0 +1,103 @@
+:root {
+    --face-id-primary: #EE5828; /* Matching your theme orange */
+    --face-id-primary-rgb: 238, 88, 40;
+    --face-id-success: #2ed573;
+    --face-id-error: #ff4757;
+    --face-id-bg: rgba(14, 18, 25, 0.95);
+    --face-panel-glass: rgba(255, 255, 255, 0.05);
+}
+
+/* Face ID Button in Login Form */
+.face-id-btn {
+    width: 100%;
+    margin-top: 12px;
+    background: linear-gradient(45deg, var(--face-id-primary), #ff7e5f);
+    color: white;
+    font-weight: 600;
+    border: none;
+    padding: 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(var(--face-id-primary-rgb), 0.3);
+}
+
+.face-id-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(var(--face-id-primary-rgb), 0.5);
+}
+
+/* Modal UI */
+.face-id-modal {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: var(--face-id-bg);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+    backdrop-filter: blur(15px);
+}
+
+.webcam-container {
+    position: relative;
+    width: 90%;
+    max-width: 500px;
+    aspect-ratio: 4/3;
+    background: var(--face-panel-glass);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 24px;
+    overflow: hidden;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+#webcam-video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+#face-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.scan-status {
+    position: absolute;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.7);
+    padding: 10px 20px;
+    border-radius: 30px;
+    color: white;
+    font-size: 0.95rem;
+    font-weight: 600;
+    white-space: nowrap;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+#closeFaceModal {
+    transition: transform 0.3s ease;
+}
+
+#closeFaceModal:hover {
+    transform: rotate(90deg);
+}
+
+/* Enrollment UI in Profile */
+#enroll-container {
+    animation: fadeIn 0.4s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}

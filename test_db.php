@@ -12,17 +12,21 @@ try {
     echo "</ul>";
 
     // Show users
-    if (in_array('users', $tables)) {
-        $stmt = $pdo->query("SELECT * FROM users");
+    if (in_array('user', $tables)) {
+        $stmt = $pdo->query("
+            SELECT u.*, p.nom, p.prenom 
+            FROM user u 
+            JOIN profile p ON u.id_user = p.id_user
+        ");
         $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        echo "<h3>Nombre d'utilisateurs : " . count($users) . "</h3>";
+        echo "<h3>Nombre d'utilisateurs avec profil : " . count($users) . "</h3>";
         if (count($users) > 0) {
             echo "<pre>";
             print_r(end($users));
             echo "</pre>";
         }
     } else {
-        echo "<h3 style='color:red;'>La table 'users' n'existe pas !</h3>";
+        echo "<h3 style='color:red;'>La table 'user' n'existe pas !</h3>";
     }
 
 } catch (Exception $e) {

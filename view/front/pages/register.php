@@ -31,6 +31,10 @@
                 <div class="field-block">
                     <label for="password">Mot de passe</label>
                     <input type="password" id="password" name="password" required>
+                    <div class="password-strength-meter">
+                        <div class="strength-bar" id="strength-bar"></div>
+                    </div>
+                    <small id="strength-text" class="strength-text">Niveau de sécurité</small>
                 </div>
 
                 <div class="field-block">
@@ -64,3 +68,87 @@
         </form>
     </article>
 </section>
+
+<style>
+.password-strength-meter {
+    height: 6px;
+    background-color: rgba(100, 100, 100, 0.2);
+    border-radius: 4px;
+    margin-top: 8px;
+    overflow: hidden;
+    position: relative;
+}
+.strength-bar {
+    height: 100%;
+    width: 0%;
+    border-radius: 4px;
+    transition: width 0.4s ease-out, background-color 0.4s ease-out;
+}
+.strength-text {
+    display: block;
+    margin-top: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #777;
+    transition: color 0.3s ease;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const passwordInput = document.getElementById('password');
+    const strengthBar = document.getElementById('strength-bar');
+    const strengthText = document.getElementById('strength-text');
+
+    if (passwordInput && strengthBar && strengthText) {
+        passwordInput.addEventListener('input', () => {
+            const value = passwordInput.value;
+            let score = 0;
+
+            if (!value) {
+                strengthBar.style.width = '0%';
+                strengthBar.style.backgroundColor = 'transparent';
+                strengthText.textContent = 'Niveau de sécurité';
+                strengthText.style.color = '#777';
+                return;
+            }
+
+            // Check length
+            if (value.length >= 8) score++;
+            // Check for both lower and upper case
+            if (/[A-Z]/.test(value) && /[a-z]/.test(value)) score++;
+            // Check for numbers
+            if (/\d/.test(value)) score++;
+            // Check for special characters
+            if (/[^A-Za-z0-9]/.test(value)) score++;
+
+            let width = '0%';
+            let color = 'transparent';
+            let text = '';
+            let textColor = '#777';
+
+            if (score <= 1) {
+                width = '33%';
+                color = '#ff4757'; // Rouge - Faible
+                text = 'Faible';
+                textColor = '#ff4757';
+            } else if (score === 2 || score === 3) {
+                width = '66%';
+                color = '#ffa502'; // Orange - Moyen
+                text = 'Moyen';
+                textColor = '#ffa502';
+            } else if (score >= 4) {
+                width = '100%';
+                color = '#2ed573'; // Vert - Fort
+                text = 'Fort';
+                textColor = '#2ed573';
+            }
+
+            strengthBar.style.width = width;
+            strengthBar.style.backgroundColor = color;
+            strengthText.textContent = text;
+            strengthText.style.color = textColor;
+        });
+    }
+});
+</script>

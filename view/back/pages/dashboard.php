@@ -1,46 +1,151 @@
+<?php
+require_once __DIR__ . '/../../../model/User.php';
+$userModel = new User();
+$stats = $userModel->getUserStats();
+$trends = $userModel->getRegistrationTrends();
+
+// Prepare Line Chart Data
+$labels = [];
+$data = [];
+foreach ($trends as $t) {
+    $labels[] = date('d/m', strtotime($t['date']));
+    $data[] = $t['count'];
+}
+
+// Prepare Doughnut Chart Data
+$roleLabels = ['Clients', 'Providers', 'Admins'];
+$roleData = [$stats['user'], $stats['provider'], $stats['admin']];
+?>
 <section class="admin-stats reveal">
-    <article class="admin-stat">
-        <strong>1 284</strong>
+    <article class="admin-stat glass-panel card-float">
+        <strong class="stat-animate grad-text" data-target="<?php echo $stats['total']; ?>">0</strong>
         <span>Utilisateurs</span>
     </article>
-    <article class="admin-stat">
-        <strong>324</strong>
+    <article class="admin-stat glass-panel card-float" style="animation-delay: 0.2s">
+        <strong class="stat-animate grad-text" data-target="324">0</strong>
         <span>Services</span>
     </article>
-    <article class="admin-stat">
-        <strong>86</strong>
+    <article class="admin-stat glass-panel card-float" style="animation-delay: 0.4s">
+        <strong class="stat-animate grad-text" data-target="86">0</strong>
         <span>Posts forum</span>
     </article>
-    <article class="admin-stat">
-        <strong>41</strong>
+    <article class="admin-stat glass-panel card-float" style="animation-delay: 0.6s">
+        <strong class="stat-animate grad-text" data-target="41">0</strong>
         <span>Réclamations</span>
     </article>
 </section>
 
-<section class="admin-grid reveal">
-    <article class="admin-panel">
-        <span class="section-badge">Vue globale</span>
-        <h3>Évolution hebdomadaire</h3>
-        <p>Visualisation rapide de l’activité par module.</p>
+<div class="admin-grid reveal" style="grid-template-columns: 2fr 1fr; gap: 20px;">
+    <article class="admin-panel glass-panel">
+        <span class="section-badge">Croissance</span>
+        <h3 class="grad-text">Évolution des inscriptions</h3>
+        <p>Analyse des 30 derniers jours.</p>
 
-        <div class="chart-box">
-            <div class="bar" style="height: 52%;"><span>Lun</span></div>
-            <div class="bar" style="height: 68%;"><span>Mar</span></div>
-            <div class="bar" style="height: 74%;"><span>Mer</span></div>
-            <div class="bar" style="height: 58%;"><span>Jeu</span></div>
-            <div class="bar" style="height: 86%;"><span>Ven</span></div>
-            <div class="bar" style="height: 62%;"><span>Sam</span></div>
-            <div class="bar" style="height: 48%;"><span>Dim</span></div>
+        <div style="height: 350px; margin-top: 20px; position: relative;">
+            <canvas id="registrationChart"></canvas>
         </div>
     </article>
 
-    <article class="admin-panel">
+    <article class="admin-panel glass-panel">
         <span class="section-badge">Répartition</span>
-        <h3>Poids des modules</h3>
-        <p>Services, communauté et événements dans une vue synthétique.</p>
-        <div class="donut"></div>
+        <h3 class="grad-text">Rôles</h3>
+        <p>Distribution par profil.</p>
+        <div style="height: 300px; margin-top: 20px;">
+            <canvas id="roleChart"></canvas>
+        </div>
     </article>
-</section>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Line Chart with Gradient
+    const regCtx = document.getElementById('registrationChart').getContext('2d');
+    const regGradient = regCtx.createLinearGradient(0, 0, 0, 400);
+    regGradient.addColorStop(0, 'rgba(108, 92, 231, 0.4)');
+    regGradient.addColorStop(1, 'rgba(108, 92, 231, 0)');
+
+    new Chart(regCtx, {
+        type: 'line',
+        data: {
+            labels: <?php echo json_encode($labels); ?>,
+            datasets: [{
+                label: 'Inscriptions',
+                data: <?php echo json_encode($data); ?>,
+                borderColor: '#6c5ce7',
+                backgroundColor: regGradient,
+                borderWidth: 4,
+                tension: 0, // Zigzag look
+                fill: true,
+                pointBackgroundColor: '#fff',
+                pointBorderColor: '#6c5ce7',
+                pointBorderWidth: 2,
+                pointRadius: 6,
+                pointHoverRadius: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                    ticks: { color: '#888', stepSize: 1 }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: { color: '#888' }
+                }
+            },
+            animation: {
+                y: {
+                    duration: 2000,
+                    from: 500
+                },
+                x: {
+                    duration: 2000,
+                    from: 0
+                }
+            }
+        }
+    });
+
+    // Doughnut Chart - Drawing effect
+    const roleCtx = document.getElementById('roleChart').getContext('2d');
+    new Chart(roleCtx, {
+        type: 'doughnut',
+        data: {
+            labels: <?php echo json_encode($roleLabels); ?>,
+            datasets: [{
+                data: <?php echo json_encode($roleData); ?>,
+                backgroundColor: ['#EE5828', '#4CAF50', '#6c5ce7'],
+                borderWidth: 0,
+                hoverOffset: 20
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '70%',
+            rotation: -90,
+            circumference: 360,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { color: '#888', usePointStyle: true, padding: 20 }
+                }
+            },
+            animation: {
+                animateRotate: true,
+                animateScale: true,
+                duration: 3000,
+                easing: 'easeInOutQuart'
+            }
+        }
+    });
+});
+</script>
 
 <section class="admin-grid reveal">
     <article class="admin-panel">

@@ -19,7 +19,7 @@
 
     <div class="icon-actions">
         <a class="solid-btn" href="#ajout-candidature">+ Ajouter candidature</a>
-        <button class="outline-btn">Mes candidatures</button>
+        <a class="outline-btn" href="index.php?page=profile" style="text-decoration:none;">Mes candidatures</a>
     </div>
 </section>
 

@@ -12,6 +12,8 @@ $allowedPages = [
     'profile',
     'register',
     'login',
+    'forgot_password',
+    'reset_password',
 ];
 
 if (!in_array($page, $allowedPages, true)) {

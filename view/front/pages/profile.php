@@ -71,26 +71,35 @@ if (!$userData) {
         </article>
 
         <div>
+            <?php $profileStats = $userModel->getProfileStats($_SESSION['user_id']); ?>
             <div class="profile-stats">
                 <article class="stat-card">
-                    <strong>14</strong>
+                    <strong class="stat-animate" data-target="<?php echo $profileStats['services_count'] ?? 0; ?>">0</strong>
                     <span>Services publiés</span>
                 </article>
                 <article class="stat-card">
-                    <strong>26</strong>
-                    <span>Avis reçus</span>
+                    <strong class="stat-animate" data-target="<?php echo $profileStats['offers_count'] ?? 0; ?>">0</strong>
+                    <span>Candidatures</span>
                 </article>
                 <article class="stat-card">
-                    <strong>09</strong>
+                    <strong class="stat-animate" data-target="0">0</strong>
                     <span>Demandes actives</span>
                 </article>
                 <article class="stat-card">
-                    <strong>4.9</strong>
+                    <strong class="stat-animate" data-target="5">0</strong>
                     <span>Note moyenne</span>
                 </article>
             </div>
 
             <div class="profile-grid" style="margin-top:20px;">
+                <article class="profile-card" style="border: 1px solid var(--orange);">
+                    <span class="section-badge">Biométrie</span>
+                    <h3>Face ID</h3>
+                    <p>Sécurisez votre accès avec la reconnaissance faciale.</p>
+                    <button id="btnEnrollFace" class="solid-btn">Enregistrer mon visage</button>
+                    <div id="enroll-feedback" style="margin-top:10px; font-weight:bold;"></div>
+                </article>
+
                 <article class="profile-card">
                     <span class="section-badge">À propos</span>
                     <h3>Présentation</h3>

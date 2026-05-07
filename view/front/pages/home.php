@@ -12,18 +12,23 @@
             <a class="ghost-btn" href="index.php?page=forum">Explorer la communauté</a>
         </div>
 
+        <?php 
+        require_once __DIR__ . '/../../../model/User.php';
+        $userModel = new User();
+        $globalCounts = $userModel->getGlobalCounts();
+        ?>
         <div class="mini-stats">
             <div class="glass-card">
-                <strong>120+</strong>
-                <span>Services visuels</span>
+                <strong class="stat-animate" data-target="<?php echo $globalCounts['services'] ?? 0; ?>">0</strong>
+                <span>Services réels</span>
             </div>
             <div class="glass-card">
-                <strong>48</strong>
-                <span>Événements actifs</span>
+                <strong class="stat-animate" data-target="<?php echo $globalCounts['events'] ?? 0; ?>">0</strong>
+                <span>Événements</span>
             </div>
             <div class="glass-card">
-                <strong>4.9</strong>
-                <span>Satisfaction globale</span>
+                <strong class="stat-animate" data-target="<?php echo $globalCounts['users'] ?? 0; ?>">0</strong>
+                <span>Membres actifs</span>
             </div>
         </div>
     </div>

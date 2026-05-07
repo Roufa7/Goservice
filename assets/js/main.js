@@ -99,4 +99,35 @@ document.addEventListener("DOMContentLoaded", function() {
             input.addEventListener("input", () => clearError(input));
         });
     });
+
+    // Enhanced Number Counting Animation
+    const counters = document.querySelectorAll('.stat-animate');
+    if (counters.length > 0) {
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const el = entry.target;
+                    const target = +el.getAttribute('data-target');
+                    el.innerText = '0';
+                    el.classList.add('animating');
+                    
+                    const animate = () => {
+                        const current = +el.innerText;
+                        const step = Math.ceil(target / 40) || 1;
+                        if (current < target) {
+                            el.innerText = Math.min(current + step, target);
+                            requestAnimationFrame(animate);
+                        } else {
+                            el.classList.remove('animating');
+                            el.classList.add('finished');
+                        }
+                    };
+                    // Delay slightly for visual impact
+                    setTimeout(animate, 200);
+                    observer.unobserve(el);
+                }
+            });
+        }, { threshold: 0.1 });
+        counters.forEach(c => observer.observe(c));
+    }
 });

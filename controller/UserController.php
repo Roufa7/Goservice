@@ -21,6 +21,29 @@ switch ($action) {
         header('Location: ../view/back/index.php?page=users');
         exit;
         
+    case 'add':
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $nom = $_POST['nom'] ?? '';
+            $prenom = $_POST['prenom'] ?? '';
+            $email = $_POST['email'] ?? '';
+            $password = $_POST['password'] ?? '';
+            $telephone = $_POST['telephone'] ?? '';
+            $adresse = $_POST['adresse'] ?? '';
+            $role = $_POST['role'] ?? 'user';
+            
+            // Reusing the register method from User model to create the new user safely.
+            $result = $userModel->register($nom, $prenom, $email, $password, $telephone, $adresse, $role);
+            
+            if ($result['success']) {
+                header('Location: ../view/back/index.php?page=users&success=added');
+            } else {
+                header('Location: ../view/back/index.php?page=user_add&error=' . urlencode($result['message']));
+            }
+        } else {
+            header('Location: ../view/back/index.php?page=users');
+        }
+        exit;
+        
     case 'update':
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $id = $_POST['id_user'] ?? null;
