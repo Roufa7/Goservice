@@ -321,7 +321,7 @@ class RecommendationController {
 
         // Show only strong recommendations.
         $scored = array_values(array_filter($scored, static function (array $row): bool {
-            return (int) ($row['score'] ?? 0) > 50;
+            return (int) ($row['score'] ?? 0) >= 0;
         }));
 
         $scored = array_slice($scored, 0, max(1, min($limit, 50)));

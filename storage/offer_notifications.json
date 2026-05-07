@@ -1,5 +1,176 @@
 [
     {
+        "id": "notif_69fc589d299923.57552024",
+        "offer_id": 13,
+        "type": "suppression",
+        "headline": {
+            "fr": "Offre supprimée",
+            "en": "Offer deleted",
+            "ar": "تم حذف العرض"
+        },
+        "message": "proffesionnel cuisinier",
+        "details": {
+            "type_service": "nettoyage",
+            "localisation": "bizerte",
+            "prix": "500.00"
+        },
+        "link": "index.php?page=offre",
+        "time": "2026-05-07T11:17:17+02:00",
+        "read": false
+    },
+    {
+        "id": "notif_69fc5832a98377.11110883",
+        "offer_id": 16,
+        "type": "suppression",
+        "headline": {
+            "fr": "Offre supprimée",
+            "en": "Offer deleted",
+            "ar": "تم حذف العرض"
+        },
+        "message": "proffessionnel",
+        "details": {
+            "type_service": "plomberie",
+            "localisation": "bnjk",
+            "prix": "78965.00"
+        },
+        "link": "index.php?page=offre",
+        "time": "2026-05-07T11:15:30+02:00",
+        "read": false
+    },
+    {
+        "id": "notif_69fc5478742e51.54619647",
+        "offer_id": 30,
+        "type": "modification",
+        "headline": {
+            "fr": "Offre modifiée",
+            "en": "Offer updated",
+            "ar": "تم تعديل العرض"
+        },
+        "message": "designer",
+        "details": {
+            "type_service": "evenementiel",
+            "localisation": "ras jebel",
+            "prix": "100.00 TND"
+        },
+        "changes": {
+            "type_service": {
+                "from": "design",
+                "to": "evenementiel"
+            }
+        },
+        "link": "index.php?page=offre&offer_id=30",
+        "time": "2026-05-07T10:59:36+02:00",
+        "read": false
+    },
+    {
+        "id": "notif_69fb9a0de01c24.42839225",
+        "offer_id": 29,
+        "type": "modification",
+        "headline": {
+            "fr": "Offre modifiée",
+            "en": "Offer updated",
+            "ar": "تم تعديل العرض"
+        },
+        "message": "anniversaire",
+        "details": {
+            "type_service": "nettoyage",
+            "localisation": "bizerte",
+            "prix": "300.00 TND"
+        },
+        "changes": {
+            "date_expiration": {
+                "from": "2026-05-07 00:00:00",
+                "to": "2026-05-27 00:00:00"
+            }
+        },
+        "link": "index.php?page=offre&offer_id=29",
+        "time": "2026-05-06T21:44:13+02:00",
+        "read": false
+    },
+    {
+        "id": "notif_69fb94b64a08b3.50496229",
+        "offer_id": 16,
+        "type": "modification",
+        "headline": {
+            "fr": "Offre modifiée",
+            "en": "Offer updated",
+            "ar": "تم تعديل العرض"
+        },
+        "message": "proffessionnel",
+        "details": {
+            "type_service": "plomberie",
+            "localisation": "bnjk",
+            "prix": "78 965.00 TND"
+        },
+        "changes": {
+            "type_service": {
+                "from": "nettoyage",
+                "to": "plomberie"
+            }
+        },
+        "link": "index.php?page=offre&offer_id=16",
+        "time": "2026-05-06T21:21:26+02:00",
+        "read": false
+    },
+    {
+        "id": "notif_69fb94891e2982.54797158",
+        "offer_id": 16,
+        "type": "modification",
+        "headline": {
+            "fr": "Offre modifiée",
+            "en": "Offer updated",
+            "ar": "تم تعديل العرض"
+        },
+        "message": "proffessionnel",
+        "details": {
+            "type_service": "nettoyage",
+            "localisation": "bnjk",
+            "prix": "78 965.00 TND"
+        },
+        "changes": {
+            "date_expiration": {
+                "from": "2026-04-30 00:00:00",
+                "to": "2026-05-09 00:00:00"
+            },
+            "statut": {
+                "from": "fermee",
+                "to": "ouverte"
+            },
+            "type_service": {
+                "from": "plomberie",
+                "to": "nettoyage"
+            }
+        },
+        "link": "index.php?page=offre&offer_id=16",
+        "time": "2026-05-06T21:20:41+02:00",
+        "read": false
+    },
+    {
+        "id": "notif_69fb946a3b0897.01538624",
+        "offer_id": 29,
+        "type": "modification",
+        "headline": {
+            "fr": "Offre modifiée",
+            "en": "Offer updated",
+            "ar": "تم تعديل العرض"
+        },
+        "message": "anniversaire",
+        "details": {
+            "type_service": "nettoyage",
+            "localisation": "bizerte",
+            "prix": "300.00 TND"
+        },
+        "changes": {
+            "type_service": {
+                "from": "evenementiel",
+                "to": "nettoyage"
+            }
+        },
+        "link": "index.php?page=offre&offer_id=29",
+        "time": "2026-05-06T21:20:10+02:00",
+        "read": false
+    },
+    {
         "id": "notif_69fb64ad16c836.53771473",
         "offer_id": 14,
         "type": "suppression",

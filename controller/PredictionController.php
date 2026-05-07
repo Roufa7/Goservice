@@ -1,10 +1,4 @@
 <?php
-/**
- * PredictionController
- * 
- * Handles prediction logic for service offers and candidatures.
- * Provides trending analysis without machine learning - purely statistical.
- */
 
 include_once(__DIR__ . '/../config.php');
 include_once(__DIR__ . '/../model/Offer.php');
