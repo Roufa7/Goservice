@@ -28,6 +28,53 @@ $mainNav = [
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo htmlspecialchars($title, ENT_QUOTES, 'UTF-8'); ?></title>
     <link rel="stylesheet" href="../../assets/css/style.css">
+    <?php
+if (isset($_GET['page'], $_GET['open_post']) && $_GET['page'] === 'forum') {
+    require_once __DIR__ . '/../../../config.php';
+
+    $id = (int) $_GET['open_post'];
+    if ($id > 0) {
+        try {
+            $db = config::getConnexion();
+            $query = $db->prepare("SELECT titre, contenu, image, video FROM post WHERE id_post = :id LIMIT 1");
+            $query->execute(['id' => $id]);
+            $post = $query->fetch(PDO::FETCH_ASSOC);
+
+            if ($post) {
+                $ogTitle = htmlspecialchars($post['titre'] ?? 'GoService Forum', ENT_QUOTES, 'UTF-8');
+                $ogDescription = trim(strip_tags($post['contenu'] ?? ''));
+                if ($ogDescription === '') $ogDescription = 'Découvrez cette publication sur GoService Forum.';
+                if (function_exists('mb_substr')) $ogDescription = mb_substr($ogDescription, 0, 180);
+                else $ogDescription = substr($ogDescription, 0, 180);
+                $ogDescription = htmlspecialchars($ogDescription, ENT_QUOTES, 'UTF-8');
+
+                $baseUrl = 'https://' . $_SERVER['HTTP_HOST'];
+                if (!empty($post['image'])) {
+                    $previewImage = $baseUrl . '/GoService/' . ltrim($post['image'], '/');
+                } else {
+                    $previewImage = $baseUrl . '/GoService/assets/images/logo.png';
+                }
+                $previewImage = htmlspecialchars($previewImage, ENT_QUOTES, 'UTF-8');
+                $ogUrl = htmlspecialchars($baseUrl . $_SERVER['REQUEST_URI'], ENT_QUOTES, 'UTF-8');
+
+                echo '\n<meta property="og:type" content="article">\n';
+                echo '<meta property="og:site_name" content="GoService Forum">\n';
+                echo '<meta property="og:title" content="' . $ogTitle . '">\n';
+                echo '<meta property="og:description" content="' . $ogDescription . '">\n';
+                echo '<meta property="og:image" content="' . $previewImage . '">\n';
+                echo '<meta property="og:image:secure_url" content="' . $previewImage . '">\n';
+                echo '<meta property="og:url" content="' . $ogUrl . '">\n';
+                echo '<meta name="twitter:card" content="summary_large_image">\n';
+                echo '<meta name="twitter:title" content="' . $ogTitle . '">\n';
+                echo '<meta name="twitter:description" content="' . $ogDescription . '">\n';
+                echo '<meta name="twitter:image" content="' . $previewImage . '">\n';
+            }
+        } catch (Throwable $e) {
+            // Ne pas casser le layout si Open Graph échoue.
+        }
+    }
+}
+?>
 </head>
 <body>
     <div class="bg-orb orb-1"></div>

@@ -5,6 +5,9 @@ require_once __DIR__ . '/../model/Post.php';
 
 class PostController
 {
+    // =========================
+    // LIST POSTS
+    // =========================
     public function listPosts()
     {
         $sql = "SELECT p.*, u.nom, u.prenom,
@@ -18,13 +21,19 @@ class PostController
 
         $db = config::getConnexion();
         $query = $db->query($sql);
+
         return $query->fetchAll();
     }
 
+    // =========================
+    // ADD POST
+    // =========================
     public function addPost(Post $post)
     {
-        $sql = "INSERT INTO post (titre, contenu, image, video, type_post, statut_post, id_user)
-                VALUES (:titre, :contenu, :image, :video, :type_post, :statut_post, :id_user)";
+        $sql = "INSERT INTO post 
+                (titre, contenu, image, video, type_post, statut_post, id_user)
+                VALUES 
+                (:titre, :contenu, :image, :video, :type_post, :statut_post, :id_user)";
 
         $db = config::getConnexion();
         $query = $db->prepare($sql);
@@ -40,6 +49,9 @@ class PostController
         ]);
     }
 
+    // =========================
+    // UPDATE POST
+    // =========================
     public function updatePost(Post $post)
     {
         $db = config::getConnexion();
@@ -69,23 +81,116 @@ class PostController
             $params['video'] = $post->getVideo();
         }
 
-        $sql = "UPDATE post SET " . implode(', ', $fields) . " WHERE id_post = :id_post";
+        $sql = "UPDATE post 
+                SET " . implode(', ', $fields) . "
+                WHERE id_post = :id_post";
+
         $query = $db->prepare($sql);
+
         $query->execute($params);
     }
 
+    // =========================
+    // GET POST BY ID
+    // =========================
     public function getPostById($id)
     {
         $sql = "SELECT * FROM post WHERE id_post = :id";
+
         $db = config::getConnexion();
         $query = $db->prepare($sql);
-        $query->execute(['id' => $id]);
+
+        $query->execute([
+            'id' => $id
+        ]);
+
         return $query->fetch();
     }
 
+    // =========================
+    // DELETE POST
+    // =========================
+    public function deletePost($id_post)
+    {
+        $db = config::getConnexion();
+
+        // supprimer likes
+        $sqlLike = "DELETE FROM like_post
+                    WHERE id_post = :id_post";
+
+        $queryLike = $db->prepare($sqlLike);
+
+        $queryLike->execute([
+            'id_post' => $id_post
+        ]);
+
+        // supprimer commentaires
+        $sqlComment = "DELETE FROM commentaire
+                       WHERE id_post = :id_post";
+
+        $queryComment = $db->prepare($sqlComment);
+
+        $queryComment->execute([
+            'id_post' => $id_post
+        ]);
+
+        // supprimer partages
+        $sqlShare = "DELETE FROM share_post
+                     WHERE id_post = :id_post";
+
+        $queryShare = $db->prepare($sqlShare);
+
+        $queryShare->execute([
+            'id_post' => $id_post
+        ]);
+
+        // supprimer signalements
+        $sqlReport = "DELETE FROM report_post
+                      WHERE id_post = :id_post";
+
+        $queryReport = $db->prepare($sqlReport);
+
+        $queryReport->execute([
+            'id_post' => $id_post
+        ]);
+
+        // supprimer post
+        $sqlPost = "DELETE FROM post
+                    WHERE id_post = :id_post";
+
+        $queryPost = $db->prepare($sqlPost);
+
+        return $queryPost->execute([
+            'id_post' => $id_post
+        ]);
+    }
+
+    // =========================
+    // SIGNAL POST
+    // =========================
+    public function signalPost($id_post)
+    {
+        $sql = "UPDATE post
+                SET statut_post = 'Signalé'
+                WHERE id_post = :id_post";
+
+        $db = config::getConnexion();
+        $query = $db->prepare($sql);
+
+        return $query->execute([
+            'id_post' => $id_post
+        ]);
+    }
+
+    // =========================
+    // COMMENTS ADMIN
+    // =========================
     public function listCommentsForAdmin()
     {
-        $sql = "SELECT c.*, p.titre as post_title, u.nom, u.prenom
+        $sql = "SELECT c.*, 
+                       p.titre as post_title,
+                       u.nom,
+                       u.prenom
                 FROM commentaire c
                 LEFT JOIN post p ON c.id_post = p.id_post
                 LEFT JOIN users u ON c.id_user = u.id_user
@@ -93,12 +198,19 @@ class PostController
 
         $db = config::getConnexion();
         $query = $db->query($sql);
+
         return $query->fetchAll();
     }
 
+    // =========================
+    // TOP CONTRIBUTORS
+    // =========================
     public function getTopContributors($limit = 5)
     {
-        $sql = "SELECT u.id_user, u.nom, u.prenom, COUNT(p.id_post) AS total_posts
+        $sql = "SELECT u.id_user,
+                       u.nom,
+                       u.prenom,
+                       COUNT(p.id_post) AS total_posts
                 FROM users u
                 INNER JOIN post p ON u.id_user = p.id_user
                 GROUP BY u.id_user, u.nom, u.prenom
@@ -107,7 +219,9 @@ class PostController
 
         $db = config::getConnexion();
         $query = $db->prepare($sql);
+
         $query->bindValue(':lim', (int)$limit, PDO::PARAM_INT);
+
         $query->execute();
 
         return $query->fetchAll();

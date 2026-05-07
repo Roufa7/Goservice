@@ -9,6 +9,7 @@ $allowedPages = [
     'forum',
     'reclamation',
     'events',
+    'savedPosts',
 ];
 
 if (!in_array($page, $allowedPages, true)) {
