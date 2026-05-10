@@ -1765,3 +1765,42 @@ body.admin-body.dark .event-qr-reference {
         white-space: normal;
     }
 }
+.event-map-panel {
+    margin-top: 1rem;
+    padding: 1rem;
+    border-radius: 20px;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.04));
+}
+
+body:not(.dark) .event-map-panel,
+body.admin-body:not(.dark) .event-map-panel {
+    background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,250,252,0.9));
+    border: 1px solid rgba(20,39,56,0.08);
+}
+
+.event-map-panel iframe {
+    width: 100%;
+    min-height: 300px;
+    border: 0;
+    border-radius: 18px;
+    margin-top: 0.75rem;
+    background: #dbe4ee;
+}
+
+.event-map-panel-admin {
+    margin-bottom: 1rem;
+}
+
+.event-map-actions {
+    align-items: center;
+}
+.event-pass-card {
+    margin-bottom: 1.2rem;
+}
+
+.event-pass-copy {
+    margin: 0 0 18px;
+    color: var(--muted);
+    line-height: 1.7;
+}

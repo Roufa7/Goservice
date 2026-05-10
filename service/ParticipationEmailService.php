@@ -20,7 +20,7 @@ class ParticipationEmailService
             return [
                 'sent' => false,
                 'configured' => false,
-                'message' => 'La confirmation email est prete, mais le SMTP n\'est pas encore configure sur cette machine.',
+                'message' => 'La confirmation email est prete, mais le service d\'envoi n\'est pas encore configure sur cette machine.',
             ];
         }
 
@@ -66,15 +66,32 @@ class ParticipationEmailService
             return [
                 'sent' => true,
                 'configured' => true,
-                'message' => 'Un email de confirmation a ete envoye a ' . (string) ($participation['email_participant'] ?? '') . '.',
+                'sandbox' => $this->isSandboxMailbox(),
+                'message' => $this->successMessage((string) ($participation['email_participant'] ?? '')),
             ];
-        } catch (PHPMailerException) {
+        } catch (PHPMailerException $exception) {
             return [
                 'sent' => false,
                 'configured' => true,
+                'sandbox' => $this->isSandboxMailbox(),
                 'message' => 'L\'inscription a ete enregistree, mais l\'email de confirmation n\'a pas pu etre envoye.',
+                'error' => $exception->getMessage(),
             ];
         }
+    }
+
+    private function successMessage(string $email): string
+    {
+        if ($this->isSandboxMailbox()) {
+            return 'Le message de confirmation a ete envoye vers la boite Mailtrap de test pour ' . $email . '.';
+        }
+
+        return 'Un email de confirmation a ete envoye a ' . $email . '.';
+    }
+
+    private function isSandboxMailbox(): bool
+    {
+        return str_contains(strtolower((string) config::env('MAIL_HOST', '')), 'sandbox.smtp.mailtrap.io');
     }
 
     private function htmlBody(array $participation, array $event): string

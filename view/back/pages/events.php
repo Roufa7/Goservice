@@ -30,6 +30,7 @@ $eventPagination = $data['eventPagination'] ?? ['page' => 1, 'total_pages' => 1,
 $participationPagination = $data['participationPagination'] ?? ['page' => 1, 'total_pages' => 1, 'has_previous' => false, 'has_next' => false, 'from' => 0, 'to' => 0, 'total_items' => 0];
 $selectedEventCalendarUrl = (string) ($data['selectedEventCalendarUrl'] ?? '');
 $selectedEventMapUrl = (string) ($data['selectedEventMapUrl'] ?? '');
+$selectedEventMapEmbedUrl = (string) ($data['selectedEventMapEmbedUrl'] ?? '');
 $selectedEventFrontUrl = (string) ($data['selectedEventFrontUrl'] ?? '');
 $participationRecordQr = (string) ($data['participationRecordQr'] ?? '');
 $participationRecordQrReference = (string) ($data['participationRecordQrReference'] ?? '');
@@ -673,6 +674,18 @@ if (!empty($selectedEventParticipationStats['latest_registration'])) {
         </article>
     <?php endif; ?>
 
+    <?php if ($selectedEventMapEmbedUrl !== ''): ?>
+        <article class="event-map-panel event-map-panel-admin">
+            <div class="section-head event-mini-head">
+                <div>
+                    <span class="section-badge">Localisation</span>
+                    <h4>Carte integree de l'evenement selectionne</h4>
+                </div>
+            </div>
+            <iframe src="<?php echo $escape($selectedEventMapEmbedUrl); ?>" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen title="Carte de l'evenement <?php echo $escape($selectedManagementEvent['titre']); ?>"></iframe>
+        </article>
+    <?php endif; ?>
+
     <div class="icon-actions event-admin-table-actions">
         <?php if ($selectedEventFrontUrl !== ''): ?>
             <a class="small-btn" href="<?php echo $escape($selectedEventFrontUrl); ?>">Voir en front</a>
@@ -681,7 +694,7 @@ if (!empty($selectedEventParticipationStats['latest_registration'])) {
             <a class="small-btn" data-no-loader="true" href="<?php echo $escape($selectedEventCalendarUrl); ?>">T&eacute;l&eacute;charger le calendrier (.ics)</a>
         <?php endif; ?>
         <?php if ($selectedEventMapUrl !== ''): ?>
-            <a class="small-btn" target="_blank" rel="noopener noreferrer" href="<?php echo $escape($selectedEventMapUrl); ?>">Voir sur la carte</a>
+            <a class="small-btn" data-no-loader="true" target="_blank" rel="noopener noreferrer" href="<?php echo $escape($selectedEventMapUrl); ?>">Ouvrir dans Google Maps</a>
         <?php endif; ?>
         <a class="small-btn" data-no-loader="true" href="<?php echo $escape($buildAdminUrl(['export' => 'participations_csv'])); ?>">Exporter CSV</a>
         <a class="small-btn" href="<?php echo $escape($buildAdminUrl(['print' => 'participations'])); ?>" target="_blank" rel="noopener noreferrer">Version imprimable</a>

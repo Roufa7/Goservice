@@ -201,9 +201,55 @@ abstract class AbstractEventController
         return $url;
     }
 
+    protected function buildPublicEventsUrl(array $params = [], string $hash = ''): string
+    {
+        $baseUrl = rtrim((string) config::env('APP_PUBLIC_BASE_URL', ''), '/');
+
+        if ($baseUrl === '') {
+            $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+            $host = trim((string) ($_SERVER['HTTP_HOST'] ?? ''));
+            $scriptName = (string) ($_SERVER['SCRIPT_NAME'] ?? '');
+            $appRoot = preg_replace('#/view/(front|back)/index\.php$#', '', $scriptName) ?: '';
+
+            if ($host !== '' && !preg_match('#^(localhost|127(?:\.\d{1,3}){3})(?::\d+)?$#i', $host)) {
+                $baseUrl = $scheme . '://' . $host . $appRoot;
+            }
+        }
+
+        if ($baseUrl === '') {
+            return '';
+        }
+
+        $query = array_merge(['page' => 'events'], $params);
+        $url = $baseUrl . '/view/front/index.php?' . http_build_query($query);
+
+        if ($hash !== '') {
+            $url .= str_starts_with($hash, '#') ? $hash : '#' . $hash;
+        }
+
+        return $url;
+    }
+
     protected function buildMapUrl(string $location): string
     {
-        return 'https://www.google.com/maps/search/?api=1&query=' . rawurlencode(trim($location));
+        $cleanLocation = trim($location);
+
+        if ($cleanLocation === '' || mb_strtolower($cleanLocation, 'UTF-8') === 'en ligne') {
+            return '';
+        }
+
+        return 'https://www.google.com/maps/search/?api=1&query=' . rawurlencode($cleanLocation);
+    }
+
+    protected function buildMapEmbedUrl(string $location): string
+    {
+        $cleanLocation = trim($location);
+
+        if ($cleanLocation === '' || mb_strtolower($cleanLocation, 'UTF-8') === 'en ligne') {
+            return '';
+        }
+
+        return 'https://www.google.com/maps?q=' . rawurlencode($cleanLocation) . '&output=embed';
     }
 
     protected function buildReturnUrl(?string $returnTo, array $overrides = [], string $hash = ''): string
@@ -881,7 +927,10 @@ abstract class AbstractEventController
             return null;
         }
 
-        return $this->qrService->renderDataUri($participation, $event);
+        $passUrl = $this->buildParticipationPassUrl($participation, $event);
+        $payload = $passUrl ?: ('PASS_REF:' . $this->qrService->buildReferenceCode($participation, $event));
+
+        return $this->qrService->renderDataUri($payload);
     }
 
     protected function buildParticipationQrReference(?array $participation, ?array $event): ?string
@@ -891,6 +940,75 @@ abstract class AbstractEventController
         }
 
         return $this->qrService->buildReferenceCode($participation, $event);
+    }
+
+    protected function buildParticipationPassUrl(?array $participation, ?array $event): ?string
+    {
+        if (!$participation || !$event) {
+            return null;
+        }
+
+        $reference = $this->qrService->buildReferenceCode($participation, $event);
+        $url = $this->buildPublicEventsUrl([
+            'event_id' => (int) ($event['id_evenement'] ?? 0),
+            'pass' => $reference,
+        ], '#event-pass');
+
+        return $url !== '' ? $url : null;
+    }
+
+    protected function resolveParticipationPass(string $reference): ?array
+    {
+        $reference = strtoupper(trim($reference));
+        if ($reference === '' || !preg_match('/^GSE-(\d+)-E(\d+)$/', $reference, $matches)) {
+            return null;
+        }
+
+        $participationId = (int) $matches[1];
+        $eventId = (int) $matches[2];
+        $participation = $this->participationRepository->findById($participationId);
+
+        if (!$participation || (int) ($participation['id_evenement'] ?? 0) !== $eventId) {
+            return null;
+        }
+
+        $event = $this->eventRepository->findById($eventId);
+        if (!$event) {
+            return null;
+        }
+
+        $participation = $this->normalizeParticipation($participation);
+        $event = $this->normalizeEvent($event);
+
+        return [
+            'reference' => $reference,
+            'participation' => $participation,
+            'event' => $event,
+            'holder_label' => $this->buildParticipationHolderLabel($participation),
+            'calendar_url' => $this->buildCalendarDownloadUrl($eventId),
+            'map_url' => $this->buildMapUrl((string) ($event['lieu'] ?? '')),
+        ];
+    }
+
+    protected function buildParticipationHolderLabel(array $participation): string
+    {
+        $name = trim((string) ($participation['nom_participant'] ?? ''));
+        if ($name === '') {
+            return 'Participant confirme';
+        }
+
+        $parts = preg_split('/\s+/', $name) ?: [];
+        $initials = [];
+
+        foreach (array_slice($parts, 0, 2) as $part) {
+            if ($part === '') {
+                continue;
+            }
+
+            $initials[] = mb_strtoupper(mb_substr($part, 0, 1, 'UTF-8'), 'UTF-8');
+        }
+
+        return $initials ? implode('. ', $initials) . '.' : 'Participant confirme';
     }
 
     protected function validateEventInput(array $input, array $files, ?array $existingEvent = null): array

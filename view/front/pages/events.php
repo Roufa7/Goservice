@@ -29,8 +29,11 @@ $selectedEventSummaryChart = $data['selectedEventSummaryChart'] ?? [];
 $selectedCapacityChart = $data['selectedCapacityChart'] ?? [];
 $selectedEventCalendarUrl = (string) ($data['selectedEventCalendarUrl'] ?? '');
 $selectedEventMapUrl = (string) ($data['selectedEventMapUrl'] ?? '');
+$selectedEventMapEmbedUrl = (string) ($data['selectedEventMapEmbedUrl'] ?? '');
 $registrationQr = (string) ($data['registrationQr'] ?? '');
 $registrationQrReference = (string) ($data['registrationQrReference'] ?? '');
+$registrationPassUrl = (string) ($data['registrationPassUrl'] ?? '');
+$publicPass = $data['publicPass'] ?? null;
 
 $oldValue = static function (string $key, string $default = '') use ($formValues): string {
     return (string) ($formValues[$key] ?? $default);
@@ -182,6 +185,48 @@ $renderSummaryBar = static function (array $chart, string $title, string $subtit
     </section>
 <?php endif; ?>
 
+<?php if ($publicPass): ?>
+    <section class="section reveal" id="event-pass">
+        <article class="panel event-pass-card">
+            <div class="section-head">
+                <div>
+                    <span class="section-badge">Pass QR</span>
+                    <h2>Pass de participation pret a etre presente</h2>
+                </div>
+                <span class="event-qr-reference">Reference : <?php echo $escape($publicPass['reference'] ?? ''); ?></span>
+            </div>
+            <p class="event-pass-copy">
+                Ce QR ouvre directement une fiche de participation lisible sur mobile. Il confirme l'inscription sans afficher les autres participants.
+            </p>
+            <div class="event-detail-grid">
+                <div class="event-detail-card">
+                    <strong>Participant</strong>
+                    <span><?php echo $escape($publicPass['holder_label'] ?? 'Participant confirme'); ?></span>
+                </div>
+                <div class="event-detail-card">
+                    <strong>Evenement</strong>
+                    <span><?php echo $escape($publicPass['event']['titre'] ?? ''); ?></span>
+                </div>
+                <div class="event-detail-card">
+                    <strong>Statut</strong>
+                    <span><?php echo $escape($publicPass['participation']['status_label'] ?? ''); ?></span>
+                </div>
+                <div class="event-detail-card">
+                    <strong>Inscription</strong>
+                    <span><?php echo $escape($publicPass['participation']['registered_display'] ?? ''); ?></span>
+                </div>
+            </div>
+            <div class="icon-actions event-map-actions">
+                <?php if (!empty($publicPass['calendar_url'])): ?>
+                    <a class="outline-btn" data-no-loader="true" href="<?php echo $escape($publicPass['calendar_url']); ?>">Telecharger le calendrier (.ics)</a>
+                <?php endif; ?>
+                <?php if (!empty($publicPass['map_url'])): ?>
+                    <a class="outline-btn" data-no-loader="true" target="_blank" rel="noopener noreferrer" href="<?php echo $escape($publicPass['map_url']); ?>">Ouvrir le lieu</a>
+                <?php endif; ?>
+            </div>
+        </article>
+    </section>
+<?php endif; ?>
 <?php if ($featuredEvent): ?>
     <section class="section reveal">
         <article class="panel event-featured-card">
@@ -504,12 +549,12 @@ $renderSummaryBar = static function (array $chart, string $title, string $subtit
                 </div>
 
                 <?php if ($selectedEventCalendarUrl !== '' || $selectedEventMapUrl !== ''): ?>
-                    <div class="icon-actions">
+                    <div class="icon-actions event-map-actions">
                         <?php if ($selectedEventCalendarUrl !== ''): ?>
                             <a class="outline-btn" data-no-loader="true" href="<?php echo $escape($selectedEventCalendarUrl); ?>">T&eacute;l&eacute;charger le calendrier (.ics)</a>
                         <?php endif; ?>
                         <?php if ($selectedEventMapUrl !== ''): ?>
-                            <a class="solid-btn" target="_blank" rel="noopener noreferrer" href="<?php echo $escape($selectedEventMapUrl); ?>">Voir sur la carte</a>
+                            <a class="outline-btn" data-no-loader="true" target="_blank" rel="noopener noreferrer" href="<?php echo $escape($selectedEventMapUrl); ?>">Ouvrir dans Google Maps</a>
                         <?php endif; ?>
                     </div>
                     <?php if ($selectedEventCalendarUrl !== ''): ?>
@@ -518,6 +563,18 @@ $renderSummaryBar = static function (array $chart, string $title, string $subtit
                 <?php endif; ?>
             </div>
         </article>
+
+        <?php if ($selectedEventMapEmbedUrl !== ''): ?>
+            <article class="event-map-panel">
+                <div class="section-head event-mini-head">
+                    <div>
+                        <span class="section-badge">Localisation</span>
+                        <h4>Voir l'emplacement sans quitter la page</h4>
+                    </div>
+                </div>
+                <iframe src="<?php echo $escape($selectedEventMapEmbedUrl); ?>" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen title="Carte de l'evenement <?php echo $escape($selectedEvent['titre']); ?>"></iframe>
+            </article>
+        <?php endif; ?>
 
         <article class="panel event-registration-card" id="participation-form">
             <span class="section-badge">Participation</span>
@@ -546,11 +603,11 @@ $renderSummaryBar = static function (array $chart, string $title, string $subtit
                     <?php endif; ?>
                     <?php if ($selectedEventCalendarUrl !== '' || $selectedEventMapUrl !== ''): ?>
                         <div class="icon-actions">
+                            <?php if ($registrationPassUrl !== ''): ?>
+                                <a class="outline-btn" data-no-loader="true" href="<?php echo $escape($registrationPassUrl); ?>">Ouvrir le pass</a>
+                            <?php endif; ?>
                             <?php if ($selectedEventCalendarUrl !== ''): ?>
                                 <a class="outline-btn" data-no-loader="true" href="<?php echo $escape($selectedEventCalendarUrl); ?>">T&eacute;l&eacute;charger le rappel calendrier (.ics)</a>
-                            <?php endif; ?>
-                            <?php if ($selectedEventMapUrl !== ''): ?>
-                                <a class="solid-btn" target="_blank" rel="noopener noreferrer" href="<?php echo $escape($selectedEventMapUrl); ?>">Voir sur la carte</a>
                             <?php endif; ?>
                         </div>
                         <?php if ($selectedEventCalendarUrl !== ''): ?>

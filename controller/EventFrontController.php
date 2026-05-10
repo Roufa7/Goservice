@@ -114,8 +114,12 @@ class EventFrontController extends AbstractEventController
         $allFilteredEvents = $this->normalizeEvents($this->eventRepository->findAll($filters));
         $selectedEventId = (int) ($query['event_id'] ?? 0);
         $selectedEvent = null;
+        $publicPass = $this->resolveParticipationPass((string) ($query['pass'] ?? ''));
 
-        if ($selectedEventId > 0) {
+        if ($publicPass) {
+            $selectedEvent = $publicPass['event'];
+            $selectedEventId = (int) ($selectedEvent['id_evenement'] ?? 0);
+        } elseif ($selectedEventId > 0) {
             foreach ($allFilteredEvents as $event) {
                 if ((int) $event['id_evenement'] === $selectedEventId) {
                     $selectedEvent = $event;
@@ -181,6 +185,7 @@ class EventFrontController extends AbstractEventController
 
         $registrationQr = null;
         $registrationQrReference = null;
+        $registrationPassUrl = null;
         if (
             $registrationReceipt
             && $selectedEvent
@@ -191,6 +196,7 @@ class EventFrontController extends AbstractEventController
                 $participation = $this->normalizeParticipation($participation);
                 $registrationQr = $this->buildParticipationQr($participation, $selectedEvent);
                 $registrationQrReference = $this->buildParticipationQrReference($participation, $selectedEvent);
+                $registrationPassUrl = $this->buildParticipationPassUrl($participation, $selectedEvent);
             }
         }
 
@@ -202,6 +208,7 @@ class EventFrontController extends AbstractEventController
             'selectedEventId' => $selectedEventId,
             'selectedEventCalendarUrl' => $selectedEvent ? $this->buildCalendarDownloadUrl((int) $selectedEvent['id_evenement']) : '',
             'selectedEventMapUrl' => $selectedEvent && trim((string) ($selectedEvent['lieu'] ?? '')) !== '' ? $this->buildMapUrl((string) $selectedEvent['lieu']) : '',
+            'selectedEventMapEmbedUrl' => $selectedEvent && trim((string) ($selectedEvent['lieu'] ?? '')) !== '' ? $this->buildMapEmbedUrl((string) $selectedEvent['lieu']) : '',
             'featuredEvent' => $featuredEvent,
             'flashes' => $this->pullFlashes('front'),
             'formValues' => $formState['values'],
@@ -209,6 +216,8 @@ class EventFrontController extends AbstractEventController
             'registrationReceipt' => $registrationReceipt,
             'registrationQr' => $registrationQr,
             'registrationQrReference' => $registrationQrReference,
+            'registrationPassUrl' => $registrationPassUrl,
+            'publicPass' => $publicPass,
             'csrfToken' => $this->getCsrfToken(),
             'eventTypes' => $this->eventTypes,
             'eventStatuses' => $this->eventStatuses,
@@ -273,5 +282,3 @@ class EventFrontController extends AbstractEventController
         return array_values($counts);
     }
 }
-
-

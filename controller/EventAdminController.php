@@ -266,6 +266,7 @@ class EventAdminController extends AbstractEventController
             'selectedManagementEvent' => $selectedManagementEvent,
             'selectedEventCalendarUrl' => $selectedManagementEvent ? $this->buildCalendarDownloadUrl((int) $selectedManagementEvent['id_evenement']) : '',
             'selectedEventMapUrl' => $selectedManagementEvent && trim((string) ($selectedManagementEvent['lieu'] ?? '')) !== '' ? $this->buildMapUrl((string) $selectedManagementEvent['lieu']) : '',
+            'selectedEventMapEmbedUrl' => $selectedManagementEvent && trim((string) ($selectedManagementEvent['lieu'] ?? '')) !== '' ? $this->buildMapEmbedUrl((string) $selectedManagementEvent['lieu']) : '',
             'selectedEventFrontUrl' => $selectedManagementEvent ? $this->buildFrontEventsUrl((int) $selectedManagementEvent['id_evenement'], '#event-focus') : $this->buildFrontEventsUrl(),
             'selectedEventParticipationStats' => $selectedEventParticipationStats,
             'eventPagination' => $eventPagination['meta'],
