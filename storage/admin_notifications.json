@@ -1,5 +1,329 @@
 [
     {
+        "id": "admin_notif_6a00799e8d18d0.02527404",
+        "application_id": 33,
+        "type": "candidature_supprime",
+        "headline": {
+            "fr": "Candidature supprimée",
+            "en": "Application deleted",
+            "ar": "تم حذف الترشيح"
+        },
+        "message": "Admin GoService a supprimé sa candidature pour l'offre «anniversaire» (ID 29).",
+        "details": {
+            "offer_id": 29,
+            "offer_titre": "anniversaire"
+        },
+        "link": "index.php?page=offer_applications&offer_id=29",
+        "time": "2026-05-10T14:27:10+02:00",
+        "read": false
+    },
+    {
+        "id": "admin_notif_6a00799e8d18d0.02527404",
+        "application_id": 33,
+        "type": "candidature_supprime",
+        "headline": {
+            "fr": "Candidature supprimée",
+            "en": "Application deleted",
+            "ar": "تم حذف الترشيح"
+        },
+        "message": "Admin GoService a supprimé sa candidature pour l'offre «anniversaire» (ID 29).",
+        "details": {
+            "offer_id": 29,
+            "offer_titre": "anniversaire"
+        },
+        "link": "index.php?page=offer_applications&offer_id=29",
+        "time": "2026-05-10T14:27:10+02:00",
+        "read": false
+    },
+    {
+        "id": "admin_notif_6a00799339c1f7.47574943",
+        "application_id": 39,
+        "type": "candidature_supprime",
+        "headline": {
+            "fr": "Candidature supprimée",
+            "en": "Application deleted",
+            "ar": "تم حذف الترشيح"
+        },
+        "message": "Admin GoService a supprimé sa candidature pour l'offre «evenement» (ID 31).",
+        "details": {
+            "offer_id": 31,
+            "offer_titre": "evenement"
+        },
+        "link": "index.php?page=offer_applications&offer_id=31",
+        "time": "2026-05-10T14:26:59+02:00",
+        "read": false
+    },
+    {
+        "id": "admin_notif_6a00799339c1f7.47574943",
+        "application_id": 39,
+        "type": "candidature_supprime",
+        "headline": {
+            "fr": "Candidature supprimée",
+            "en": "Application deleted",
+            "ar": "تم حذف الترشيح"
+        },
+        "message": "Admin GoService a supprimé sa candidature pour l'offre «evenement» (ID 31).",
+        "details": {
+            "offer_id": 31,
+            "offer_titre": "evenement"
+        },
+        "link": "index.php?page=offer_applications&offer_id=31",
+        "time": "2026-05-10T14:26:59+02:00",
+        "read": false
+    },
+    {
+        "id": "admin_notif_6a00798a093797.70924061",
+        "application_id": 38,
+        "type": "candidature_supprime",
+        "headline": {
+            "fr": "Candidature supprimée",
+            "en": "Application deleted",
+            "ar": "تم حذف الترشيح"
+        },
+        "message": "Admin GoService a supprimé sa candidature pour l'offre «evenement» (ID 31).",
+        "details": {
+            "offer_id": 31,
+            "offer_titre": "evenement"
+        },
+        "link": "index.php?page=offer_applications&offer_id=31",
+        "time": "2026-05-10T14:26:50+02:00",
+        "read": false
+    },
+    {
+        "id": "admin_notif_6a00798a093797.70924061",
+        "application_id": 38,
+        "type": "candidature_supprime",
+        "headline": {
+            "fr": "Candidature supprimée",
+            "en": "Application deleted",
+            "ar": "تم حذف الترشيح"
+        },
+        "message": "Admin GoService a supprimé sa candidature pour l'offre «evenement» (ID 31).",
+        "details": {
+            "offer_id": 31,
+            "offer_titre": "evenement"
+        },
+        "link": "index.php?page=offer_applications&offer_id=31",
+        "time": "2026-05-10T14:26:50+02:00",
+        "read": false
+    },
+    {
+        "id": "admin_notif_6a00798168a6a8.91684743",
+        "application_id": 40,
+        "type": "candidature_supprime",
+        "headline": {
+            "fr": "Candidature supprimée",
+            "en": "Application deleted",
+            "ar": "تم حذف الترشيح"
+        },
+        "message": "Admin GoService a supprimé sa candidature pour l'offre «anniv» (ID 32).",
+        "details": {
+            "offer_id": 32,
+            "offer_titre": "anniv"
+        },
+        "link": "index.php?page=offer_applications&offer_id=32",
+        "time": "2026-05-10T14:26:41+02:00",
+        "read": false
+    },
+    {
+        "id": "admin_notif_6a00798168a6a8.91684743",
+        "application_id": 40,
+        "type": "candidature_supprime",
+        "headline": {
+            "fr": "Candidature supprimée",
+            "en": "Application deleted",
+            "ar": "تم حذف الترشيح"
+        },
+        "message": "Admin GoService a supprimé sa candidature pour l'offre «anniv» (ID 32).",
+        "details": {
+            "offer_id": 32,
+            "offer_titre": "anniv"
+        },
+        "link": "index.php?page=offer_applications&offer_id=32",
+        "time": "2026-05-10T14:26:41+02:00",
+        "read": false
+    },
+    {
+        "id": "admin_notif_6a0079785f59d9.12311022",
+        "application_id": 16,
+        "type": "candidature_supprime",
+        "headline": {
+            "fr": "Candidature supprimée",
+            "en": "Application deleted",
+            "ar": "تم حذف الترشيح"
+        },
+        "message": "Admin GoService a supprimé sa candidature pour l'offre «evenement» (ID 31).",
+        "details": {
+            "offer_id": 31,
+            "offer_titre": "evenement"
+        },
+        "link": "index.php?page=offer_applications&offer_id=31",
+        "time": "2026-05-10T14:26:32+02:00",
+        "read": false
+    },
+    {
+        "id": "admin_notif_6a0079785f59d9.12311022",
+        "application_id": 16,
+        "type": "candidature_supprime",
+        "headline": {
+            "fr": "Candidature supprimée",
+            "en": "Application deleted",
+            "ar": "تم حذف الترشيح"
+        },
+        "message": "Admin GoService a supprimé sa candidature pour l'offre «evenement» (ID 31).",
+        "details": {
+            "offer_id": 31,
+            "offer_titre": "evenement"
+        },
+        "link": "index.php?page=offer_applications&offer_id=31",
+        "time": "2026-05-10T14:26:32+02:00",
+        "read": false
+    },
+    {
+        "id": "admin_notif_6a0071f1e71974.03971102",
+        "application_id": 27,
+        "type": "candidature_supprime",
+        "headline": {
+            "fr": "Candidature supprimée",
+            "en": "Application deleted",
+            "ar": "تم حذف الترشيح"
+        },
+        "message": "Admin GoService a supprimé sa candidature pour l'offre «anniv» (ID 32).",
+        "details": {
+            "offer_id": 32,
+            "offer_titre": "anniv"
+        },
+        "link": "index.php?page=offer_applications&offer_id=32",
+        "time": "2026-05-10T13:54:25+02:00",
+        "read": false
+    },
+    {
+        "id": "admin_notif_6a0071f1e71974.03971102",
+        "application_id": 27,
+        "type": "candidature_supprime",
+        "headline": {
+            "fr": "Candidature supprimée",
+            "en": "Application deleted",
+            "ar": "تم حذف الترشيح"
+        },
+        "message": "Admin GoService a supprimé sa candidature pour l'offre «anniv» (ID 32).",
+        "details": {
+            "offer_id": 32,
+            "offer_titre": "anniv"
+        },
+        "link": "index.php?page=offer_applications&offer_id=32",
+        "time": "2026-05-10T13:54:25+02:00",
+        "read": false
+    },
+    {
+        "id": "admin_notif_6a0071e34e61c8.06334295",
+        "application_id": 26,
+        "type": "candidature_supprime",
+        "headline": {
+            "fr": "Candidature supprimée",
+            "en": "Application deleted",
+            "ar": "تم حذف الترشيح"
+        },
+        "message": "Admin GoService a supprimé sa candidature pour l'offre «evenement» (ID 31).",
+        "details": {
+            "offer_id": 31,
+            "offer_titre": "evenement"
+        },
+        "link": "index.php?page=offer_applications&offer_id=31",
+        "time": "2026-05-10T13:54:11+02:00",
+        "read": false
+    },
+    {
+        "id": "admin_notif_6a0071e34e61c8.06334295",
+        "application_id": 26,
+        "type": "candidature_supprime",
+        "headline": {
+            "fr": "Candidature supprimée",
+            "en": "Application deleted",
+            "ar": "تم حذف الترشيح"
+        },
+        "message": "Admin GoService a supprimé sa candidature pour l'offre «evenement» (ID 31).",
+        "details": {
+            "offer_id": 31,
+            "offer_titre": "evenement"
+        },
+        "link": "index.php?page=offer_applications&offer_id=31",
+        "time": "2026-05-10T13:54:11+02:00",
+        "read": false
+    },
+    {
+        "id": "admin_notif_6a0071d57e46a9.27923226",
+        "application_id": 29,
+        "type": "candidature_supprime",
+        "headline": {
+            "fr": "Candidature supprimée",
+            "en": "Application deleted",
+            "ar": "تم حذف الترشيح"
+        },
+        "message": "Admin GoService a supprimé sa candidature pour l'offre «anniv» (ID 32).",
+        "details": {
+            "offer_id": 32,
+            "offer_titre": "anniv"
+        },
+        "link": "index.php?page=offer_applications&offer_id=32",
+        "time": "2026-05-10T13:53:57+02:00",
+        "read": false
+    },
+    {
+        "id": "admin_notif_6a0071d57e46a9.27923226",
+        "application_id": 29,
+        "type": "candidature_supprime",
+        "headline": {
+            "fr": "Candidature supprimée",
+            "en": "Application deleted",
+            "ar": "تم حذف الترشيح"
+        },
+        "message": "Admin GoService a supprimé sa candidature pour l'offre «anniv» (ID 32).",
+        "details": {
+            "offer_id": 32,
+            "offer_titre": "anniv"
+        },
+        "link": "index.php?page=offer_applications&offer_id=32",
+        "time": "2026-05-10T13:53:57+02:00",
+        "read": false
+    },
+    {
+        "id": "admin_notif_6a0071ca778fd0.81189411",
+        "application_id": 35,
+        "type": "candidature_supprime",
+        "headline": {
+            "fr": "Candidature supprimée",
+            "en": "Application deleted",
+            "ar": "تم حذف الترشيح"
+        },
+        "message": "Admin GoService a supprimé sa candidature pour l'offre «anniversaire» (ID 29).",
+        "details": {
+            "offer_id": 29,
+            "offer_titre": "anniversaire"
+        },
+        "link": "index.php?page=offer_applications&offer_id=29",
+        "time": "2026-05-10T13:53:46+02:00",
+        "read": false
+    },
+    {
+        "id": "admin_notif_6a0071ca778fd0.81189411",
+        "application_id": 35,
+        "type": "candidature_supprime",
+        "headline": {
+            "fr": "Candidature supprimée",
+            "en": "Application deleted",
+            "ar": "تم حذف الترشيح"
+        },
+        "message": "Admin GoService a supprimé sa candidature pour l'offre «anniversaire» (ID 29).",
+        "details": {
+            "offer_id": 29,
+            "offer_titre": "anniversaire"
+        },
+        "link": "index.php?page=offer_applications&offer_id=29",
+        "time": "2026-05-10T13:53:46+02:00",
+        "read": false
+    },
+    {
         "id": "admin_notif_69fc58f42d5824.13540787",
         "application_id": 21,
         "type": "candidature_supprime",

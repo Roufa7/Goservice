@@ -375,6 +375,22 @@ if (isset($_GET['edit_application'])) {
     }
 }
 
+// Deep-link from recommendations / notifications: open apply form with this offer selected
+if (
+    $_SERVER['REQUEST_METHOD'] !== 'POST'
+    && $editingApplicationId === 0
+    && isset($_GET['offer_id'])
+    && (string) $_GET['offer_id'] !== ''
+) {
+    $prefillOfferId = (string) (int) $_GET['offer_id'];
+    foreach ($activeOffers as $offerRow) {
+        if ((string) ($offerRow['id_offre'] ?? '') === $prefillOfferId) {
+            $formData['offer_id'] = $prefillOfferId;
+            break;
+        }
+    }
+}
+
 function formatOfferDate(?string $value): string {
     return $value ? date('d/m/Y', strtotime($value)) : 'N/A';
 }
@@ -1165,6 +1181,12 @@ document.addEventListener('DOMContentLoaded', function() {
     box-shadow: 0 8px 20px rgba(20,39,56,0.06);
 }
 
+body.dark .offer-recommendation-card {
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid var(--line);
+    box-shadow: 0 10px 32px rgba(0, 0, 0, 0.35);
+}
+
 .offer-recommendation-head {
     display: flex;
     align-items: center;
@@ -1184,6 +1206,11 @@ document.addEventListener('DOMContentLoaded', function() {
     font-weight: 700;
 }
 
+body.dark .offer-recommendation-card .offer-recommendation-type {
+    background: rgba(90, 149, 238, 0.22);
+    color: #b8d4ff;
+}
+
 .offer-recommendation-score {
     font-size: 0.82rem;
     font-weight: 800;
@@ -1201,6 +1228,38 @@ document.addEventListener('DOMContentLoaded', function() {
     align-items: center;
     justify-content: center;
     min-height: 38px;
+    color: #142738;
+    border-color: rgba(20, 39, 56, 0.22);
+}
+
+.offer-recommendation-card .small-btn:hover {
+    background: rgba(20, 39, 56, 0.06);
+}
+
+body.dark .offer-recommendation-card .small-btn {
+    color: var(--text);
+    border-color: var(--line);
+}
+
+body.dark .offer-recommendation-card .small-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.offer-recommendation-title {
+    margin: 0 0 8px;
+    font-size: 1rem;
+    font-weight: 800;
+    color: #142738;
+    line-height: 1.35;
+}
+
+/* Dark mode: card is a glass surface; beat .admin-panel h3 / p (white-on-white fix no longer needed) */
+body.dark .offer-recommendation-card h3.offer-recommendation-title {
+    color: var(--text);
+}
+
+body.dark .offer-recommendation-card .offer-recommendation-city {
+    color: var(--muted);
 }
 
 .offer-recommendations-state {
@@ -1208,8 +1267,12 @@ document.addEventListener('DOMContentLoaded', function() {
     padding: 10px 12px;
     border-radius: 10px;
     background: rgba(20,39,56,0.06);
-    color: #142738;
+    color: var(--text);
     font-size: 0.9rem;
+}
+
+body.dark .offer-recommendations-state {
+    background: rgba(255,255,255,0.08);
 }
 
 .application-card-list {
@@ -1800,16 +1863,33 @@ body.dark .application-status-danger {
         recommendationsState.textContent = '';
     }
 
-    function renderRecommendations(items) {
+    function escapeHtmlRec(s) {
+        return String(s)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    function renderRecommendations(payload) {
         if (!recommendationsList) return;
         recommendationsList.innerHTML = '';
-        if (!Array.isArray(items) || items.length === 0) {
+        var items = [];
+        if (Array.isArray(payload)) {
+            items = payload;
+        } else if (payload && typeof payload === 'object') {
+            if (Array.isArray(payload.items)) items = payload.items;
+            else if (Array.isArray(payload.recommendations)) items = payload.recommendations;
+            else if (Array.isArray(payload.data)) items = payload.data;
+        }
+        if (!items.length) {
             showRecommendationsState('<?php echo addslashes(app_text('Aucune recommandation disponible pour le moment.','No recommendations available at the moment.','لا توجد توصيات متاحة حالياً.')); ?>');
             return;
         }
 
         hideRecommendationsState();
-        var viewLabel = '<?php echo addslashes(app_text('Voir condidature','View applications','عرض الطلبات')); ?>';
+        var viewLabel = '<?php echo addslashes(app_text('Voir l\'offre','View offer','عرض العرض')); ?>';
+        var scoreLabel = '<?php echo addslashes(app_text('Score','Score','النقاط')); ?>';
         for (var i = 0; i < items.length; i++) {
             var item = items[i] || {};
             var id = Number(item.id || 0);
@@ -1817,33 +1897,43 @@ body.dark .application-status-danger {
             var card = document.createElement('article');
             card.className = 'offer-recommendation-card';
 
-            var typeService = String(item.type_service || '<?php echo addslashes(app_text('Service','Service','خدمة')); ?>');
-            var city = String(item.localisation || '<?php echo addslashes(app_text('Non spécifiée','Not specified','غير محدد')); ?>');
-            var score = Number(item.score || 0);
+            var typeService = escapeHtmlRec(item.type_service || '<?php echo addslashes(app_text('Service','Service','خدمة')); ?>');
+            var titleRaw = String(item.titre || item.title || item.titre_offre || '').trim();
+            if (!titleRaw) {
+                titleRaw = '<?php echo addslashes(app_text('Offre','Offer','عرض')); ?> #' + id;
+            }
+            var titleHtml = '<h3 class="offer-recommendation-title">' + escapeHtmlRec(titleRaw) + '</h3>';
+            var locRaw = String(item.localisation || '').trim();
+            var city = escapeHtmlRec(locRaw || '<?php echo addslashes(app_text('Lieu non précisé','Location not specified','الموقع غير محدد')); ?>');
+            var score = Math.round(Number(item.score || 0));
 
             card.innerHTML =
                 '<div class="offer-recommendation-head">' +
                     '<span class="offer-recommendation-type">' + typeService + '</span>' +
-                    '<span class="offer-recommendation-score">Score: ' + score + '</span>' +
+                    '<span class="offer-recommendation-score">' + scoreLabel + ': ' + score + '</span>' +
                 '</div>' +
+                titleHtml +
                 '<p class="offer-recommendation-city">📍 ' + city + '</p>' +
-                '<a class="small-btn" href="index.php?page=offre&offer_id=' + encodeURIComponent(String(id)) + '#offer-' + encodeURIComponent(String(id)) + '">' + viewLabel + '</a>';
+                '<a class="small-btn" href="index.php?page=offre&offer_id=' + encodeURIComponent(String(id)) + '#postuler-offre">' + viewLabel + '</a>';
 
             recommendationsList.appendChild(card);
         }
     }
 
     function loadRecommendations() {
-        if (recommendationsLoaded || recommendationsUserId <= 0) {
+        if (recommendationsLoaded) {
+            return Promise.resolve();
+        }
+        if (recommendationsUserId <= 0) {
+            showRecommendationsState('<?php echo addslashes(app_text('Connectez-vous pour voir des offres personnalisées.','Sign in to see personalized offers.','سجّل الدخول لرؤية عروض مخصصة.')); ?>');
             return Promise.resolve();
         }
         showRecommendationsState('<?php echo addslashes(app_text('Chargement des recommandations...','Loading recommendations...','جار تحميل التوصيات...')); ?>');
 
-        // Build robust URLs relative to current front route.
-        var endpoints = [
-            '../../api/recommendations.php?userId=' + encodeURIComponent(String(recommendationsUserId)),
-            '../../api/recommendations/' + encodeURIComponent(String(recommendationsUserId))
-        ];
+        var baseApi = new URL('../../api/recommendations.php', window.location.href);
+        baseApi.searchParams.set('userId', String(recommendationsUserId));
+        var pathApi = new URL('../../api/recommendations/' + encodeURIComponent(String(recommendationsUserId)), window.location.href);
+        var endpoints = [baseApi.href, pathApi.href];
 
         var fetchAttempt = function(index) {
             if (index >= endpoints.length) {
