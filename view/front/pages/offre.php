@@ -1363,8 +1363,22 @@ body.dark .application-card {
     border-color: rgba(255,255,255,0.08);
 }
 
+body.dark .application-title {
+    color: var(--text);
+}
+
 body.dark .application-card-grid {
     background: rgba(255,255,255,0.05);
+}
+
+body.dark .application-empty-state {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: var(--text);
+}
+
+body.dark .application-empty-state p {
+    color: var(--muted);
 }
 
 body.dark .application-info-block span {

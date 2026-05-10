@@ -1,5 +1,24 @@
 [
     {
+        "id": "notif_69fc5d051f8918.91209030",
+        "offer_id": 30,
+        "type": "suppression",
+        "headline": {
+            "fr": "Offre supprimée",
+            "en": "Offer deleted",
+            "ar": "تم حذف العرض"
+        },
+        "message": "designer",
+        "details": {
+            "type_service": "evenementiel",
+            "localisation": "ras jebel",
+            "prix": "100.00"
+        },
+        "link": "index.php?page=offre",
+        "time": "2026-05-07T11:36:05+02:00",
+        "read": false
+    },
+    {
         "id": "notif_69fc589d299923.57552024",
         "offer_id": 13,
         "type": "suppression",

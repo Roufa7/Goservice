@@ -869,76 +869,76 @@ if ($currentOffer) {
             <small class="muted"><?php echo sprintf(app_text('Offres les plus demandées — %d derniers jours','Most trending offers — last %d days','أكثر العروض طلبًا — آخر %d يومًا'), $predictionWindowDays); ?></small>
         </div>
     </header>
-    <div style="margin-top:12px; display:flex; gap:12px; flex-wrap:wrap;">
+    <div class="offers-predictions-cards">
         <?php if (empty($predictedTop)): ?>
-            <div style="padding:14px; border-radius:12px; background:#fff; border:1px solid rgba(20,39,56,.06); width:100%;">
+            <div class="offers-prediction-empty">
                 <?php if (isset($totalRecentApplications) && $totalRecentApplications === 0): ?>
-                    <p style="margin:0; color:#666;"><?php echo app_text('Pas de candidatures dans la période sélectionnée.','No candidatures in the selected period.','لا توجد طلبات في الفترة المحددة.'); ?></p>
-                    <p style="margin:8px 0 0 0; font-size:0.9rem; color:#777;"><?php echo sprintf(app_text('Total candidatures (dernier %d jours): %d','Total candidatures (last %d days): %d','إجمالي الطلبات (آخر %d يومًا): %d'), $predictionWindowDays, $totalRecentApplications); ?></p>
-                    <p style="margin:8px 0 0 0; font-size:0.9rem; color:#777;"><?php echo app_text('Vous pouvez ajouter des candidatures de test via','You can add test candidatures via','يمكنك إضافة طلبات اختبار عبر'); ?> <a href="/goservice/test-predictions.php">test-predictions.php</a></p>
+                    <p class="offers-prediction-empty__p"><?php echo app_text('Pas de candidatures dans la période sélectionnée.','No candidatures in the selected period.','لا توجد طلبات في الفترة المحددة.'); ?></p>
+                    <p class="offers-prediction-empty__p is-secondary"><?php echo sprintf(app_text('Total candidatures (dernier %d jours): %d','Total candidatures (last %d days): %d','إجمالي الطلبات (آخر %d يومًا): %d'), $predictionWindowDays, $totalRecentApplications); ?></p>
+                    <p class="offers-prediction-empty__p is-secondary"><?php echo app_text('Vous pouvez ajouter des candidatures de test via','You can add test candidatures via','يمكنك إضافة طلبات اختبار عبر'); ?> <a href="/goservice/test-predictions.php">test-predictions.php</a></p>
                 <?php else: ?>
-                    <p style="margin:0; color:#666;"><?php echo app_text('Des candidatures existent mais aucune offre n a été identifiée comme tendance.','There are candidatures but no trending offers were identified.','هناك طلبات ولكن لم يتم تحديد أي عروض شائعة.'); ?></p>
-                    <p style="margin:8px 0 0 0; font-size:0.9rem; color:#777;"><?php echo sprintf(app_text('Total candidatures (dernier %d jours): %d','Total candidatures (last %d days): %d','إجمالي الطلبات (آخر %d يومًا): %d'), $predictionWindowDays, $totalRecentApplications); ?></p>
+                    <p class="offers-prediction-empty__p"><?php echo app_text('Des candidatures existent mais aucune offre n a été identifiée comme tendance.','There are candidatures but no trending offers were identified.','هناك طلبات ولكن لم يتم تحديد أي عروض شائعة.'); ?></p>
+                    <p class="offers-prediction-empty__p is-secondary"><?php echo sprintf(app_text('Total candidatures (dernier %d jours): %d','Total candidatures (last %d days): %d','إجمالي الطلبات (آخر %d يومًا): %d'), $predictionWindowDays, $totalRecentApplications); ?></p>
                     <?php if (isset($_GET['pred_debug']) && $_GET['pred_debug'] === '1'): ?>
-                        <div style="margin-top:8px;">
+                        <div class="offers-prediction-debug">
                             <strong><?php echo app_text('Détails par offre','Details per offer','تفاصيل لكل عرض'); ?>:</strong>
-                            <ul style="margin:6px 0 0 16px; color:#444;">
+                            <ul class="offers-prediction-debug__list">
                                 <?php foreach ($recentCountsPerOffer as $oid => $cnt): ?>
                                     <li><?php echo htmlspecialchars((string)$oid); ?>: <?php echo (int)$cnt; ?> <?php echo app_text('candidatures','applications','الطلبات'); ?></li>
                                 <?php endforeach; ?>
                             </ul>
                         </div>
                     <?php else: ?>
-                        <p style="margin:8px 0 0 0; font-size:0.85rem; color:#666;"><?php echo app_text('Pour plus de détails, ajoutez ?pred_debug=1 à l URL','For more details, add ?pred_debug=1 to the URL','لمزيد من التفاصيل، أضف ?pred_debug=1 إلى عنوان URL'); ?></p>
+                        <p class="offers-prediction-empty__p is-hint"><?php echo app_text('Pour plus de détails, ajoutez ?pred_debug=1 à l URL','For more details, add ?pred_debug=1 to the URL','لمزيد من التفاصيل، أضف ?pred_debug=1 إلى عنوان URL'); ?></p>
                     <?php endif; ?>
                 <?php endif; ?>
             </div>
         <?php else: ?>
             <?php foreach ($predictedTop as $index => $p): ?>
-                <div style="flex:1; min-width:240px; padding:16px; border-radius:12px; background:linear-gradient(135deg, #fff 0%, #f8fafb 100%); border:1px solid rgba(20,39,56,.08); position:relative; overflow:hidden;">
+                <div class="offers-prediction-card">
                     <!-- Rank Badge -->
-                    <div style="position:absolute; top:8px; right:8px; width:32px; height:32px; display:flex; align-items:center; justify-content:center; border-radius:50%; background:<?php echo $index === 0 ? '#FFD700' : ($index === 1 ? '#C0C0C0' : '#CD7F32'); ?>; color:#fff; font-weight:bold; font-size:16px;">
+                    <div class="offers-prediction-card__rank" style="background:<?php echo $index === 0 ? '#FFD700' : ($index === 1 ? '#C0C0C0' : '#CD7F32'); ?>;">
                         <?php echo match($index) { 0 => '🥇', 1 => '🥈', 2 => '🥉', default => $index + 1 }; ?>
                     </div>
                     
                     <!-- Content -->
-                    <div style="font-weight:700; font-size:0.98rem; margin-bottom:6px; margin-right:40px; color:#142738;"><?php echo htmlspecialchars($p['titre'], ENT_QUOTES, 'UTF-8'); ?></div>
+                    <div class="offers-prediction-card__title"><?php echo htmlspecialchars($p['titre'], ENT_QUOTES, 'UTF-8'); ?></div>
                     
-                    <div style="font-size:0.85rem; color:#666; margin-bottom:10px;">
-                        <span style="display:inline-block; margin-right:8px; padding:2px 6px; background:#e8eef5; border-radius:4px; font-size:0.8rem;"><?php echo htmlspecialchars($p['type_service'] ?? '—', ENT_QUOTES, 'UTF-8'); ?></span>
+                    <div class="offers-prediction-card__meta">
+                        <span class="offers-prediction-tag"><?php echo htmlspecialchars($p['type_service'] ?? '—', ENT_QUOTES, 'UTF-8'); ?></span>
                     </div>
                     
                     <!-- Stats Row -->
-                    <div style="display:flex; gap:12px; margin-bottom:10px;">
+                    <div class="offers-prediction-stat-row">
                         <div>
-                            <div style="font-weight:700; color:#142738; font-size:1.2rem;"><?php echo (int)$p['recent_count']; ?></div>
-                            <div style="font-size:0.75rem; color:#999;"><?php echo app_text('candidatures','applications','الطلبات'); ?></div>
+                            <div class="offers-prediction-stat__value"><?php echo (int)$p['recent_count']; ?></div>
+                            <div class="offers-prediction-stat__label"><?php echo app_text('candidatures','applications','الطلبات'); ?></div>
                         </div>
                         <?php if (isset($p['trending_score'])): ?>
                         <div>
-                            <div style="font-weight:700; color:#007bff; font-size:1.2rem;"><?php echo number_format((float)$p['trending_score'], 2); ?></div>
-                            <div style="font-size:0.75rem; color:#999;"><?php echo app_text('score/jour','score/day','النقاط/اليوم'); ?></div>
+                            <div class="offers-prediction-stat__value is-accent"><?php echo number_format((float)$p['trending_score'], 2); ?></div>
+                            <div class="offers-prediction-stat__label"><?php echo app_text('score/jour','score/day','النقاط/اليوم'); ?></div>
                         </div>
                         <?php endif; ?>
                         <?php if (isset($p['days_since_post'])): ?>
                         <div>
-                            <div style="font-weight:700; color:#666; font-size:1.2rem;"><?php echo (int)$p['days_since_post']; ?></div>
-                            <div style="font-size:0.75rem; color:#999;"><?php echo app_text('jours','days','الأيام'); ?></div>
+                            <div class="offers-prediction-stat__value is-muted"><?php echo (int)$p['days_since_post']; ?></div>
+                            <div class="offers-prediction-stat__label"><?php echo app_text('jours','days','الأيام'); ?></div>
                         </div>
                         <?php endif; ?>
                     </div>
                     
                     <!-- Action Button -->
-                    <a class="small-btn" href="?page=offer_applications&offer_id=<?php echo urlencode((string)$p['id_offre']); ?>" style="display:inline-block; margin-top:8px;"><?php echo $viewApplicationsLabel; ?></a>
+                    <a class="small-btn offers-prediction-card__action" href="?page=offer_applications&offer_id=<?php echo urlencode((string)$p['id_offre']); ?>"><?php echo $viewApplicationsLabel; ?></a>
                 </div>
             <?php endforeach; ?>
         <?php endif; ?>
     </div>
     
     <?php if (!empty($predictionInsight)): ?>
-    <div style="margin-top:16px; padding:12px 14px; border-radius:10px; background:#f0f8ff; border-left:3px solid #007bff;">
-        <strong style="color:#0056b3; font-size:0.9rem;">💡 <?php echo app_text('Insight','Insight','رؤية'); ?>:</strong>
-        <p style="margin:4px 0 0 0; color:#0056b3; font-size:0.85rem;"><?php echo htmlspecialchars($predictionInsight, ENT_QUOTES, 'UTF-8'); ?></p>
+    <div class="offers-prediction-insight">
+        <strong class="offers-prediction-insight__title">💡 <?php echo app_text('Insight','Insight','رؤية'); ?>:</strong>
+        <p class="offers-prediction-insight__text"><?php echo htmlspecialchars($predictionInsight, ENT_QUOTES, 'UTF-8'); ?></p>
     </div>
     <?php endif; ?>
 </section>
@@ -1750,6 +1750,216 @@ if ($currentOffer) {
     color: #000000;
 }
 
+body.admin-body.dark .module-table thead th {
+    background: #1a2836;
+    color: #e8eef5;
+    border-bottom-color: rgba(255, 255, 255, 0.14);
+}
+
+body.admin-body.dark .module-table tbody tr:hover {
+    background: rgba(238, 88, 40, 0.14);
+}
+
+/* Predictions panel: theme-aware cards and insight */
+.offers-predictions-cards {
+    margin-top: 12px;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.offers-prediction-empty {
+    padding: 14px;
+    border-radius: 12px;
+    background: #fff;
+    border: 1px solid rgba(20, 39, 56, 0.06);
+    width: 100%;
+}
+
+.offers-prediction-empty__p {
+    margin: 0;
+    color: #555;
+}
+
+.offers-prediction-empty__p.is-secondary {
+    margin: 8px 0 0 0;
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.offers-prediction-empty__p.is-hint {
+    margin: 8px 0 0 0;
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.offers-prediction-debug {
+    margin-top: 8px;
+}
+
+.offers-prediction-debug__list {
+    margin: 6px 0 0 16px;
+    color: #444;
+}
+
+.offers-prediction-card {
+    flex: 1;
+    min-width: 240px;
+    padding: 16px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #fff 0%, #f8fafb 100%);
+    border: 1px solid rgba(20, 39, 56, 0.08);
+    position: relative;
+    overflow: hidden;
+}
+
+.offers-prediction-card__rank {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    color: #fff;
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.offers-prediction-card__title {
+    font-weight: 700;
+    font-size: 0.98rem;
+    margin-bottom: 6px;
+    margin-right: 40px;
+    color: #142738;
+}
+
+.offers-prediction-card__meta {
+    font-size: 0.85rem;
+    color: #555;
+    margin-bottom: 10px;
+}
+
+.offers-prediction-tag {
+    display: inline-block;
+    margin-right: 8px;
+    padding: 2px 6px;
+    background: #e8eef5;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    color: #333;
+}
+
+.offers-prediction-stat-row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.offers-prediction-stat__value {
+    font-weight: 700;
+    color: #142738;
+    font-size: 1.2rem;
+}
+
+.offers-prediction-stat__value.is-accent {
+    color: #007bff;
+}
+
+.offers-prediction-stat__value.is-muted {
+    color: #555;
+}
+
+.offers-prediction-stat__label {
+    font-size: 0.75rem;
+    color: #888;
+}
+
+.offers-prediction-card__action {
+    display: inline-block;
+    margin-top: 8px;
+}
+
+.offers-prediction-insight {
+    margin-top: 16px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: #f0f8ff;
+    border-left: 3px solid #007bff;
+}
+
+.offers-prediction-insight__title {
+    color: #0056b3;
+    font-size: 0.9rem;
+}
+
+.offers-prediction-insight__text {
+    margin: 4px 0 0 0;
+    color: #0b4f8c;
+    font-size: 0.85rem;
+}
+
+body.admin-body.dark .offers-prediction-empty {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+body.admin-body.dark .offers-prediction-empty__p,
+body.admin-body.dark .offers-prediction-debug,
+body.admin-body.dark .offers-prediction-debug__list {
+    color: #c5d0e0;
+}
+
+body.admin-body.dark .offers-prediction-empty a {
+    color: #8ec5ff;
+}
+
+body.admin-body.dark .offers-prediction-card {
+    background: linear-gradient(145deg, rgba(30, 45, 60, 0.98) 0%, rgba(18, 30, 45, 0.99) 100%);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+body.admin-body.dark .offers-prediction-card__title {
+    color: #f0f4f8;
+}
+
+body.admin-body.dark .offers-prediction-card__meta {
+    color: #a8b8cc;
+}
+
+body.admin-body.dark .offers-prediction-tag {
+    background: rgba(255, 255, 255, 0.1);
+    color: #e2eaf4;
+}
+
+body.admin-body.dark .offers-prediction-stat__value {
+    color: #f0f4f8;
+}
+
+body.admin-body.dark .offers-prediction-stat__value.is-accent {
+    color: #8ec5ff;
+}
+
+body.admin-body.dark .offers-prediction-stat__value.is-muted {
+    color: #b8c8dc;
+}
+
+body.admin-body.dark .offers-prediction-stat__label {
+    color: #8a9bad;
+}
+
+body.admin-body.dark .offers-prediction-insight {
+    background: rgba(0, 123, 255, 0.14);
+    border-left-color: #4a9eff;
+}
+
+body.admin-body.dark .offers-prediction-insight__title,
+body.admin-body.dark .offers-prediction-insight__text {
+    color: #d6ebff;
+}
+
 /* Ensure action buttons in the Actions column appear on a single row */
 .admin-tools {
     display: flex;
@@ -1828,6 +2038,13 @@ body.admin-body.dark .offer-stats-details > div {
 
 .offer-stats-list li {
     display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 14px;
+    background: rgba(20, 39, 56, 0.04);
+}
 
 /* Offers stats panel palette lock: only orange / navy / green / white / black */
 .offers-stats-panel .admin-stat,
@@ -1935,13 +2152,6 @@ body.admin-body.dark .offer-stats-details > div {
 
 .offers-stats-modal .distribution {
     box-shadow: none;
-}
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 10px 12px;
-    border-radius: 14px;
-    background: rgba(20, 39, 56, 0.04);
 }
 
 body.admin-body.dark .offer-stats-list li {
@@ -2096,6 +2306,24 @@ body.admin-body.dark .offer-stats-list li {
     background: rgba(238, 88, 40, 0.18);
     color: #EE5828;
     border: 1px solid rgba(238, 88, 40, 0.35);
+}
+
+body.admin-body.dark .status-en_attente {
+    background: rgba(255, 209, 102, 0.22);
+    color: #ffe9a8;
+    border-color: rgba(255, 209, 102, 0.5);
+}
+
+body.admin-body.dark .status-acceptee {
+    background: rgba(129, 199, 132, 0.22);
+    color: #b9f6b0;
+    border-color: rgba(129, 199, 132, 0.45);
+}
+
+body.admin-body.dark .status-refusee {
+    background: rgba(255, 138, 101, 0.2);
+    color: #ffc4b0;
+    border-color: rgba(255, 138, 101, 0.45);
 }
 </style>
 

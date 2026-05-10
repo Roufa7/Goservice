@@ -663,11 +663,17 @@ body.dark .glass-card {
 }
 
 body.dark .search-box input,
-body.dark .search-box select,
 body.dark .form-grid input,
-body.dark .form-grid select,
 body.dark .form-grid textarea {
     background: rgba(12,22,34,0.88);
+    color: var(--white);
+}
+
+/* Use background-color only on selects: `background` shorthand resets
+   background-repeat to repeat and breaks the single SVG caret on .search-box select */
+body.dark .search-box select,
+body.dark .form-grid select {
+    background-color: rgba(12,22,34,0.88);
     color: var(--white);
 }
 
@@ -694,7 +700,9 @@ body.dark .form-grid textarea {
 
 body.dark .search-box select {
     background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%23FFFFFF' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M6 9l6 6 6-6'/></svg>");
+    background-repeat: no-repeat;
     background-position: right 12px center;
+    background-size: 18px 18px;
 }
 
 .form-grid {
@@ -1089,6 +1097,22 @@ body.admin-body.dark .admin-stat span {
     color: #d5dce5;
 }
 
+/* Front office (and anywhere else) with body.dark: .admin-stat lives in the
+   “back office” block above with a light-only background — restore theme tokens */
+body.dark .admin-stat {
+    background: var(--card);
+    border: 1px solid var(--line);
+    box-shadow: var(--shadow);
+}
+
+body.dark .admin-stat strong {
+    color: var(--text);
+}
+
+body.dark .admin-stat span {
+    color: var(--muted);
+}
+
 .admin-grid {
     grid-template-columns: 1.05fr .95fr;
     margin-bottom: 22px;
@@ -1201,6 +1225,24 @@ body.admin-body.dark .table-panel {
     background: rgba(255,255,255,0.04);
     border: 1px solid rgba(255,255,255,0.08);
     box-shadow: none;
+}
+
+/* Front office (body.dark only): same panels use .admin-panel with a light-only fill above */
+body.dark .admin-panel,
+body.dark .chart-card,
+body.dark .table-panel {
+    background: var(--card);
+    border: 1px solid var(--line);
+    box-shadow: var(--shadow);
+}
+
+body.dark .admin-panel h3,
+body.dark .chart-card h3,
+body.dark .table-panel h3,
+body.dark .admin-panel p,
+body.dark .chart-card p,
+body.dark .table-panel p {
+    color: var(--text);
 }
 
 .admin-panel h3,
