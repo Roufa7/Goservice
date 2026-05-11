@@ -1,0 +1,12 @@
+{
+    "name": "hp/go-service",
+    "authors": [
+        {
+            "name": "emnajlassii",
+            "email": "emna.jlassi@esprit.tn"
+        }
+    ],
+    "require": {
+        "dompdf/dompdf": "^3.1"
+    }
+}
