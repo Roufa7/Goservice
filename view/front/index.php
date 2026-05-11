@@ -14,6 +14,14 @@ $allowedPages = [
     'login',
     'forgot_password',
     'reset_password',
+    'serviceDetails',
+    'addService',
+    'myServices',
+    'editMyService',
+    'saveService',
+    'reserver',
+    'confirmation',
+    'myReservations',
 ];
 
 if (!in_array($page, $allowedPages, true)) {

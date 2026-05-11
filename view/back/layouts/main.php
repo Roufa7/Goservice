@@ -1,24 +1,28 @@
 <?php
 $pageTitles = [
-    'dashboard' => 'Dashboard',
-    'users' => 'Gestion des utilisateurs',
-    'services' => 'Gestion des services',
-    'offers' => 'Gestion des offres',
-    'forum' => 'Modération du forum',
-    'reclamation' => 'Gestion des réclamations',
-    'events' => 'Gestion des événements',
+    'dashboard'    => 'Dashboard',
+    'users'        => 'Gestion des utilisateurs',
+    'services'     => 'Gestion des services',
+    'categories'   => 'Gestion des catégories',
+    'reservations' => 'Gestion des réservations',
+    'offers'       => 'Gestion des offres',
+    'forum'        => 'Modération du forum',
+    'reclamation'  => 'Gestion des réclamations',
+    'events'       => 'Gestion des événements',
 ];
 
 $title = $pageTitles[$page] ?? 'Dashboard';
 
 $adminNav = [
-    'Dashboard' => 'index.php?page=dashboard',
+    'Dashboard'    => 'index.php?page=dashboard',
     'Utilisateurs' => 'index.php?page=users',
-    'Services' => 'index.php?page=services',
-    'Offres' => 'index.php?page=offers',
-    'Forum' => 'index.php?page=forum',
+    'Services'     => 'index.php?page=services',
+    'Catégories'   => 'index.php?page=categories',
+    'Réservations' => 'index.php?page=reservations',
+    'Offres'       => 'index.php?page=offers',
+    'Forum'        => 'index.php?page=forum',
     'Réclamations' => 'index.php?page=reclamation',
-    'Événements' => 'index.php?page=events',
+    'Événements'   => 'index.php?page=events',
 ];
 ?>
 <!DOCTYPE html>
@@ -43,7 +47,6 @@ $adminNav = [
                 >
             </a>
 
-
             <nav class="admin-nav">
                 <?php foreach ($adminNav as $label => $link): ?>
                     <a href="<?php echo $link; ?>" class="<?php echo $link === 'index.php?page=' . $page ? 'active' : ''; ?>">
@@ -55,17 +58,17 @@ $adminNav = [
 
         <div class="admin-main">
             <header class="admin-topbar">
-    <div class="admin-topbar-row">
-        <span class="section-badge admin-badge">Back Office</span>
+                <div class="admin-topbar-row">
+                    <span class="section-badge admin-badge">Back Office</span>
 
-        <div class="admin-topbar-actions">
-            <button id="themeToggle" class="theme-btn" type="button">☀</button>
-            <a class="ghost-btn" href="../front/index.php?page=home">Voir le site</a>
-        </div>
-    </div>
+                    <div class="admin-topbar-actions">
+                        <button id="themeToggle" class="theme-btn" type="button">☀</button>
+                        <a class="ghost-btn" href="../front/index.php?page=home">Voir le site</a>
+                    </div>
+                </div>
 
-    <h1 class="admin-page-title"><?php echo htmlspecialchars($title, ENT_QUOTES, 'UTF-8'); ?></h1>
-</header>
+                <h1 class="admin-page-title"><?php echo htmlspecialchars($title, ENT_QUOTES, 'UTF-8'); ?></h1>
+            </header>
 
             <main class="admin-content">
                 <?php require $view; ?>
