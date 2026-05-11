@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 include_once(__DIR__ . '/../config.php');
 include_once(__DIR__ . '/../model/Offer.php');
 // Load i18n helper so controller can store translated notification headlines
@@ -131,10 +131,10 @@ class OfferController {
         $value = strtolower(trim((string) $status));
 
         if ($this->useFrenchSchema()) {
-            return ($value === 'fermee' || $value === 'fermée' || $value === 'inactive' || $value === 'expiree') ? 'fermee' : 'ouverte';
+            return ($value === 'fermee' || $value === 'fermÃ©e' || $value === 'inactive' || $value === 'expiree') ? 'fermee' : 'ouverte';
         }
 
-        return ($value === 'fermee' || $value === 'fermée' || $value === 'inactive' || $value === 'expiree') ? 'inactive' : 'active';
+        return ($value === 'fermee' || $value === 'fermÃ©e' || $value === 'inactive' || $value === 'expiree') ? 'inactive' : 'active';
     }
 
     private function mapPayloadToEntity(array $data): Offer {
@@ -166,7 +166,7 @@ class OfferController {
         $this->syncOfferStatusesByExpiration();
 
         if ($this->useFrenchSchema()) {
-            $sql = 'SELECT o.id_offre, o.titre, o.description, o.localisation, o.date_publication, o.date_expiration, o.statut, o.type_service, o.prix, o.id_admin, u.nom AS admin_nom, u.prenom AS admin_prenom FROM offre o LEFT JOIN users u ON o.id_admin = u.id_user ORDER BY o.date_publication DESC, o.id_offre DESC';
+            $sql = 'SELECT o.id_offre, o.titre, o.description, o.localisation, o.date_publication, o.date_expiration, o.statut, o.type_service, NULL AS prix, o.id_admin, u.nom AS admin_nom, u.prenom AS admin_prenom FROM offre o LEFT JOIN users u ON o.id_admin = u.id_user ORDER BY o.date_publication DESC, o.id_offre DESC';
         } else {
             $sql = 'SELECT o.id AS id_offre, o.titre, o.description, "" AS localisation, o.created_at AS date_publication, o.date_fin AS date_expiration, CASE WHEN o.statut = "active" THEN "ouverte" ELSE "fermee" END AS statut, COALESCE(s.titre, "autre") AS type_service, o.prix, o.creator_id AS id_admin, u.nom AS admin_nom, u.prenom AS admin_prenom FROM offers o LEFT JOIN users u ON o.creator_id = u.id LEFT JOIN services s ON o.service_id = s.id ORDER BY o.created_at DESC, o.id DESC';
         }
@@ -183,7 +183,7 @@ class OfferController {
         $this->syncOfferStatusesByExpiration();
 
         if ($this->useFrenchSchema()) {
-            $sql = 'SELECT o.id_offre, o.titre, o.description, o.localisation, o.date_publication, o.date_expiration, o.statut, o.type_service, o.prix, o.id_admin, u.nom AS admin_nom, u.prenom AS admin_prenom FROM offre o LEFT JOIN users u ON o.id_admin = u.id_user WHERE o.statut = :statut ORDER BY o.date_publication DESC, o.id_offre DESC';
+            $sql = 'SELECT o.id_offre, o.titre, o.description, o.localisation, o.date_publication, o.date_expiration, o.statut, o.type_service, NULL AS prix, o.id_admin, u.nom AS admin_nom, u.prenom AS admin_prenom FROM offre o LEFT JOIN users u ON o.id_admin = u.id_user WHERE o.statut = :statut ORDER BY o.date_publication DESC, o.id_offre DESC';
             $params = ['statut' => 'ouverte'];
         } else {
             $sql = 'SELECT o.id AS id_offre, o.titre, o.description, "" AS localisation, o.created_at AS date_publication, o.date_fin AS date_expiration, CASE WHEN o.statut = "active" THEN "ouverte" ELSE "fermee" END AS statut, COALESCE(s.titre, "autre") AS type_service, o.prix, o.creator_id AS id_admin, u.nom AS admin_nom, u.prenom AS admin_prenom FROM offers o LEFT JOIN users u ON o.creator_id = u.id LEFT JOIN services s ON o.service_id = s.id WHERE o.statut = :statut ORDER BY o.created_at DESC, o.id DESC';
@@ -250,10 +250,10 @@ class OfferController {
                     'offer_id' => (int)$id,
                     'type' => 'suppression',
                     'headline' => is_callable('app_text') ? [
-                        'fr' => 'Offre supprimée',
+                        'fr' => 'Offre supprimÃ©e',
                         'en' => 'Offer deleted',
-                        'ar' => 'تم حذف العرض',
-                    ] : 'Offre supprimée',
+                        'ar' => 'ØªÙ… Ø­Ø°Ù Ø§Ù„Ø¹Ø±Ø¶',
+                    ] : 'Offre supprimÃ©e',
                     'message' => (string) ($existing['titre'] ?? 'Offre'),
                     'details' => [
                         'type_service' => (string) ($existing['type_service'] ?? ''),
@@ -290,7 +290,7 @@ class OfferController {
                 return 0;
             }
             
-            $sql = 'INSERT INTO offre (titre, description, localisation, date_expiration, statut, type_service, prix, id_admin) VALUES (:titre, :description, :localisation, :date_expiration, :statut, :type_service, :prix, :id_admin)';
+            $sql = 'INSERT INTO offre (titre, description, localisation, date_expiration, statut, type_service, id_admin) VALUES (:titre, :description, :localisation, :date_expiration, :statut, :type_service, :id_admin)';
             $params = [
                 'titre' => $offer->getTitre(),
                 'description' => $offer->getDescription(),
@@ -298,7 +298,6 @@ class OfferController {
                 'date_expiration' => $offer->getDateExpiration() ? $offer->getDateExpiration()->format('Y-m-d H:i:s') : null,
                 'statut' => $computedStatus,
                 'type_service' => $offer->getTypeService(),
-                'prix' => $offer->getPrix(),
                 'id_admin' => $offer->getIdAdmin(),
             ];
         } else {
@@ -382,7 +381,7 @@ class OfferController {
                 // capture previous state to compute changes
                 $before = $this->showOffer($id);
                 $query = $db->prepare(
-                    'UPDATE offre SET titre = :titre, description = :description, localisation = :localisation, date_expiration = :date_expiration, statut = :statut, type_service = :type_service, prix = :prix, id_admin = :id_admin WHERE id_offre = :id'
+                    'UPDATE offre SET titre = :titre, description = :description, localisation = :localisation, date_expiration = :date_expiration, statut = :statut, type_service = :type_service, id_admin = :id_admin WHERE id_offre = :id'
                 );
 
                 $ok = $query->execute([
@@ -436,10 +435,10 @@ class OfferController {
                                 'offer_id' => $id,
                                 'type' => 'modification',
                                 'headline' => is_callable('app_text') ? [
-                                    'fr' => 'Offre modifiée',
+                                    'fr' => 'Offre modifiÃ©e',
                                     'en' => 'Offer updated',
-                                    'ar' => 'تم تعديل العرض',
-                                ] : 'Offre modifiée',
+                                    'ar' => 'ØªÙ… ØªØ¹Ø¯ÙŠÙ„ Ø§Ù„Ø¹Ø±Ø¶',
+                                ] : 'Offre modifiÃ©e',
                                 'message' => (string) $offer->getTitre(),
                                 'details' => [
                                     'type_service' => (string) $offer->getTypeService(),
@@ -508,10 +507,10 @@ class OfferController {
                             'offer_id' => $id,
                             'type' => 'modification',
                             'headline' => is_callable('app_text') ? [
-                                'fr' => 'Offre modifiée',
+                                'fr' => 'Offre modifiÃ©e',
                                 'en' => 'Offer updated',
-                                'ar' => 'تم تعديل العرض',
-                            ] : 'Offre modifiée',
+                                'ar' => 'ØªÙ… ØªØ¹Ø¯ÙŠÙ„ Ø§Ù„Ø¹Ø±Ø¶',
+                            ] : 'Offre modifiÃ©e',
                             'message' => (string) $offer->getTitre(),
                             'details' => [
                                 'type_service' => (string) $offer->getTypeService(),
@@ -539,7 +538,7 @@ class OfferController {
         $this->syncOfferStatusesByExpiration();
 
         if ($this->useFrenchSchema()) {
-            $sql = 'SELECT o.id_offre, o.titre, o.description, o.localisation, o.date_publication, o.date_expiration, o.statut, o.type_service, o.prix, o.id_admin, u.nom AS admin_nom, u.prenom AS admin_prenom FROM offre o LEFT JOIN users u ON o.id_admin = u.id_user WHERE o.id_offre = :id LIMIT 1';
+            $sql = 'SELECT o.id_offre, o.titre, o.description, o.localisation, o.date_publication, o.date_expiration, o.statut, o.type_service, NULL AS prix, o.id_admin, u.nom AS admin_nom, u.prenom AS admin_prenom FROM offre o LEFT JOIN users u ON o.id_admin = u.id_user WHERE o.id_offre = :id LIMIT 1';
         } else {
             $sql = 'SELECT o.id AS id_offre, o.titre, o.description, "" AS localisation, o.created_at AS date_publication, o.date_fin AS date_expiration, CASE WHEN o.statut = "active" THEN "ouverte" ELSE "fermee" END AS statut, COALESCE(s.titre, "autre") AS type_service, o.prix, o.creator_id AS id_admin, u.nom AS admin_nom, u.prenom AS admin_prenom FROM offers o LEFT JOIN users u ON o.creator_id = u.id LEFT JOIN services s ON o.service_id = s.id WHERE o.id = :id LIMIT 1';
         }
@@ -568,4 +567,6 @@ class OfferController {
     }
 }
 }
+
+
 

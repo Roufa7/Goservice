@@ -1,11 +1,11 @@
 <?php
 $pageTitles = [
     'home' => 'Accueil',
-    'services' => 'Services & Catégories',
+    'services' => 'Services & Categories',
     'offre' => 'Offres',
     'forum' => 'Forum',
-    'reclamation' => 'Réclamations',
-    'events' => 'Événements',
+    'reclamation' => 'Reclamations',
+    'events' => 'Evenements',
     'profile' => 'Profil',
 ];
 
@@ -13,12 +13,11 @@ $title = $pageTitles[$page] ?? 'Accueil';
 
 $mainNav = [
     'Accueil' => 'index.php?page=home',
-    'Services & Catégories' => 'index.php?page=services',
+    'Services' => 'index.php?page=services',
     'Offres' => 'index.php?page=offre',
     'Forum' => 'index.php?page=forum',
-    'Réclamations' => 'index.php?page=reclamation',
-    'Événements' => 'index.php?page=events',
-    'Profil' => 'index.php?page=profile',
+    'Evenements' => 'index.php?page=events',
+    'Reclam.' => 'index.php?page=reclamation',
 ];
 ?>
 <!DOCTYPE html>
@@ -29,6 +28,55 @@ $mainNav = [
     <title><?php echo htmlspecialchars($title, ENT_QUOTES, 'UTF-8'); ?></title>
     <link rel="stylesheet" href="../../assets/css/style.css">
     <link rel="stylesheet" href="../../assets/css/face-id.css">
+    <style>
+        .main-nav {
+            gap: 12px;
+            flex-wrap: nowrap;
+            flex: 1 1 auto;
+            justify-content: center;
+            min-width: 0;
+        }
+
+        .main-nav a {
+            padding: 11px 16px;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+
+        .nav-actions {
+            gap: 10px;
+            flex-shrink: 0;
+            margin-left: 14px;
+        }
+
+        .nav-actions > span {
+            max-width: 170px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        .theme-btn {
+            min-width: 44px;
+            width: 44px;
+            height: 44px;
+            padding: 0;
+            font-size: 1rem;
+        }
+
+        @media (max-width: 1400px) {
+            .main-nav a {
+                padding: 10px 12px;
+                font-size: 0.9rem;
+            }
+
+            .nav-actions > span {
+                display: none;
+            }
+        }
+    </style>
 </head>
 <body>
     <div class="bg-orb orb-1"></div>
@@ -56,14 +104,14 @@ $mainNav = [
             </nav>
 
             <div class="nav-actions">
-                <button id="themeToggle" class="theme-btn" type="button">☾</button>
+                <button id="themeToggle" class="theme-btn" type="button">Theme</button>
                 <?php if (isset($_SESSION['user_id'])): ?>
                     <span style="font-weight: bold; margin-right: 10px;">Bienvenue, <?php echo htmlspecialchars($_SESSION['user_name']); ?></span>
                     <a href="index.php?page=profile" class="solid-btn" style="margin-right: 10px;">Mon Profil</a>
-                    <a href="../../controller/AuthController.php?action=logout" class="ghost-btn">Déconnexion</a>
+                    <a href="../../controller/AuthController.php?action=logout" class="ghost-btn">Deconnexion</a>
                 <?php else: ?>
                     <a href="#" class="ghost-btn" id="openLoginModal">Connexion</a>
-                    <a href="index.php?page=register" class="solid-btn">S’inscrire</a>
+                    <a href="index.php?page=register" class="solid-btn">S'inscrire</a>
                 <?php endif; ?>
             </div>
         </div>
@@ -77,15 +125,16 @@ $mainNav = [
         <div class="container footer-grid">
             <div>
                 <h3>Plateforme digitale</h3>
-                <p>Services, offres, forum, réclamations, événements et administration dans une expérience cohérente.</p>
+                <p>Services, offres, forum, reclamations, evenements et administration dans une experience coherente.</p>
             </div>
 
             <div>
                 <h4>Navigation</h4>
                 <a href="index.php?page=home">Accueil</a>
-                <a href="index.php?page=services">Services & Catégories</a>
+                <a href="index.php?page=services">Services & Categories</a>
                 <a href="index.php?page=offre">Offres</a>
                 <a href="index.php?page=forum">Forum</a>
+                <a href="index.php?page=events">Evenements</a>
             </div>
 
             <div>
@@ -102,75 +151,75 @@ $mainNav = [
     <script src="../../assets/js/main.js"></script>
     <script src="../../assets/js/offer-validation.js"></script>
     <div class="auth-modal" id="loginModal">
-    <div class="auth-modal-box">
-        <button class="auth-close" id="closeLoginModal">&times;</button>
+        <div class="auth-modal-box">
+            <button class="auth-close" id="closeLoginModal">&times;</button>
 
-        <h2>Connexion</h2>
-        <?php if(isset($_GET['error'])): ?>
-            <p style="color: #ff4757; font-weight: bold; background: rgba(255, 71, 87, 0.1); padding: 10px; border-radius: 6px; text-align: center;">
-                <?php echo htmlspecialchars($_GET['error']); ?>
-            </p>
-        <?php endif; ?>
-        <p>Connectez-vous avec votre email et votre mot de passe.</p>
+            <h2>Connexion</h2>
+            <?php if (isset($_GET['error'])): ?>
+                <p style="color: #ff4757; font-weight: bold; background: rgba(255, 71, 87, 0.1); padding: 10px; border-radius: 6px; text-align: center;">
+                    <?php echo htmlspecialchars($_GET['error']); ?>
+                </p>
+            <?php endif; ?>
+            <p>Connectez-vous avec votre email et votre mot de passe.</p>
 
-        <form class="auth-form" action="../../controller/AuthController.php?action=login" method="POST">
-            <div class="field-block">
-                <label for="login_email">Email</label>
-                <input type="email" id="login_email" name="email" required>
-            </div>
-
-            <div class="field-block">
-                <label for="login_password">Mot de passe</label>
-                <input type="password" id="login_password" name="password" required>
-            </div>
-
-            <!-- SECURITY VERIFICATION (CSS Stylisé) -->
-            <div class="captcha-wrap" style="text-align: center; margin-bottom: 15px; background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #eee;">
-                <span style="display: block; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 15px; color: #555; font-weight: bold;">Security Verification</span>
-                
-                <div id="captchaBox" style="
-                    display: inline-block; 
-                    background: #fff; 
-                    padding: 10px 20px; 
-                    border-radius: 4px; 
-                    border: 1px dashed #ccc; 
-                    font-family: 'Courier New', Courier, monospace; 
-                    font-size: 24px; 
-                    font-weight: bold; 
-                    color: #2c3e50; 
-                    letter-spacing: 8px; 
-                    user-select: none;
-                    position: relative;
-                    overflow: hidden;
-                    margin-bottom: 15px;
-                ">
-                    <?php 
-                    if(!isset($_SESSION['captcha_code'])) {
-                        $permitted_chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-                        $_SESSION['captcha_code'] = '';
-                        for($i = 0; $i < 6; $i++) { $_SESSION['captcha_code'] .= $permitted_chars[rand(0, strlen($permitted_chars) - 1)]; }
-                    }
-                    echo $_SESSION['captcha_code']; 
-                    ?>
-                    <!-- Noise lines inside captcha -->
-                    <div style="position:absolute; top:40%; left:0; width:100%; height:1px; background:rgba(0,0,0,0.1); transform:rotate(5deg);"></div>
-                    <div style="position:absolute; top:60%; left:0; width:100%; height:1px; background:rgba(0,0,0,0.1); transform:rotate(-5deg);"></div>
+            <form class="auth-form" action="../../controller/AuthController.php?action=login" method="POST">
+                <div class="field-block">
+                    <label for="login_email">Email</label>
+                    <input type="email" id="login_email" name="email" required>
                 </div>
 
-                <button type="button" onclick="window.location.reload();" style="border:none; background:none; cursor:pointer; color: var(--orange); font-size: 1.2rem; vertical-align: middle;" title="Rafraîchir"> 🔄</button>
-                <input type="text" name="captcha_input" placeholder="ENTER THE CODE ABOVE" required style="width: 100%; text-align: center; font-weight: bold; letter-spacing: 2px;">
-            </div>
+                <div class="field-block">
+                    <label for="login_password">Mot de passe</label>
+                    <input type="password" id="login_password" name="password" required>
+                </div>
 
-            <button type="submit" class="solid-btn auth-submit">Se connecter</button>
-            
-            <div style="text-align:center; margin:15px 0; color:#888;">— OU —</div>
-            
-            <button type="button" id="btnFaceID" class="face-id-btn">
-                <span style="font-size:1.2rem;">👤</span> Se connecter avec Face ID
-            </button>
-        </form>
+                <div class="captcha-wrap" style="text-align: center; margin-bottom: 15px; background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #eee;">
+                    <span style="display: block; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 15px; color: #555; font-weight: bold;">Security Verification</span>
+
+                    <div id="captchaBox" style="
+                        display: inline-block;
+                        background: #fff;
+                        padding: 10px 20px;
+                        border-radius: 4px;
+                        border: 1px dashed #ccc;
+                        font-family: 'Courier New', Courier, monospace;
+                        font-size: 24px;
+                        font-weight: bold;
+                        color: #2c3e50;
+                        letter-spacing: 8px;
+                        user-select: none;
+                        position: relative;
+                        overflow: hidden;
+                        margin-bottom: 15px;
+                    ">
+                        <?php
+                        if (!isset($_SESSION['captcha_code'])) {
+                            $permitted_chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+                            $_SESSION['captcha_code'] = '';
+                            for ($i = 0; $i < 6; $i++) {
+                                $_SESSION['captcha_code'] .= $permitted_chars[rand(0, strlen($permitted_chars) - 1)];
+                            }
+                        }
+                        echo $_SESSION['captcha_code'];
+                        ?>
+                        <div style="position:absolute; top:40%; left:0; width:100%; height:1px; background:rgba(0,0,0,0.1); transform:rotate(5deg);"></div>
+                        <div style="position:absolute; top:60%; left:0; width:100%; height:1px; background:rgba(0,0,0,0.1); transform:rotate(-5deg);"></div>
+                    </div>
+
+                    <button type="button" onclick="window.location.reload();" style="border:none; background:none; cursor:pointer; color: var(--orange); font-size: 1.2rem; vertical-align: middle;" title="Rafraichir">Refresh</button>
+                    <input type="text" name="captcha_input" placeholder="ENTER THE CODE ABOVE" required style="width: 100%; text-align: center; font-weight: bold; letter-spacing: 2px;">
+                </div>
+
+                <button type="submit" class="solid-btn auth-submit">Se connecter</button>
+
+                <div style="text-align:center; margin:15px 0; color:#888;">- OU -</div>
+
+                <button type="button" id="btnFaceID" class="face-id-btn">
+                    <span style="font-size:1.2rem;">Face ID</span> Se connecter avec Face ID
+                </button>
+            </form>
+        </div>
     </div>
-</div>
 <script>
 const loginModal = document.getElementById('loginModal');
 const openLoginModal = document.getElementById('openLoginModal');

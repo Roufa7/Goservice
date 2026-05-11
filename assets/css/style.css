@@ -3111,3 +3111,148 @@ body.dark .auth-form input {
 .notif-item.is-unread .notif-link { background: linear-gradient(90deg, rgba(238,88,40,0.04), transparent); }
 .notif-empty { padding: 14px; color: var(--muted); }
 
+
+/* Offer toolbar polish */
+.offers-page-toolbar {
+    background: linear-gradient(135deg, rgba(15,33,52,0.96), rgba(12,27,43,0.98)) !important;
+    border: 1px solid rgba(255,255,255,0.08) !important;
+    box-shadow: 0 18px 34px rgba(0,0,0,0.22) !important;
+    border-radius: 28px !important;
+    padding: 20px 22px !important;
+}
+
+.offers-page-toolbar .offers-toolbar-form {
+    align-items: center;
+    gap: 14px;
+}
+
+.offers-page-toolbar input,
+.offers-page-toolbar select {
+    background: rgba(255,255,255,0.08) !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(255,255,255,0.10) !important;
+}
+
+.offers-page-toolbar input::placeholder {
+    color: #b9c7d6 !important;
+}
+
+.offers-page-toolbar select {
+    min-width: 180px;
+}
+
+.offers-page-toolbar .icon-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: nowrap;
+    margin-left: auto;
+}
+
+#offreRecommendationsToggle {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    min-width: 220px;
+    white-space: nowrap;
+}
+
+.offer-mini-btn {
+    min-width: 108px;
+    min-height: 56px;
+    padding: 0 18px !important;
+    border-radius: 999px !important;
+    background: #2c3441 !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(255,255,255,0.08) !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.01em;
+    box-shadow: none !important;
+}
+
+.offer-mini-btn:hover {
+    background: #384352 !important;
+    color: #ffffff !important;
+    transform: translateY(-1px);
+}
+
+.notif-btn.offer-mini-btn {
+    position: relative;
+    min-width: 124px;
+    padding-right: 22px !important;
+}
+
+.offer-recommendations-panel {
+    margin-top: 20px;
+    background: linear-gradient(180deg, rgba(15,33,52,0.96), rgba(12,27,43,0.98)) !important;
+    border: 1px solid rgba(255,255,255,0.08) !important;
+}
+
+.offer-recommendations-list {
+    margin-top: 18px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
+}
+
+.offer-recommendation-card {
+    border-radius: 18px;
+    padding: 18px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.08);
+    display: grid;
+    gap: 10px;
+}
+
+.offer-recommendation-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    align-items: center;
+}
+
+.offer-recommendation-type,
+.offer-recommendation-score {
+    display: inline-flex;
+    align-items: center;
+    min-height: 34px;
+    padding: 0 12px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.08);
+    color: #dfe9f5;
+    font-weight: 700;
+    font-size: 0.88rem;
+}
+
+.offer-recommendation-title {
+    margin: 0;
+    color: #ffffff;
+    font-size: 1.05rem;
+    line-height: 1.35;
+}
+
+.offer-recommendation-city {
+    margin: 0;
+    color: #b9c7d6;
+}
+
+.offer-recommendations-state {
+    margin-top: 12px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: rgba(255,255,255,0.07);
+    color: #dfe9f5;
+}
+
+@media (max-width: 1100px) {
+    .offers-page-toolbar .icon-actions {
+        width: 100%;
+        justify-content: flex-start;
+        margin-left: 0;
+        flex-wrap: wrap;
+    }
+
+    #offreRecommendationsToggle {
+        min-width: 200px;
+    }
+}

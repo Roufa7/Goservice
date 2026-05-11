@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../../../config.php';
 require_once __DIR__ . '/../../../view/i18n.php';
 require_once __DIR__ . '/../../../model/Offer.php';
@@ -150,7 +150,7 @@ $formData = [ //stocke les valeurs du formulaire
 ];
 
 if (isset($_GET['updated']) && $_GET['updated'] === '1') {
-    $message = app_text('✅ Candidature modifiée avec succès.','✅ Application updated successfully.','✅ تم تعديل الطلب بنجاح.');
+    $message = app_text('âœ… Candidature modifiÃ©e avec succÃ¨s.','âœ… Application updated successfully.','âœ… ØªÙ… ØªØ¹Ø¯ÙŠÙ„ Ø§Ù„Ø·Ù„Ø¨ Ø¨Ù†Ø¬Ø§Ø­.');
     $messageType = 'success';
 }
 
@@ -182,54 +182,54 @@ function validateApplicationForm(array $post, array $files, OfferController $off
     $message = cleanInput($post['message'] ?? '');
 
     if ($offerId <= 0 || !$offerController->getOffer($offerId)) {
-        $errors['offer_id'] = app_text('Veuillez choisir une offre valide.','Please choose a valid offer.','يرجى اختيار عرض صالح.');
+        $errors['offer_id'] = app_text('Veuillez choisir une offre valide.','Please choose a valid offer.','ÙŠØ±Ø¬Ù‰ Ø§Ø®ØªÙŠØ§Ø± Ø¹Ø±Ø¶ ØµØ§Ù„Ø­.');
     }
 
     if ($experience === '') {
-        $errors['experience'] = app_text('Le nombre d\'annees d\'experience est obligatoire.','Years of experience is required.','سنة الخبرة مطلوبة.');
+        $errors['experience'] = app_text('Le nombre d\'annees d\'experience est obligatoire.','Years of experience is required.','Ø³Ù†Ø© Ø§Ù„Ø®Ø¨Ø±Ø© Ù…Ø·Ù„ÙˆØ¨Ø©.');
     } elseif (!preg_match('/^\d{1,2}$/', $experience)) {
-        $errors['experience'] = app_text('Saisissez uniquement un nombre entier (ex: 3).','Please enter an integer number (ex: 3).','الرجاء إدخال عدد صحيح (مثال: 3).');
+        $errors['experience'] = app_text('Saisissez uniquement un nombre entier (ex: 3).','Please enter an integer number (ex: 3).','Ø§Ù„Ø±Ø¬Ø§Ø¡ Ø¥Ø¯Ø®Ø§Ù„ Ø¹Ø¯Ø¯ ØµØ­ÙŠØ­ (Ù…Ø«Ø§Ù„: 3).');
     } elseif ((int) $experience > 50) {
-        $errors['experience'] = app_text('La valeur maximale autorisee est 50 ans.','Maximum allowed value is 50.','الحد الأقصى المسموح به هو 50.');
+        $errors['experience'] = app_text('La valeur maximale autorisee est 50 ans.','Maximum allowed value is 50.','Ø§Ù„Ø­Ø¯ Ø§Ù„Ø£Ù‚ØµÙ‰ Ø§Ù„Ù…Ø³Ù…ÙˆØ­ Ø¨Ù‡ Ù‡Ùˆ 50.');
     }
 
     if ($competences === '') {
-        $errors['competences'] = app_text('Le champ competences est obligatoire.','The skills field is required.','حقل المهارات مطلوب.');
+        $errors['competences'] = app_text('Le champ competences est obligatoire.','The skills field is required.','Ø­Ù‚Ù„ Ø§Ù„Ù…Ù‡Ø§Ø±Ø§Øª Ù…Ø·Ù„ÙˆØ¨.');
     } else {
         $competencesLength = mb_strlen($competences);
         if ($competencesLength < 3) {
-            $errors['competences'] = app_text('Ajoutez au moins 3 caracteres pour decrire vos competences.','Add at least 3 characters to describe your skills.','أضف 3 أحرف على الأقل لوصف مهاراتك.');
+            $errors['competences'] = app_text('Ajoutez au moins 3 caracteres pour decrire vos competences.','Add at least 3 characters to describe your skills.','Ø£Ø¶Ù 3 Ø£Ø­Ø±Ù Ø¹Ù„Ù‰ Ø§Ù„Ø£Ù‚Ù„ Ù„ÙˆØµÙ Ù…Ù‡Ø§Ø±Ø§ØªÙƒ.');
         } elseif ($competencesLength > 255) {
-            $errors['competences'] = app_text('Le champ competences ne doit pas depasser 255 caracteres.','The skills field must not exceed 255 characters.','يجب ألا يتجاوز حقل المهارات 255 حرفًا.');
+            $errors['competences'] = app_text('Le champ competences ne doit pas depasser 255 caracteres.','The skills field must not exceed 255 characters.','ÙŠØ¬Ø¨ Ø£Ù„Ø§ ÙŠØªØ¬Ø§ÙˆØ² Ø­Ù‚Ù„ Ø§Ù„Ù…Ù‡Ø§Ø±Ø§Øª 255 Ø­Ø±ÙÙ‹Ø§.');
         }
     }
 
     if ($message === '') {
-        $errors['message'] = app_text('La lettre de motivation est obligatoire.','The cover letter is required.','رسالة التحفيز مطلوبة.');
+        $errors['message'] = app_text('La lettre de motivation est obligatoire.','The cover letter is required.','Ø±Ø³Ø§Ù„Ø© Ø§Ù„ØªØ­ÙÙŠØ² Ù…Ø·Ù„ÙˆØ¨Ø©.');
     } else {
         $messageLength = mb_strlen($message);
         if ($messageLength < 20) {
-            $errors['message'] = app_text('La lettre de motivation doit contenir au moins 20 caracteres.','The cover letter must contain at least 20 characters.','يجب أن تحتوي رسالة التحفيز على 20 حرفًا على الأقل.');
+            $errors['message'] = app_text('La lettre de motivation doit contenir au moins 20 caracteres.','The cover letter must contain at least 20 characters.','ÙŠØ¬Ø¨ Ø£Ù† ØªØ­ØªÙˆÙŠ Ø±Ø³Ø§Ù„Ø© Ø§Ù„ØªØ­ÙÙŠØ² Ø¹Ù„Ù‰ 20 Ø­Ø±ÙÙ‹Ø§ Ø¹Ù„Ù‰ Ø§Ù„Ø£Ù‚Ù„.');
         } elseif ($messageLength > 2000) {
-            $errors['message'] = app_text('La lettre de motivation ne doit pas depasser 2000 caracteres.','The cover letter must not exceed 2000 characters.','يجب ألا تتجاوز رسالة التحفيز 2000 حرف.');
+            $errors['message'] = app_text('La lettre de motivation ne doit pas depasser 2000 caracteres.','The cover letter must not exceed 2000 characters.','ÙŠØ¬Ø¨ Ø£Ù„Ø§ ØªØªØ¬Ø§ÙˆØ² Ø±Ø³Ø§Ù„Ø© Ø§Ù„ØªØ­ÙÙŠØ² 2000 Ø­Ø±Ù.');
         }
     }
 
     $cvError = $files['cv']['error'] ?? UPLOAD_ERR_NO_FILE;
     if ($requireCv && $cvError === UPLOAD_ERR_NO_FILE) {
-        $errors['cv'] = app_text('Le CV est obligatoire.','CV is required.','السيرة الذاتية مطلوبة.');
+        $errors['cv'] = app_text('Le CV est obligatoire.','CV is required.','Ø§Ù„Ø³ÙŠØ±Ø© Ø§Ù„Ø°Ø§ØªÙŠØ© Ù…Ø·Ù„ÙˆØ¨Ø©.');
     } elseif ($cvError !== UPLOAD_ERR_NO_FILE) {
         if ($cvError !== UPLOAD_ERR_OK) {
-            $errors['cv'] = app_text('Erreur lors du telechargement du CV. Veuillez reessayer.','Error uploading the CV. Please try again.','حدث خطأ أثناء تحميل السيرة الذاتية. حاول مرة أخرى.');
+            $errors['cv'] = app_text('Erreur lors du telechargement du CV. Veuillez reessayer.','Error uploading the CV. Please try again.','Ø­Ø¯Ø« Ø®Ø·Ø£ Ø£Ø«Ù†Ø§Ø¡ ØªØ­Ù…ÙŠÙ„ Ø§Ù„Ø³ÙŠØ±Ø© Ø§Ù„Ø°Ø§ØªÙŠØ©. Ø­Ø§ÙˆÙ„ Ù…Ø±Ø© Ø£Ø®Ø±Ù‰.');
         } else {
             $allowedExtensions = ['pdf', 'doc', 'docx'];
             $extension = strtolower(pathinfo((string) ($files['cv']['name'] ?? ''), PATHINFO_EXTENSION));
             $size = (int) ($files['cv']['size'] ?? 0);
 
             if (!in_array($extension, $allowedExtensions, true)) {
-                $errors['cv'] = app_text('Format de CV invalide. Formats autorises: PDF, DOC, DOCX.','Invalid CV format. Allowed formats: PDF, DOC, DOCX.','تنسيق سيرة ذاتية غير صالح. الصيغ المسموح بها: PDF، DOC، DOCX.');
+                $errors['cv'] = app_text('Format de CV invalide. Formats autorises: PDF, DOC, DOCX.','Invalid CV format. Allowed formats: PDF, DOC, DOCX.','ØªÙ†Ø³ÙŠÙ‚ Ø³ÙŠØ±Ø© Ø°Ø§ØªÙŠØ© ØºÙŠØ± ØµØ§Ù„Ø­. Ø§Ù„ØµÙŠØº Ø§Ù„Ù…Ø³Ù…ÙˆØ­ Ø¨Ù‡Ø§: PDFØŒ DOCØŒ DOCX.');
             } elseif ($size > 5 * 1024 * 1024) {
-                $errors['cv'] = app_text('Le CV depasse la taille maximale autorisee (5 Mo).','The CV exceeds the maximum allowed size (5 MB).','تتجاوز السيرة الذاتية الحد الأقصى المسموح به (5 ميغابايت).');
+                $errors['cv'] = app_text('Le CV depasse la taille maximale autorisee (5 Mo).','The CV exceeds the maximum allowed size (5 MB).','ØªØªØ¬Ø§ÙˆØ² Ø§Ù„Ø³ÙŠØ±Ø© Ø§Ù„Ø°Ø§ØªÙŠØ© Ø§Ù„Ø­Ø¯ Ø§Ù„Ø£Ù‚ØµÙ‰ Ø§Ù„Ù…Ø³Ù…ÙˆØ­ Ø¨Ù‡ (5 Ù…ÙŠØºØ§Ø¨Ø§ÙŠØª).');
             }
         }
     }
@@ -267,7 +267,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
         if ($applicationId > 0 && isset($userApplicationsById[$applicationId])) {
             $candidatureController->deleteApplication($applicationId);
-            $message = app_text('✅ Candidature supprimée avec succès.','✅ Application deleted successfully.','✅ تم حذف الطلب بنجاح.');
+            $message = app_text('âœ… Candidature supprimÃ©e avec succÃ¨s.','âœ… Application deleted successfully.','âœ… ØªÙ… Ø­Ø°Ù Ø§Ù„Ø·Ù„Ø¨ Ø¨Ù†Ø¬Ø§Ø­.');
             $messageType = 'success';
             $userApplications = $loadUserApplications($candidatureController, $userId);
             $userApplicationsById = [];
@@ -275,7 +275,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $userApplicationsById[(int) ($application['id'] ?? 0)] = $application;
             }
         } else {
-            $message = app_text('❌ Impossible de supprimer cette candidature.','❌ Unable to delete this application.','❌ غير قادر على حذف هذا الطلب.');
+            $message = app_text('âŒ Impossible de supprimer cette candidature.','âŒ Unable to delete this application.','âŒ ØºÙŠØ± Ù‚Ø§Ø¯Ø± Ø¹Ù„Ù‰ Ø­Ø°Ù Ù‡Ø°Ø§ Ø§Ù„Ø·Ù„Ø¨.');
             $messageType = 'error';
         }
     }
@@ -285,7 +285,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $applicationId = $isUpdate ? (int) ($_POST['application_id'] ?? 0) : 0;
 
         if ($isUpdate && !isset($userApplicationsById[$applicationId])) {
-            $message = app_text('❌ Cette candidature est introuvable ou inaccessible.','❌ This application was not found or is inaccessible.','❌ لم يتم العثور على هذا الطلب أو غير متاح.');
+            $message = app_text('âŒ Cette candidature est introuvable ou inaccessible.','âŒ This application was not found or is inaccessible.','âŒ Ù„Ù… ÙŠØªÙ… Ø§Ù„Ø¹Ø«ÙˆØ± Ø¹Ù„Ù‰ Ù‡Ø°Ø§ Ø§Ù„Ø·Ù„Ø¨ Ø£Ùˆ ØºÙŠØ± Ù…ØªØ§Ø­.');
             $messageType = 'error';
             $isUpdate = false;
         }
@@ -296,7 +296,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $hasValidationErrors = implode('', $fieldErrors) !== '';
 
                 if ($hasValidationErrors) {
-                    $message = app_text('Veuillez corriger les erreurs du formulaire avant de continuer.','Please correct the form errors before continuing.','يرجى تصحيح أخطاء النموذج قبل المتابعة.');
+                    $message = app_text('Veuillez corriger les erreurs du formulaire avant de continuer.','Please correct the form errors before continuing.','ÙŠØ±Ø¬Ù‰ ØªØµØ­ÙŠØ­ Ø£Ø®Ø·Ø§Ø¡ Ø§Ù„Ù†Ù…ÙˆØ°Ø¬ Ù‚Ø¨Ù„ Ø§Ù„Ù…ØªØ§Ø¨Ø¹Ø©.');
                     $messageType = 'error';
                     $editingApplicationId = $isUpdate ? $applicationId : 0;
                     $existingCvPath = $isUpdate ? (string) ($userApplicationsById[$applicationId]['cv'] ?? '') : '';
@@ -336,7 +336,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                         'statut' => 'en attente',
                     ]);
 
-                    $message = '✅ Candidature soumise avec succès ! Nous vous recontacterons bientôt.';
+                    $message = 'âœ… Candidature soumise avec succÃ¨s ! Nous vous recontacterons bientÃ´t.';
                     $messageType = 'success';
                 }
 
@@ -354,7 +354,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 }
             } catch (Exception $e) {
                 if ($e->getMessage() !== 'validation_error') {
-                    $message = '❌ Erreur : ' . htmlspecialchars($e->getMessage());
+                    $message = 'âŒ Erreur : ' . htmlspecialchars($e->getMessage());
                     $messageType = 'error';
                 }
             }
@@ -407,8 +407,8 @@ function getApplicationStatusClass(string $statut): string {
     $normalized = strtolower(trim($statut));
 
     return match($normalized) {
-        'acceptée', 'acceptee', 'accepted' => 'application-status-success',
-        'refusée', 'refusee', 'rejected' => 'application-status-danger',
+        'acceptÃ©e', 'acceptee', 'accepted' => 'application-status-success',
+        'refusÃ©e', 'refusee', 'rejected' => 'application-status-danger',
         default => 'application-status-waiting',
     };
 }
@@ -430,10 +430,10 @@ $recommendationsUserId = $userId;
 <?php endif; ?>
 
 <section class="page-hero reveal">
-    <span class="section-badge"><?php echo app_text('Offres Spéciales', 'Special Offers', 'عروض خاصة'); ?></span>
-    <h1 class="page-title"><?php echo app_text('Découvrez nos meilleures offres', 'Discover our top offers', 'اكتشف أفضل عروضنا'); ?></h1>
+    <span class="section-badge"><?php echo app_text('Offres Speciales', 'Special Offers', 'عروض خاصة'); ?></span>
+    <h1 class="page-title"><?php echo app_text('Decouvrez nos meilleures offres', 'Discover our top offers', 'اكتشف أفضل عروضنا'); ?></h1>
     <p class="page-intro">
-        <?php echo app_text('Des offres exclusives et des réductions exceptionnelles sur les services de nos meilleurs prestataires.', 'Exclusive offers and special discounts from top providers.', 'عروض حصرية وخصومات مميزة من أفضل مقدمي الخدمات.'); ?>
+        <?php echo app_text('Des offres exclusives et des reductions exceptionnelles sur les services de nos meilleurs prestataires.', 'Exclusive offers and special discounts from top providers.', 'عروض حصرية وخصومات مميزة من أفضل مقدمي الخدمات.'); ?>
     </p>
 </section>
 
@@ -532,9 +532,9 @@ document.addEventListener('DOMContentLoaded', function() {
 <section class="action-bar reveal" style="position:relative; z-index:20; overflow:visible;">
     <form class="search-box" id="offreToolbarForm" method="GET" action="index.php">
         <input type="hidden" name="page" value="offre">
-        <input type="search" id="offreSearchInput" name="q" value="<?php echo htmlspecialchars($searchTerm, ENT_QUOTES, 'UTF-8'); ?>" placeholder="<?php echo app_text('Rechercher une offre...','Search offers...','ابحث عن عرض...'); ?>" autocomplete="off" aria-label="<?php echo app_text('Rechercher une offre','Search an offer','ابحث عن عرض'); ?>">
-        <select id="offreServiceFilter" name="type" aria-label="<?php echo app_text('Filtrer par service','Filter by service','تصفية حسب الخدمة'); ?>">
-            <option value=""><?php echo app_text('Tous les services','All services','كل الخدمات'); ?></option>
+        <input type="search" id="offreSearchInput" name="q" value="<?php echo htmlspecialchars($searchTerm, ENT_QUOTES, 'UTF-8'); ?>" placeholder="<?php echo app_text('Rechercher une offre...','Search offers...','Ø§Ø¨Ø­Ø« Ø¹Ù† Ø¹Ø±Ø¶...'); ?>" autocomplete="off" aria-label="<?php echo app_text('Rechercher une offre','Search an offer','Ø§Ø¨Ø­Ø« Ø¹Ù† Ø¹Ø±Ø¶'); ?>">
+        <select id="offreServiceFilter" name="type" aria-label="<?php echo app_text('Filtrer par service','Filter by service','ØªØµÙÙŠØ© Ø­Ø³Ø¨ Ø§Ù„Ø®Ø¯Ù…Ø©'); ?>">
+            <option value=""><?php echo app_text('Tous les services','All services','ÙƒÙ„ Ø§Ù„Ø®Ø¯Ù…Ø§Øª'); ?></option>
             <?php foreach ($typeServiceOptionsFront as $svc): ?>
                 <option value="<?php echo htmlspecialchars($svc, ENT_QUOTES, 'UTF-8'); ?>" <?php echo strcasecmp($selectedServiceFront, $svc) === 0 ? 'selected' : ''; ?>>
                     <?php echo htmlspecialchars($svc, ENT_QUOTES, 'UTF-8'); ?>
@@ -542,13 +542,13 @@ document.addEventListener('DOMContentLoaded', function() {
             <?php endforeach; ?>
         </select>
         <select name="sort" id="offerSortSelect">
-            <option value="date_desc" <?php echo $sortOption === 'date_desc' ? 'selected' : ''; ?>><?php echo app_text('Plus Récentes','Most recent','الأحدث'); ?></option>
-            <option value="date_asc" <?php echo $sortOption === 'date_asc' ? 'selected' : ''; ?>><?php echo app_text('Plus Anciennes','Oldest','الأقدم'); ?></option>
-            <option value="titre_asc" <?php echo $sortOption === 'titre_asc' ? 'selected' : ''; ?>><?php echo app_text('Titre: A à Z','Title: A to Z','العنوان: أ إلى ي'); ?></option>
-            <option value="titre_desc" <?php echo $sortOption === 'titre_desc' ? 'selected' : ''; ?>><?php echo app_text('Titre: Z à A','Title: Z to A','العنوان: ي إلى أ'); ?></option>
+            <option value="date_desc" <?php echo $sortOption === 'date_desc' ? 'selected' : ''; ?>><?php echo app_text('Plus recentes','Most recent','الأحدث'); ?></option>
+            <option value="date_asc" <?php echo $sortOption === 'date_asc' ? 'selected' : ''; ?>><?php echo app_text('Plus anciennes','Oldest','الأقدم'); ?></option>
+            <option value="titre_asc" <?php echo $sortOption === 'titre_asc' ? 'selected' : ''; ?>><?php echo app_text('Titre: A a Z','Title: A to Z','العنوان: أ إلى ي'); ?></option>
+            <option value="titre_desc" <?php echo $sortOption === 'titre_desc' ? 'selected' : ''; ?>><?php echo app_text('Titre: Z a A','Title: Z to A','العنوان: ي إلى أ'); ?></option>
             <option value="prix_asc" <?php echo $sortOption === 'prix_asc' ? 'selected' : ''; ?>><?php echo app_text('Prix: Croissant','Price: Low to High','السعر: من الأقل للأعلى'); ?></option>
-            <option value="prix_desc" <?php echo $sortOption === 'prix_desc' ? 'selected' : ''; ?>><?php echo app_text('Prix: Décroissant','Price: High to Low','السعر: من الأعلى للأقل'); ?></option>
-            <option value="type_asc" <?php echo $sortOption === 'type_asc' ? 'selected' : ''; ?>><?php echo app_text('Type: A à Z','Type: A to Z','النوع: أ إلى ي'); ?></option>
+            <option value="prix_desc" <?php echo $sortOption === 'prix_desc' ? 'selected' : ''; ?>><?php echo app_text('Prix: Decroissant','Price: High to Low','السعر: من الأعلى للأقل'); ?></option>
+            <option value="type_asc" <?php echo $sortOption === 'type_asc' ? 'selected' : ''; ?>><?php echo app_text('Type: A a Z','Type: A to Z','النوع: أ إلى ي'); ?></option>
         </select>
     </form>
 
@@ -586,7 +586,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     <div class="icon-actions">
         <div class="lang-switch lang-switch-dropdown" style="display:inline-block; margin-right:12px; position:relative; z-index:40;">
-            <button type="button" class="ghost-btn lang-switch-toggle" aria-haspopup="true" aria-expanded="false" aria-label="<?php echo app_text('Choisir la langue','Choose language','اختر اللغة'); ?>">🌐</button>
+            <button type="button" class="ghost-btn lang-switch-toggle offer-mini-btn" aria-haspopup="true" aria-expanded="false" aria-label="<?php echo app_text('Choisir la langue','Choose language','اختر اللغة'); ?>">Lang</button>
             <div class="lang-switch-menu" hidden style="position:absolute; top:calc(100% + 10px); right:0; min-width:132px; background:#ffffff; border:1px solid rgba(20,39,56,.12); border-radius:16px; box-shadow:0 16px 30px rgba(20,39,56,.16); padding:8px; z-index:9999; backdrop-filter: blur(8px);">
                 <a href="<?php echo app_lang_url('fr'); ?>" style="display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; border-radius:10px; color:#0b2545; font-weight:700; text-decoration:none; transition:background .2s ease;">FR <span style="opacity:.55; font-size:12px;">FR</span></a>
                 <a href="<?php echo app_lang_url('en'); ?>" style="display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; border-radius:10px; color:#0b2545; font-weight:700; text-decoration:none; transition:background .2s ease;">EN <span style="opacity:.55; font-size:12px;">EN</span></a>
@@ -594,12 +594,12 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
         </div>
         <div class="notif-wrap" style="margin-right:12px;">
-            <button id="offreNotifToggle" class="ghost-btn notif-btn" type="button" aria-haspopup="true" aria-expanded="false">🔔<?php if ($unreadCount>0): ?><span class="notif-badge"><?php echo (int)$unreadCount; ?></span><?php endif; ?></button>
+            <button id="offreNotifToggle" class="ghost-btn notif-btn offer-mini-btn" type="button" aria-haspopup="true" aria-expanded="false">Alerts<?php if ($unreadCount>0): ?><span class="notif-badge"><?php echo (int)$unreadCount; ?></span><?php endif; ?></button>
             <div class="notif-dropdown" id="offreNotifDropdown" hidden>
-                <div class="notif-header"><?php echo app_text('Notifications','Notifications','الإشعارات'); ?></div>
+                <div class="notif-header"><?php echo app_text('Notifications','Notifications','Ø§Ù„Ø¥Ø´Ø¹Ø§Ø±Ø§Øª'); ?></div>
                 <ul class="notif-list">
                     <?php if (empty($notifications)): ?>
-                        <li class="notif-empty"><?php echo app_text('Aucune notification','No notifications','لا توجد إشعارات'); ?></li>
+                        <li class="notif-empty"><?php echo app_text('Aucune notification','No notifications','Ù„Ø§ ØªÙˆØ¬Ø¯ Ø¥Ø´Ø¹Ø§Ø±Ø§Øª'); ?></li>
                     <?php else: ?>
                         <?php foreach ($notifications as $note): ?>
                             <?php
@@ -629,17 +629,17 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <div style="font-weight:700; color:var(--navy); margin-top:4px;"><?php echo $title; ?></div>
                                     <?php if (!empty($details) && is_array($details)): ?>
                                         <div style="margin-top:6px; font-size:0.92rem; color:var(--muted);">
-                                            <?php if (!empty($details['type_service'])): ?><?php echo app_text('Type:','Type:','النوع:'); ?> <?php echo htmlspecialchars($details['type_service'], ENT_QUOTES, 'UTF-8'); ?> &middot; <?php endif; ?>
-                                            <?php if (!empty($details['localisation'])): ?><?php echo app_text('Lieu:','Location:','الموقع:'); ?> <?php echo htmlspecialchars($details['localisation'], ENT_QUOTES, 'UTF-8'); ?> &middot; <?php endif; ?>
-                                            <?php if (!empty($details['prix'])): ?><?php echo app_text('Prix:','Price:','السعر:'); ?> <?php echo htmlspecialchars($details['prix'], ENT_QUOTES, 'UTF-8'); ?><?php endif; ?>
+                                            <?php if (!empty($details['type_service'])): ?><?php echo app_text('Type:','Type:','Ø§Ù„Ù†ÙˆØ¹:'); ?> <?php echo htmlspecialchars($details['type_service'], ENT_QUOTES, 'UTF-8'); ?> &middot; <?php endif; ?>
+                                            <?php if (!empty($details['localisation'])): ?><?php echo app_text('Lieu:','Location:','Ø§Ù„Ù…ÙˆÙ‚Ø¹:'); ?> <?php echo htmlspecialchars($details['localisation'], ENT_QUOTES, 'UTF-8'); ?> &middot; <?php endif; ?>
+                                            <?php if (!empty($details['prix'])): ?><?php echo app_text('Prix:','Price:','Ø§Ù„Ø³Ø¹Ø±:'); ?> <?php echo htmlspecialchars($details['prix'], ENT_QUOTES, 'UTF-8'); ?><?php endif; ?>
                                         </div>
                                     <?php endif; ?>
                                     <?php if (!empty($note['changes']) && is_array($note['changes'])): ?>
                                         <div style="margin-top:8px; font-size:0.9rem; color:var(--muted);">
-                                            <strong><?php echo app_text('Changements:','Changes:','التغييرات:'); ?></strong>
+                                            <strong><?php echo app_text('Changements:','Changes:','Ø§Ù„ØªØºÙŠÙŠØ±Ø§Øª:'); ?></strong>
                                             <ul style="margin:6px 0 0 18px;padding:0;">
                                             <?php foreach ($note['changes'] as $field => $chg): ?>
-                                                <li><?php echo htmlspecialchars($field, ENT_QUOTES, 'UTF-8'); ?>: <em><?php echo htmlspecialchars((string)($chg['from'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></em> → <em><?php echo htmlspecialchars((string)($chg['to'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></em></li>
+                                                <li><?php echo htmlspecialchars($field, ENT_QUOTES, 'UTF-8'); ?>: <em><?php echo htmlspecialchars((string)($chg['from'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></em> â†’ <em><?php echo htmlspecialchars((string)($chg['to'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></em></li>
                                             <?php endforeach; ?>
                                             </ul>
                                         </div>
@@ -655,24 +655,24 @@ document.addEventListener('DOMContentLoaded', function() {
 
         <button
             type="button"
-            class="outline-btn"
+            class="solid-btn offer-recommendations-toggle"
             id="offreRecommendationsToggle"
-            data-text-open="<?php echo htmlspecialchars(app_text('Recommendations','Recommendations','التوصيات'), ENT_QUOTES, 'UTF-8'); ?>"
-            data-text-close="<?php echo htmlspecialchars(app_text('Masquer recommendations','Hide recommendations','إخفاء التوصيات'), ENT_QUOTES, 'UTF-8'); ?>"
+            data-text-open="<?php echo htmlspecialchars(app_text('Recommendations','Recommendations','Ø§Ù„ØªÙˆØµÙŠØ§Øª'), ENT_QUOTES, 'UTF-8'); ?>"
+            data-text-close="<?php echo htmlspecialchars(app_text('Masquer recommendations','Hide recommendations','Ø¥Ø®ÙØ§Ø¡ Ø§Ù„ØªÙˆØµÙŠØ§Øª'), ENT_QUOTES, 'UTF-8'); ?>"
             aria-controls="offreRecommendationsPanel"
             aria-expanded="false"
         >
-            ⭐ <?php echo app_text('Recommendations','Recommendations','التوصيات'); ?>
+            <?php echo app_text('Recommendations','Recommendations','التوصيات'); ?>
         </button>
 
-        <a class="solid-btn" href="#mes-candidatures">📋 <?php echo app_text('Mes Candidatures','My applications','طلباتي'); ?></a>
+        <a class="solid-btn" href="#mes-candidatures"><?php echo app_text('Mes Candidatures','My applications','طلباتي'); ?></a>
     </div>
 </section>
 
 <section class="admin-panel reveal offer-recommendations-panel" id="offreRecommendationsPanel" hidden>
     <div class="offer-recommendations-header">
-        <span class="section-badge">⭐ <?php echo app_text('Recommendations','Recommendations','التوصيات'); ?></span>
-        <p class="muted"><?php echo app_text('Offres suggérées selon votre profil et votre historique.','Suggested offers based on your profile and history.','عروض مقترحة حسب ملفك وسجلّك.'); ?></p>
+        <span class="section-badge"><?php echo app_text('Recommendations','Recommendations','التوصيات'); ?></span>
+        <p class="muted"><?php echo app_text('Offres suggerees selon votre profil et votre historique.','Suggested offers based on your profile and history.','عروض مقترحة حسب ملفك وسجلك.'); ?></p>
     </div>
     <div id="offreRecommendationsState" class="offer-recommendations-state" hidden></div>
     <div id="offreRecommendationsList" class="offer-recommendations-list"></div>
@@ -681,15 +681,15 @@ document.addEventListener('DOMContentLoaded', function() {
 <section class="admin-stats reveal" id="offreStatsBar">
     <article class="admin-stat">
         <strong id="offreStatCount"><?php echo htmlspecialchars((string) count($sortedOffersForList), ENT_QUOTES, 'UTF-8'); ?></strong>
-        <span id="offreStatCountLabel" data-label-all="<?php echo htmlspecialchars(app_text('Offres Actives','Active Offers','العروض النشطة'), ENT_QUOTES, 'UTF-8'); ?>" data-label-results="<?php echo htmlspecialchars(app_text('Résultats','Results','النتائج'), ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars(app_text('Offres Actives','Active Offers','العروض النشطة'), ENT_QUOTES, 'UTF-8'); ?></span>
+        <span id="offreStatCountLabel" data-label-all="<?php echo htmlspecialchars(app_text('Offres Actives','Active Offers','Ø§Ù„Ø¹Ø±ÙˆØ¶ Ø§Ù„Ù†Ø´Ø·Ø©'), ENT_QUOTES, 'UTF-8'); ?>" data-label-results="<?php echo htmlspecialchars(app_text('RÃ©sultats','Results','Ø§Ù„Ù†ØªØ§Ø¦Ø¬'), ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars(app_text('Offres Actives','Active Offers','Ø§Ù„Ø¹Ø±ÙˆØ¶ Ø§Ù„Ù†Ø´Ø·Ø©'), ENT_QUOTES, 'UTF-8'); ?></span>
     </article>
     <article class="admin-stat">
         <strong id="offreStatLocalized"><?php echo htmlspecialchars((string) count(array_filter($sortedOffersForList, static fn ($o) => !empty($o['localisation']))), ENT_QUOTES, 'UTF-8'); ?></strong>
-        <span><?php echo app_text('Offres Localisées','Localized Offers','العروض المحلية'); ?></span>
+        <span><?php echo app_text('Offres LocalisÃ©es','Localized Offers','Ø§Ù„Ø¹Ø±ÙˆØ¶ Ø§Ù„Ù…Ø­Ù„ÙŠØ©'); ?></span>
     </article>
     <article class="admin-stat">
         <strong id="offreStatTypes"><?php echo htmlspecialchars((string) count(array_unique(array_column($sortedOffersForList, 'type_service'))), ENT_QUOTES, 'UTF-8'); ?></strong>
-        <span><?php echo app_text('Types de Services','Service Types','أنواع الخدمات'); ?></span>
+        <span><?php echo app_text('Types de Services','Service Types','Ø£Ù†ÙˆØ§Ø¹ Ø§Ù„Ø®Ø¯Ù…Ø§Øª'); ?></span>
     </article>
 </section>
 
@@ -697,13 +697,13 @@ document.addEventListener('DOMContentLoaded', function() {
     <div class="offers-column" id="offresOffersColumn">
         <?php if (empty($activeOffers)): ?>
             <article class="card offers-empty-state">
-                <h3><?php echo app_text('Aucune offre disponible pour le moment','No offers available at the moment','لا توجد عروض متاحة حالياً'); ?></h3>
-                <p><?php echo app_text('Revenez bientôt pour découvrir de nouvelles offres exclusives !','Check back soon for new exclusive offers!','عد لاحقاً لاكتشاف عروض حصرية جديدة!'); ?></p>
+                <h3><?php echo app_text('Aucune offre disponible pour le moment','No offers available at the moment','Ù„Ø§ ØªÙˆØ¬Ø¯ Ø¹Ø±ÙˆØ¶ Ù…ØªØ§Ø­Ø© Ø­Ø§Ù„ÙŠØ§Ù‹'); ?></h3>
+                <p><?php echo app_text('Revenez bientÃ´t pour dÃ©couvrir de nouvelles offres exclusives !','Check back soon for new exclusive offers!','Ø¹Ø¯ Ù„Ø§Ø­Ù‚Ø§Ù‹ Ù„Ø§ÙƒØªØ´Ø§Ù Ø¹Ø±ÙˆØ¶ Ø­ØµØ±ÙŠØ© Ø¬Ø¯ÙŠØ¯Ø©!'); ?></p>
             </article>
         <?php else: ?>
             <article class="card offers-empty-state js-offres-filter-empty" id="offresFilterEmpty" hidden>
-                <h3><?php echo app_text('Aucune offre ne correspond à votre recherche','No offers match your search','لا توجد عروض تطابق بحثك'); ?></h3>
-                <p><?php echo app_text('Essayez un autre mot-clé ou un autre service.','Try another keyword or another service.','جرّب كلمة مفتاحية أخرى أو خدمة أخرى.'); ?></p>
+                <h3><?php echo app_text('Aucune offre ne correspond Ã  votre recherche','No offers match your search','Ù„Ø§ ØªÙˆØ¬Ø¯ Ø¹Ø±ÙˆØ¶ ØªØ·Ø§Ø¨Ù‚ Ø¨Ø­Ø«Ùƒ'); ?></h3>
+                <p><?php echo app_text('Essayez un autre mot-clÃ© ou un autre service.','Try another keyword or another service.','Ø¬Ø±Ù‘Ø¨ ÙƒÙ„Ù…Ø© Ù…ÙØªØ§Ø­ÙŠØ© Ø£Ø®Ø±Ù‰ Ø£Ùˆ Ø®Ø¯Ù…Ø© Ø£Ø®Ø±Ù‰.'); ?></p>
             </article>
             <?php foreach ($sortedOffersForList as $offer): ?>
                 <?php
@@ -727,13 +727,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
                     <div class="offer-glance-grid">
                         <div>
-                            <strong class="offer-glance-label"><?php echo app_text('Localisation','Location','الموقع'); ?></strong>
+                            <strong class="offer-glance-label"><?php echo app_text('Localisation','Location','Ø§Ù„Ù…ÙˆÙ‚Ø¹'); ?></strong>
                             <p class="offer-glance-value">
-                                <?php echo htmlspecialchars($offer['localisation'] ?: 'Non spécifiée', ENT_QUOTES, 'UTF-8'); ?>
+                                <?php echo htmlspecialchars($offer['localisation'] ?: 'Non spÃ©cifiÃ©e', ENT_QUOTES, 'UTF-8'); ?>
                             </p>
                         </div>
                         <div>
-                            <strong class="offer-glance-label"><?php echo app_text("Valide jusqu\'au",'Valid until','صالحة حتى'); ?></strong>
+                            <strong class="offer-glance-label"><?php echo app_text("Valide jusqu\'au",'Valid until','ØµØ§Ù„Ø­Ø© Ø­ØªÙ‰'); ?></strong>
                             <p class="offer-glance-value">
                                 <?php echo htmlspecialchars(formatOfferDate($offer['date_expiration']), ENT_QUOTES, 'UTF-8'); ?>
                             </p>
@@ -741,30 +741,30 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
 
                     <div class="meta-row offer-meta-row">
-                        <span>📅 <?php echo app_text('Publié','Published','نشر'); ?> : <?php echo htmlspecialchars(formatOfferDate($offer['date_publication']), ENT_QUOTES, 'UTF-8'); ?></span>
+                        <span>ðŸ“… <?php echo app_text('PubliÃ©','Published','Ù†Ø´Ø±'); ?> : <?php echo htmlspecialchars(formatOfferDate($offer['date_publication']), ENT_QUOTES, 'UTF-8'); ?></span>
                         <span>
-                            💰 <?php echo app_text('Prix','Price','السعر'); ?> :
+                            ðŸ’° <?php echo app_text('Prix','Price','Ø§Ù„Ø³Ø¹Ø±'); ?> :
                             <?php echo htmlspecialchars(isset($offer['prix']) && $offer['prix'] !== null ? number_format((float) $offer['prix'], 2, '.', ' ') . ' TND' : 'N/A', ENT_QUOTES, 'UTF-8'); ?>
                         </span>
                     </div>
 
                     <div class="icon-actions offer-card-actions">
-                        <a class="solid-btn postuler-btn" href="#postuler-offre" data-offer-id="<?php echo htmlspecialchars($offer['id_offre'], ENT_QUOTES, 'UTF-8'); ?>" data-offer-title="<?php echo htmlspecialchars($offer['titre'], ENT_QUOTES, 'UTF-8'); ?>">✓ <?php echo app_text('Postuler','Apply','التقديم'); ?></a>
-                        <button type="button" class="small-btn open-location-btn" data-location="<?php echo htmlspecialchars((string) ($offer['localisation'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>"><?php echo app_text('Voir localisation','View location','عرض الموقع'); ?></button>
+                        <a class="solid-btn postuler-btn" href="#postuler-offre" data-offer-id="<?php echo htmlspecialchars($offer['id_offre'], ENT_QUOTES, 'UTF-8'); ?>" data-offer-title="<?php echo htmlspecialchars($offer['titre'], ENT_QUOTES, 'UTF-8'); ?>">âœ“ <?php echo app_text('Postuler','Apply','Ø§Ù„ØªÙ‚Ø¯ÙŠÙ…'); ?></a>
+                        <button type="button" class="small-btn open-location-btn" data-location="<?php echo htmlspecialchars((string) ($offer['localisation'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>"><?php echo app_text('Voir localisation','View location','Ø¹Ø±Ø¶ Ø§Ù„Ù…ÙˆÙ‚Ø¹'); ?></button>
                     </div>
 
                     <div class="offer-details">
                         <div class="offer-details-grid">
                             <p><strong>Titre :</strong> <?php echo htmlspecialchars($offer['titre'] ?: 'N/A', ENT_QUOTES, 'UTF-8'); ?></p>
                             <p><strong>Type de service :</strong> <?php echo htmlspecialchars($offer['type_service'] ?: 'N/A', ENT_QUOTES, 'UTF-8'); ?></p>
-                            <p><strong>Localisation :</strong> <?php echo htmlspecialchars($offer['localisation'] ?: 'Non spécifiée', ENT_QUOTES, 'UTF-8'); ?></p>
+                            <p><strong>Localisation :</strong> <?php echo htmlspecialchars($offer['localisation'] ?: 'Non spÃ©cifiÃ©e', ENT_QUOTES, 'UTF-8'); ?></p>
                             <p><strong>Prix :</strong> <?php echo htmlspecialchars(isset($offer['prix']) && $offer['prix'] !== null ? number_format((float) $offer['prix'], 2, '.', ' ') . ' TND' : 'N/A', ENT_QUOTES, 'UTF-8'); ?></p>
                             <p><strong>Date publication :</strong> <?php echo htmlspecialchars(formatOfferDate($offer['date_publication']), ENT_QUOTES, 'UTF-8'); ?></p>
                             <p><strong>Date expiration :</strong> <?php echo htmlspecialchars(formatOfferDate($offer['date_expiration']), ENT_QUOTES, 'UTF-8'); ?></p>
                             <p><strong>Statut :</strong> <?php echo htmlspecialchars(ucfirst($offer['statut'] ?? 'N/A'), ENT_QUOTES, 'UTF-8'); ?></p>
                             <p><strong>Admin :</strong> <?php echo htmlspecialchars(trim((string) (($offer['admin_nom'] ?? '') . ' ' . ($offer['admin_prenom'] ?? ''))) ?: 'N/A', ENT_QUOTES, 'UTF-8'); ?></p>
                         </div>
-                        <p class="offer-description-title"><strong><?php echo app_text('Description complète :','Full description:','الوصف الكامل:'); ?></strong></p>
+                        <p class="offer-description-title"><strong><?php echo app_text('Description complÃ¨te :','Full description:','Ø§Ù„ÙˆØµÙ Ø§Ù„ÙƒØ§Ù…Ù„:'); ?></strong></p>
                         <p class="offer-description-full">
                             <?php echo htmlspecialchars($offer['description'] ?: 'Aucune description', ENT_QUOTES, 'UTF-8'); ?>
                         </p>
@@ -777,7 +777,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <div class="apply-column">
         <?php if (!empty($activeOffers)): ?>
                 <article class="panel apply-panel" id="postuler-offre">
-                <span class="section-badge"><?php echo $editingApplicationId > 0 ? app_text('✏️ Modifier candidature','✏️ Edit application','✏️ تعديل الطلب') : app_text('📨 Postuler','📨 Apply','📨 التقديم'); ?></span>
+                <span class="section-badge"><?php echo $editingApplicationId > 0 ? app_text('Modifier candidature','Edit application','تعديل الطلب') : app_text('Postuler','Apply','التقديم'); ?></span>
 
                 <form method="POST" enctype="multipart/form-data" id="applicationForm" class="application-form" novalidate data-require-cv="<?php echo $editingApplicationId > 0 ? 'false' : 'true'; ?>">
                     <input type="hidden" name="action" value="<?php echo $editingApplicationId > 0 ? 'update_application' : 'submit_application'; ?>">
@@ -792,11 +792,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     </select>
                     <small class="field-error" data-error-for="offer_id"><?php echo htmlspecialchars($fieldErrors['offer_id'], ENT_QUOTES, 'UTF-8'); ?></small>
                     <p id="selectedOfferLabel" class="selected-offer-label">
-                        <?php echo app_text('Offre sélectionnée :','Selected offer:','العرض المحدد:'); ?> <span><?php echo htmlspecialchars($selectedOfferTitle, ENT_QUOTES, 'UTF-8'); ?></span>
+                        <?php echo app_text('Offre sÃ©lectionnÃ©e :','Selected offer:','Ø§Ù„Ø¹Ø±Ø¶ Ø§Ù„Ù…Ø­Ø¯Ø¯:'); ?> <span><?php echo htmlspecialchars($selectedOfferTitle, ENT_QUOTES, 'UTF-8'); ?></span>
                     </p>
                     <div class="form-grid application-grid">
-                        <input type="text" name="experience" id="experienceField" placeholder="<?php echo app_text('Années d\'experience','Years of experience','سنوات الخبرة'); ?>" value="<?php echo htmlspecialchars($formData['experience'], ENT_QUOTES, 'UTF-8'); ?>" aria-invalid="<?php echo $fieldErrors['experience'] !== '' ? 'true' : 'false'; ?>">
-                            <input type="text" name="competences" id="competencesField" placeholder="<?php echo app_text('Vos competences cles','Your key skills','مهاراتك الرئيسية'); ?>" value="<?php echo htmlspecialchars($formData['competences'], ENT_QUOTES, 'UTF-8'); ?>" aria-invalid="<?php echo $fieldErrors['competences'] !== '' ? 'true' : 'false'; ?>">
+                        <input type="text" name="experience" id="experienceField" placeholder="<?php echo app_text('AnnÃ©es d\'experience','Years of experience','Ø³Ù†ÙˆØ§Øª Ø§Ù„Ø®Ø¨Ø±Ø©'); ?>" value="<?php echo htmlspecialchars($formData['experience'], ENT_QUOTES, 'UTF-8'); ?>" aria-invalid="<?php echo $fieldErrors['experience'] !== '' ? 'true' : 'false'; ?>">
+                            <input type="text" name="competences" id="competencesField" placeholder="<?php echo app_text('Vos competences cles','Your key skills','Ù…Ù‡Ø§Ø±Ø§ØªÙƒ Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠØ©'); ?>" value="<?php echo htmlspecialchars($formData['competences'], ENT_QUOTES, 'UTF-8'); ?>" aria-invalid="<?php echo $fieldErrors['competences'] !== '' ? 'true' : 'false'; ?>">
                         <small class="field-error" data-error-for="experience"><?php echo htmlspecialchars($fieldErrors['experience'], ENT_QUOTES, 'UTF-8'); ?></small>
                         <small class="field-error" data-error-for="competences"><?php echo htmlspecialchars($fieldErrors['competences'], ENT_QUOTES, 'UTF-8'); ?></small>
 
@@ -806,37 +806,37 @@ document.addEventListener('DOMContentLoaded', function() {
                         <?php endif; ?>
                         <small class="field-error full-row" data-error-for="cv"><?php echo htmlspecialchars($fieldErrors['cv'], ENT_QUOTES, 'UTF-8'); ?></small>
 
-                        <textarea name="message" id="messageField" placeholder="<?php echo app_text('Lettre de motivation...','Cover letter...','رسالة التحفيز...'); ?>" rows="4" aria-invalid="<?php echo $fieldErrors['message'] !== '' ? 'true' : 'false'; ?>"><?php echo htmlspecialchars($formData['message'], ENT_QUOTES, 'UTF-8'); ?></textarea>
+                        <textarea name="message" id="messageField" placeholder="<?php echo app_text('Lettre de motivation...','Cover letter...','Ø±Ø³Ø§Ù„Ø© Ø§Ù„ØªØ­ÙÙŠØ²...'); ?>" rows="4" aria-invalid="<?php echo $fieldErrors['message'] !== '' ? 'true' : 'false'; ?>"><?php echo htmlspecialchars($formData['message'], ENT_QUOTES, 'UTF-8'); ?></textarea>
                         <small class="field-error full-row" data-error-for="message"><?php echo htmlspecialchars($fieldErrors['message'], ENT_QUOTES, 'UTF-8'); ?></small>
                     </div>
 
                     <div class="icon-actions apply-actions">
-                        <button type="submit" class="solid-btn full-width-btn"><?php echo $editingApplicationId > 0 ? app_text('Enregistrer les modifications','Save changes','حفظ التعديلات') : app_text('Envoyer ma candidature','Send my application','إرسال الطلب'); ?></button>
-                        <button type="reset" class="outline-btn full-width-btn"><?php echo app_text('Réinitialiser','Reset','إعادة تعيين'); ?></button>
+                        <button type="submit" class="solid-btn full-width-btn"><?php echo $editingApplicationId > 0 ? app_text('Enregistrer les modifications','Save changes','Ø­ÙØ¸ Ø§Ù„ØªØ¹Ø¯ÙŠÙ„Ø§Øª') : app_text('Envoyer ma candidature','Send my application','Ø¥Ø±Ø³Ø§Ù„ Ø§Ù„Ø·Ù„Ø¨'); ?></button>
+                        <button type="reset" class="outline-btn full-width-btn"><?php echo app_text('RÃ©initialiser','Reset','Ø¥Ø¹Ø§Ø¯Ø© ØªØ¹ÙŠÙŠÙ†'); ?></button>
                         <?php if ($editingApplicationId > 0): ?>
-                            <a href="index.php?page=offre#postuler-offre" class="outline-btn full-width-btn"><?php echo app_text('Annuler la modification','Cancel edit','إلغاء التعديل'); ?></a>
+                            <a href="index.php?page=offre#postuler-offre" class="outline-btn full-width-btn"><?php echo app_text('Annuler la modification','Cancel edit','Ø¥Ù„ØºØ§Ø¡ Ø§Ù„ØªØ¹Ø¯ÙŠÙ„'); ?></a>
                         <?php endif; ?>
                     </div>
                 </form>
             </article>
         <?php else: ?>
             <article class="panel apply-panel" id="postuler-offre">
-                <span class="section-badge"><?php echo app_text('📨 Postuler','📨 Apply','📨 التقديم'); ?></span>
+                <span class="section-badge"><?php echo app_text('Postuler','Apply','التقديم'); ?></span>
                 <div class="application-empty-state">
-                    <strong><?php echo app_text('Aucune offre active disponible','No active offers available','لا توجد عروض نشطة متاحة'); ?></strong>
-                    <p><?php echo app_text('Vous ne pouvez pas postuler pour le moment car il n\'y a aucune offre active dans le catalogue.','You cannot apply at the moment as there are no active offers in the catalog.','لا يمكنك التقديم في الوقت الحالي لأنه لا توجد عروض نشطة في الكتالوج.'); ?></p>
+                    <strong><?php echo app_text('Aucune offre active disponible','No active offers available','Ù„Ø§ ØªÙˆØ¬Ø¯ Ø¹Ø±ÙˆØ¶ Ù†Ø´Ø·Ø© Ù…ØªØ§Ø­Ø©'); ?></strong>
+                    <p><?php echo app_text('Vous ne pouvez pas postuler pour le moment car il n\'y a aucune offre active dans le catalogue.','You cannot apply at the moment as there are no active offers in the catalog.','Ù„Ø§ ÙŠÙ…ÙƒÙ†Ùƒ Ø§Ù„ØªÙ‚Ø¯ÙŠÙ… ÙÙŠ Ø§Ù„ÙˆÙ‚Øª Ø§Ù„Ø­Ø§Ù„ÙŠ Ù„Ø£Ù†Ù‡ Ù„Ø§ ØªÙˆØ¬Ø¯ Ø¹Ø±ÙˆØ¶ Ù†Ø´Ø·Ø© ÙÙŠ Ø§Ù„ÙƒØªØ§Ù„ÙˆØ¬.'); ?></p>
                 </div>
             </article>
         <?php endif; ?>
 
         <div class="panel benefits-panel">
-            <span class="section-badge">✨ <?php echo app_text('Avantages','Benefits','المميزات'); ?></span>
+            <span class="section-badge"><?php echo app_text('Avantages','Benefits','المميزات'); ?></span>
             <div class="feature-list">
-                <div class="feature-item">✓ <?php echo app_text('Offres exclusives','Exclusive offers','عروض حصرية'); ?></div>
-                <div class="feature-item">✓ <?php echo app_text('Prestataires vérifiés','Verified providers','مقدمو خدمات موثوقون'); ?></div>
-                <div class="feature-item">✓ <?php echo app_text('Paiement sécurisé','Secure payment','دفع آمن'); ?></div>
-                <div class="feature-item">✓ <?php echo app_text('Support client 24/7','24/7 Customer support','دعم العملاء 24/7'); ?></div>
-                <div class="feature-item">✓ <?php echo app_text('Garantie satisfaction','Satisfaction guarantee','ضمان الرضا'); ?></div>
+                <div class="feature-item"><?php echo app_text('Offres exclusives','Exclusive offers','عروض حصرية'); ?></div>
+                <div class="feature-item"><?php echo app_text('Prestataires verifies','Verified providers','مقدمو خدمات موثوقون'); ?></div>
+                <div class="feature-item"><?php echo app_text('Paiement securise','Secure payment','دفع آمن'); ?></div>
+                <div class="feature-item"><?php echo app_text('Support client 24/7','24/7 Customer support','دعم العملاء 24/7'); ?></div>
+                <div class="feature-item"><?php echo app_text('Garantie satisfaction','Satisfaction guarantee','ضمان الرضا'); ?></div>
             </div>
         </div>
     </div>
@@ -852,8 +852,8 @@ document.addEventListener('DOMContentLoaded', function() {
         </button>
         <header class="modal-header">
             <div>
-                <h2 id="offerLocationMapTitle"><?php echo app_text('Localisation de l\'offre','Offer location','موقع العرض'); ?></h2>
-                <p class="muted" id="offerLocationMapSubtitle"><?php echo app_text('Localisation exacte sur la carte','Exact location on the map','الموقع الدقيق على الخريطة'); ?></p>
+                <h2 id="offerLocationMapTitle"><?php echo app_text('Localisation de l\'offre','Offer location','Ù…ÙˆÙ‚Ø¹ Ø§Ù„Ø¹Ø±Ø¶'); ?></h2>
+                <p class="muted" id="offerLocationMapSubtitle"><?php echo app_text('Localisation exacte sur la carte','Exact location on the map','Ø§Ù„Ù…ÙˆÙ‚Ø¹ Ø§Ù„Ø¯Ù‚ÙŠÙ‚ Ø¹Ù„Ù‰ Ø§Ù„Ø®Ø±ÙŠØ·Ø©'); ?></p>
             </div>
         </header>
         <div class="modal-body offer-location-modal-body">
@@ -861,7 +861,7 @@ document.addEventListener('DOMContentLoaded', function() {
             <div id="offerLocationMapContainer" class="offer-location-map-container"></div>
         </div>
         <footer class="modal-footer" style="justify-content:flex-end;">
-            <button type="button" class="outline-btn" id="offerLocationMapCloseBtn"><?php echo app_text('Fermer','Close','إغلاق'); ?></button>
+            <button type="button" class="outline-btn" id="offerLocationMapCloseBtn"><?php echo app_text('Fermer','Close','Ø¥ØºÙ„Ø§Ù‚'); ?></button>
         </footer>
     </div>
 </div>
@@ -870,12 +870,12 @@ document.addEventListener('DOMContentLoaded', function() {
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <section class="admin-panel reveal my-applications-panel" id="mes-candidatures">
-    <span class="section-badge">📋 <?php echo app_text('Mes Candidatures','My applications','طلباتي'); ?></span>
+    <span class="section-badge"><?php echo app_text('Mes Candidatures','My applications','طلباتي'); ?></span>
 
     <?php if (empty($userApplications)): ?>
         <div class="application-empty-state" style="margin-top: 14px;">
-            <strong><?php echo app_text('Aucune candidature enregistrée','No applications recorded','لا توجد طلبات مسجلة'); ?></strong>
-            <p><?php echo app_text("Commencez par postuler à une offre pour voir vos candidatures ici.",'Start by applying to an offer to see your applications here.','ابدأ بالتقديم على عرض لرؤية طلباتك هنا.'); ?></p>
+            <strong><?php echo app_text('Aucune candidature enregistrÃ©e','No applications recorded','Ù„Ø§ ØªÙˆØ¬Ø¯ Ø·Ù„Ø¨Ø§Øª Ù…Ø³Ø¬Ù„Ø©'); ?></strong>
+            <p><?php echo app_text("Commencez par postuler Ã  une offre pour voir vos candidatures ici.",'Start by applying to an offer to see your applications here.','Ø§Ø¨Ø¯Ø£ Ø¨Ø§Ù„ØªÙ‚Ø¯ÙŠÙ… Ø¹Ù„Ù‰ Ø¹Ø±Ø¶ Ù„Ø±Ø¤ÙŠØ© Ø·Ù„Ø¨Ø§ØªÙƒ Ù‡Ù†Ø§.'); ?></p>
         </div>
     <?php else: ?>
         <div class="application-card-list" style="margin-top: 14px;">
@@ -887,8 +887,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 <article class="application-card">
                     <div class="application-card-head">
                         <div>
-                            <span class="application-chip"><?php echo app_text('Candidature','Application','الطلب'); ?></span>
-                            <h3 class="application-title"><?php echo htmlspecialchars((string) ($application['offer_titre'] ?? app_text('Offre supprimée','Offer deleted','تم حذف العرض')), ENT_QUOTES, 'UTF-8'); ?></h3>
+                            <span class="application-chip"><?php echo app_text('Candidature','Application','Ø§Ù„Ø·Ù„Ø¨'); ?></span>
+                            <h3 class="application-title"><?php echo htmlspecialchars((string) ($application['offer_titre'] ?? app_text('Offre supprimÃ©e','Offer deleted','ØªÙ… Ø­Ø°Ù Ø§Ù„Ø¹Ø±Ø¶')), ENT_QUOTES, 'UTF-8'); ?></h3>
                         </div>
                         <span class="application-status <?php echo htmlspecialchars(getApplicationStatusClass($applicationStatus), ENT_QUOTES, 'UTF-8'); ?>">
                             <?php echo htmlspecialchars($applicationStatusLabel, ENT_QUOTES, 'UTF-8'); ?>
@@ -897,20 +897,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
                     <div class="application-card-grid">
                         <div class="application-info-block">
-                            <span><?php echo app_text('Date','Date','التاريخ'); ?></span>
+                            <span><?php echo app_text('Date','Date','Ø§Ù„ØªØ§Ø±ÙŠØ®'); ?></span>
                             <strong><?php echo htmlspecialchars(formatOfferDate($application['created_at'] ?? null), ENT_QUOTES, 'UTF-8'); ?></strong>
                         </div>
                         <div class="application-info-block">
-                            <span><?php echo app_text('Expérience','Experience','الخبرة'); ?></span>
+                            <span><?php echo app_text('ExpÃ©rience','Experience','Ø§Ù„Ø®Ø¨Ø±Ø©'); ?></span>
                             <strong><?php echo htmlspecialchars((string) ($application['experience'] ?? 'N/A'), ENT_QUOTES, 'UTF-8'); ?></strong>
                         </div>
                         <div class="application-info-block application-info-full">
-                            <span><?php echo app_text('Compétences','Skills','المهارات'); ?></span>
+                            <span><?php echo app_text('CompÃ©tences','Skills','Ø§Ù„Ù…Ù‡Ø§Ø±Ø§Øª'); ?></span>
                             <strong><?php echo htmlspecialchars((string) ($application['competences'] ?? 'N/A'), ENT_QUOTES, 'UTF-8'); ?></strong>
                         </div>
                         <?php if (!empty($application['message'])): ?>
                             <div class="application-info-block application-info-full" style="margin-top:12px;">
-                                <span><?php echo app_text('Lettre de motivation','Cover letter','رسالة التحفيز'); ?></span>
+                                <span><?php echo app_text('Lettre de motivation','Cover letter','Ø±Ø³Ø§Ù„Ø© Ø§Ù„ØªØ­ÙÙŠØ²'); ?></span>
                                 <div style="background:var(--card); padding:12px; border-radius:8px; margin-top:6px; color:var(--text);">
                                     <?php echo nl2br(htmlspecialchars((string) $application['message'], ENT_QUOTES, 'UTF-8')); ?>
                                 </div>
@@ -919,11 +919,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
 
                     <div class="application-card-actions">
-                        <a class="small-btn application-edit-btn" href="index.php?page=offre&edit_application=<?php echo htmlspecialchars((string) ($application['id'] ?? 0), ENT_QUOTES, 'UTF-8'); ?>#postuler-offre"><?php echo app_text('Modifier','Edit','تعديل'); ?></a>
+                        <a class="small-btn application-edit-btn" href="index.php?page=offre&edit_application=<?php echo htmlspecialchars((string) ($application['id'] ?? 0), ENT_QUOTES, 'UTF-8'); ?>#postuler-offre"><?php echo app_text('Modifier','Edit','ØªØ¹Ø¯ÙŠÙ„'); ?></a>
                         <form method="POST" class="application-delete-form">
                             <input type="hidden" name="action" value="delete_application">
                             <input type="hidden" name="application_id" value="<?php echo htmlspecialchars((string) ($application['id'] ?? 0), ENT_QUOTES, 'UTF-8'); ?>">
-                            <button type="submit" class="danger-btn application-delete-btn" onclick="return confirm('<?php echo addslashes(app_text("Supprimer cette candidature ?","Delete this application?","حذف هذا الطلب؟")); ?>');"><?php echo app_text('Supprimer','Delete','حذف'); ?></button>
+                            <button type="submit" class="danger-btn application-delete-btn" onclick="return confirm('<?php echo addslashes(app_text("Supprimer cette candidature ?","Delete this application?","Ø­Ø°Ù Ù‡Ø°Ø§ Ø§Ù„Ø·Ù„Ø¨ØŸ")); ?>');"><?php echo app_text('Supprimer','Delete','Ø­Ø°Ù'); ?></button>
                         </form>
                     </div>
                 </article>
@@ -1610,19 +1610,19 @@ body.dark .application-status-danger {
 
     function showLocationOnMap(rawLocation) {
         if (typeof L === 'undefined') {
-            showMapStatus('<?php echo addslashes(app_text('La carte est indisponible pour le moment.','Map is currently unavailable.','الخريطة غير متاحة حالياً.')); ?>');
+            showMapStatus('<?php echo addslashes(app_text('La carte est indisponible pour le moment.','Map is currently unavailable.','Ø§Ù„Ø®Ø±ÙŠØ·Ø© ØºÙŠØ± Ù…ØªØ§Ø­Ø© Ø­Ø§Ù„ÙŠØ§Ù‹.')); ?>');
             return;
         }
 
         ensureLocationMap();
         if (!locationMap) {
-            showMapStatus('<?php echo addslashes(app_text('Impossible d\'initialiser la carte.','Unable to initialize map.','تعذر تهيئة الخريطة.')); ?>');
+            showMapStatus('<?php echo addslashes(app_text('Impossible d\'initialiser la carte.','Unable to initialize map.','ØªØ¹Ø°Ø± ØªÙ‡ÙŠØ¦Ø© Ø§Ù„Ø®Ø±ÙŠØ·Ø©.')); ?>');
             return;
         }
 
         var locationText = String(rawLocation || '').trim();
         if (locationMapSubtitle) {
-            locationMapSubtitle.textContent = locationText || '<?php echo addslashes(app_text('Localisation non spécifiée','Location not specified','الموقع غير محدد')); ?>';
+            locationMapSubtitle.textContent = locationText || '<?php echo addslashes(app_text('Localisation non spÃ©cifiÃ©e','Location not specified','Ø§Ù„Ù…ÙˆÙ‚Ø¹ ØºÙŠØ± Ù…Ø­Ø¯Ø¯')); ?>';
         }
 
         var coords = parseCoordinates(locationText);
@@ -1633,14 +1633,14 @@ body.dark .application-status-danger {
         }
 
         if (!locationText) {
-            showMapStatus('<?php echo addslashes(app_text('Cette offre ne contient pas de localisation.','This offer has no location.','هذا العرض لا يحتوي على موقع.')); ?>');
+            showMapStatus('<?php echo addslashes(app_text('Cette offre ne contient pas de localisation.','This offer has no location.','Ù‡Ø°Ø§ Ø§Ù„Ø¹Ø±Ø¶ Ù„Ø§ ÙŠØ­ØªÙˆÙŠ Ø¹Ù„Ù‰ Ù…ÙˆÙ‚Ø¹.')); ?>');
             locationMap.setView([33.8869, 9.5375], 7);
             return;
         }
 
-        showMapStatus('<?php echo addslashes(app_text('Recherche de l\'adresse...','Searching address...','جاري البحث عن العنوان...')); ?>');
+        showMapStatus('<?php echo addslashes(app_text('Recherche de l\'adresse...','Searching address...','Ø¬Ø§Ø±ÙŠ Ø§Ù„Ø¨Ø­Ø« Ø¹Ù† Ø§Ù„Ø¹Ù†ÙˆØ§Ù†...')); ?>');
         if (typeof fetch !== 'function') {
-            showMapStatus('<?php echo addslashes(app_text('Votre navigateur ne prend pas en charge la recherche d\'adresse automatique.','Your browser does not support automatic address lookup.','متصفحك لا يدعم البحث التلقائي عن العنوان.')); ?>');
+            showMapStatus('<?php echo addslashes(app_text('Votre navigateur ne prend pas en charge la recherche d\'adresse automatique.','Your browser does not support automatic address lookup.','Ù…ØªØµÙØ­Ùƒ Ù„Ø§ ÙŠØ¯Ø¹Ù… Ø§Ù„Ø¨Ø­Ø« Ø§Ù„ØªÙ„Ù‚Ø§Ø¦ÙŠ Ø¹Ù† Ø§Ù„Ø¹Ù†ÙˆØ§Ù†.')); ?>');
             locationMap.setView([33.8869, 9.5375], 7);
             return;
         }
@@ -1660,11 +1660,11 @@ body.dark .application-status-danger {
                         return;
                     }
                 }
-                showMapStatus('<?php echo addslashes(app_text('Adresse introuvable sur la carte.','Address not found on map.','تعذر العثور على العنوان على الخريطة.')); ?>');
+                showMapStatus('<?php echo addslashes(app_text('Adresse introuvable sur la carte.','Address not found on map.','ØªØ¹Ø°Ø± Ø§Ù„Ø¹Ø«ÙˆØ± Ø¹Ù„Ù‰ Ø§Ù„Ø¹Ù†ÙˆØ§Ù† Ø¹Ù„Ù‰ Ø§Ù„Ø®Ø±ÙŠØ·Ø©.')); ?>');
                 locationMap.setView([33.8869, 9.5375], 7);
             })
             .catch(function() {
-                showMapStatus('<?php echo addslashes(app_text('Erreur lors de la recherche de l\'adresse.','Error while searching for address.','حدث خطأ أثناء البحث عن العنوان.')); ?>');
+                showMapStatus('<?php echo addslashes(app_text('Erreur lors de la recherche de l\'adresse.','Error while searching for address.','Ø­Ø¯Ø« Ø®Ø·Ø£ Ø£Ø«Ù†Ø§Ø¡ Ø§Ù„Ø¨Ø­Ø« Ø¹Ù† Ø§Ù„Ø¹Ù†ÙˆØ§Ù†.')); ?>');
                 locationMap.setView([33.8869, 9.5375], 7);
             });
     }
@@ -1883,13 +1883,13 @@ body.dark .application-status-danger {
             else if (Array.isArray(payload.data)) items = payload.data;
         }
         if (!items.length) {
-            showRecommendationsState('<?php echo addslashes(app_text('Aucune recommandation disponible pour le moment.','No recommendations available at the moment.','لا توجد توصيات متاحة حالياً.')); ?>');
+            showRecommendationsState('<?php echo addslashes(app_text('Aucune recommandation disponible pour le moment.','No recommendations available at the moment.','Ù„Ø§ ØªÙˆØ¬Ø¯ ØªÙˆØµÙŠØ§Øª Ù…ØªØ§Ø­Ø© Ø­Ø§Ù„ÙŠØ§Ù‹.')); ?>');
             return;
         }
 
         hideRecommendationsState();
-        var viewLabel = '<?php echo addslashes(app_text('Voir l\'offre','View offer','عرض العرض')); ?>';
-        var scoreLabel = '<?php echo addslashes(app_text('Score','Score','النقاط')); ?>';
+        var viewLabel = '<?php echo addslashes(app_text('Voir l\'offre','View offer','Ø¹Ø±Ø¶ Ø§Ù„Ø¹Ø±Ø¶')); ?>';
+        var scoreLabel = '<?php echo addslashes(app_text('Score','Score','Ø§Ù„Ù†Ù‚Ø§Ø·')); ?>';
         for (var i = 0; i < items.length; i++) {
             var item = items[i] || {};
             var id = Number(item.id || 0);
@@ -1897,14 +1897,14 @@ body.dark .application-status-danger {
             var card = document.createElement('article');
             card.className = 'offer-recommendation-card';
 
-            var typeService = escapeHtmlRec(item.type_service || '<?php echo addslashes(app_text('Service','Service','خدمة')); ?>');
+            var typeService = escapeHtmlRec(item.type_service || '<?php echo addslashes(app_text('Service','Service','Ø®Ø¯Ù…Ø©')); ?>');
             var titleRaw = String(item.titre || item.title || item.titre_offre || '').trim();
             if (!titleRaw) {
-                titleRaw = '<?php echo addslashes(app_text('Offre','Offer','عرض')); ?> #' + id;
+                titleRaw = '<?php echo addslashes(app_text('Offre','Offer','Ø¹Ø±Ø¶')); ?> #' + id;
             }
             var titleHtml = '<h3 class="offer-recommendation-title">' + escapeHtmlRec(titleRaw) + '</h3>';
             var locRaw = String(item.localisation || '').trim();
-            var city = escapeHtmlRec(locRaw || '<?php echo addslashes(app_text('Lieu non précisé','Location not specified','الموقع غير محدد')); ?>');
+            var city = escapeHtmlRec(locRaw || '<?php echo addslashes(app_text('Lieu non precise','Location not specified','الموقع غير محدد')); ?>');
             var score = Math.round(Number(item.score || 0));
 
             card.innerHTML =
@@ -1913,7 +1913,7 @@ body.dark .application-status-danger {
                     '<span class="offer-recommendation-score">' + scoreLabel + ': ' + score + '</span>' +
                 '</div>' +
                 titleHtml +
-                '<p class="offer-recommendation-city">📍 ' + city + '</p>' +
+                '<p class="offer-recommendation-city">' + city + '</p>' +
                 '<a class="small-btn" href="index.php?page=offre&offer_id=' + encodeURIComponent(String(id)) + '#postuler-offre">' + viewLabel + '</a>';
 
             recommendationsList.appendChild(card);
@@ -1925,10 +1925,10 @@ body.dark .application-status-danger {
             return Promise.resolve();
         }
         if (recommendationsUserId <= 0) {
-            showRecommendationsState('<?php echo addslashes(app_text('Connectez-vous pour voir des offres personnalisées.','Sign in to see personalized offers.','سجّل الدخول لرؤية عروض مخصصة.')); ?>');
+            showRecommendationsState('<?php echo addslashes(app_text('Connectez-vous pour voir des offres personnalisÃ©es.','Sign in to see personalized offers.','Ø³Ø¬Ù‘Ù„ Ø§Ù„Ø¯Ø®ÙˆÙ„ Ù„Ø±Ø¤ÙŠØ© Ø¹Ø±ÙˆØ¶ Ù…Ø®ØµØµØ©.')); ?>');
             return Promise.resolve();
         }
-        showRecommendationsState('<?php echo addslashes(app_text('Chargement des recommandations...','Loading recommendations...','جار تحميل التوصيات...')); ?>');
+        showRecommendationsState('<?php echo addslashes(app_text('Chargement des recommandations...','Loading recommendations...','Ø¬Ø§Ø± ØªØ­Ù…ÙŠÙ„ Ø§Ù„ØªÙˆØµÙŠØ§Øª...')); ?>');
 
         var baseApi = new URL('../../api/recommendations.php', window.location.href);
         baseApi.searchParams.set('userId', String(recommendationsUserId));
@@ -1955,7 +1955,7 @@ body.dark .application-status-danger {
                 renderRecommendations(payload);
             })
             .catch(function() {
-                showRecommendationsState('<?php echo addslashes(app_text('Impossible de charger les recommandations pour le moment.','Unable to load recommendations right now.','تعذر تحميل التوصيات حالياً.')); ?>');
+                showRecommendationsState('<?php echo addslashes(app_text('Impossible de charger les recommandations pour le moment.','Unable to load recommendations right now.','ØªØ¹Ø°Ø± ØªØ­Ù…ÙŠÙ„ Ø§Ù„ØªÙˆØµÙŠØ§Øª Ø­Ø§Ù„ÙŠØ§Ù‹.')); ?>');
             });
     }
 
@@ -1975,7 +1975,7 @@ body.dark .application-status-danger {
     }
 
     if (recommendationsToggle && recommendationsPanel) {
-        closeRecommendationsPanel();
+        openRecommendationsPanel();
         recommendationsToggle.addEventListener('click', function() {
             if (recommendationsPanel.hasAttribute('hidden')) {
                 openRecommendationsPanel();
@@ -1986,3 +1986,5 @@ body.dark .application-status-danger {
     }
 })();
 </script>
+
+
