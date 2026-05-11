@@ -1,5 +1,8 @@
 <?php
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 $page = $_GET['page'] ?? 'home';
 
 $allowedPages = [
@@ -22,6 +25,7 @@ $allowedPages = [
     'reserver',
     'confirmation',
     'myReservations',
+    'savedPosts',
 ];
 
 if (!in_array($page, $allowedPages, true)) {
