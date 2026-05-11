@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 $pageTitles = [
     'dashboard'    => 'Dashboard',
     'users'        => 'Gestion des utilisateurs',
@@ -6,6 +6,7 @@ $pageTitles = [
     'categories'   => 'Gestion des catégories',
     'reservations' => 'Gestion des réservations',
     'offers'       => 'Gestion des offres',
+    'offer_applications' => 'Candidatures de l\'offre',
     'forum'        => 'Modération du forum',
     'reclamation'  => 'Gestion des réclamations',
     'events'       => 'Gestion des événements',
@@ -78,5 +79,6 @@ $adminNav = [
 
     <script src="../../assets/js/theme.js"></script>
     <script src="../../assets/js/main.js"></script>
+    <script src="../../assets/js/offers-admin.js"></script>
 </body>
 </html>

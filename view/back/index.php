@@ -16,6 +16,7 @@ $allowedPages = [
     'categories',
     'reservations',
     'offers',
+    'offer_applications',
     'forum',
     'reclamation',
     'events',

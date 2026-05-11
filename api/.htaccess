@@ -1,0 +1,4 @@
+RewriteEngine On
+
+# Support REST path: /api/recommendations/{userId}
+RewriteRule ^recommendations/([0-9]+)$ recommendations.php?userId=$1 [QSA,L]

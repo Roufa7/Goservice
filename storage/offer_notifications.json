@@ -1,0 +1,357 @@
+[
+    {
+        "id": "notif_6a007bed39c9f8.94717273",
+        "offer_id": 26,
+        "type": "modification",
+        "headline": {
+            "fr": "Offre modifiée",
+            "en": "Offer updated",
+            "ar": "تم تعديل العرض"
+        },
+        "message": "architechture",
+        "details": {
+            "type_service": "design",
+            "localisation": "34.005057,9.399111",
+            "prix": "4 444.00 TND"
+        },
+        "changes": {
+            "date_expiration": {
+                "from": "2026-05-21 00:00:00",
+                "to": "2026-05-10 00:00:00"
+            }
+        },
+        "link": "index.php?page=offre&offer_id=26",
+        "time": "2026-05-10T14:37:01+02:00",
+        "read": false
+    },
+    {
+        "id": "notif_6a007b01b12b89.29236769",
+        "offer_id": 26,
+        "type": "modification",
+        "headline": {
+            "fr": "Offre modifiée",
+            "en": "Offer updated",
+            "ar": "تم تعديل العرض"
+        },
+        "message": "architechture",
+        "details": {
+            "type_service": "design",
+            "localisation": "34.005057,9.399111",
+            "prix": "4 444.00 TND"
+        },
+        "changes": {
+            "localisation": {
+                "from": "tozeur",
+                "to": "34.005057,9.399111"
+            },
+            "date_expiration": {
+                "from": "2026-05-08 00:00:00",
+                "to": "2026-05-21 00:00:00"
+            },
+            "statut": {
+                "from": "fermee",
+                "to": "ouverte"
+            }
+        },
+        "link": "index.php?page=offre&offer_id=26",
+        "time": "2026-05-10T14:33:05+02:00",
+        "read": false
+    },
+    {
+        "id": "notif_6a0071b6b33e79.88917180",
+        "offer_id": 32,
+        "type": "modification",
+        "headline": {
+            "fr": "Offre modifiée",
+            "en": "Offer updated",
+            "ar": "تم تعديل العرض"
+        },
+        "message": "anniv",
+        "details": {
+            "type_service": "evenementiel",
+            "localisation": "tozeur",
+            "prix": "4 444.00 TND"
+        },
+        "changes": {
+            "localisation": {
+                "from": "ccssssss",
+                "to": "tozeur"
+            }
+        },
+        "link": "index.php?page=offre&offer_id=32",
+        "time": "2026-05-10T13:53:26+02:00",
+        "read": false
+    },
+    {
+        "id": "notif_6a007146539905.51381163",
+        "offer_id": 33,
+        "type": "suppression",
+        "headline": {
+            "fr": "Offre supprimée",
+            "en": "Offer deleted",
+            "ar": "تم حذف العرض"
+        },
+        "message": "proffessionnel",
+        "details": {
+            "type_service": "nettoyage",
+            "localisation": "tozeur",
+            "prix": "111.00"
+        },
+        "link": "index.php?page=offre",
+        "time": "2026-05-10T13:51:34+02:00",
+        "read": false
+    },
+    {
+        "id": "notif_6a0071426029d3.51627484",
+        "offer_id": 34,
+        "type": "suppression",
+        "headline": {
+            "fr": "Offre supprimée",
+            "en": "Offer deleted",
+            "ar": "تم حذف العرض"
+        },
+        "message": "tayy",
+        "details": {
+            "type_service": "design",
+            "localisation": "tunis",
+            "prix": "44444.00"
+        },
+        "link": "index.php?page=offre",
+        "time": "2026-05-10T13:51:30+02:00",
+        "read": false
+    },
+    {
+        "id": "notif_69fc5d051f8918.91209030",
+        "offer_id": 30,
+        "type": "suppression",
+        "headline": {
+            "fr": "Offre supprimée",
+            "en": "Offer deleted",
+            "ar": "تم حذف العرض"
+        },
+        "message": "designer",
+        "details": {
+            "type_service": "evenementiel",
+            "localisation": "ras jebel",
+            "prix": "100.00"
+        },
+        "link": "index.php?page=offre",
+        "time": "2026-05-07T11:36:05+02:00",
+        "read": false
+    },
+    {
+        "id": "notif_69fc589d299923.57552024",
+        "offer_id": 13,
+        "type": "suppression",
+        "headline": {
+            "fr": "Offre supprimée",
+            "en": "Offer deleted",
+            "ar": "تم حذف العرض"
+        },
+        "message": "proffesionnel cuisinier",
+        "details": {
+            "type_service": "nettoyage",
+            "localisation": "bizerte",
+            "prix": "500.00"
+        },
+        "link": "index.php?page=offre",
+        "time": "2026-05-07T11:17:17+02:00",
+        "read": false
+    },
+    {
+        "id": "notif_69fc5832a98377.11110883",
+        "offer_id": 16,
+        "type": "suppression",
+        "headline": {
+            "fr": "Offre supprimée",
+            "en": "Offer deleted",
+            "ar": "تم حذف العرض"
+        },
+        "message": "proffessionnel",
+        "details": {
+            "type_service": "plomberie",
+            "localisation": "bnjk",
+            "prix": "78965.00"
+        },
+        "link": "index.php?page=offre",
+        "time": "2026-05-07T11:15:30+02:00",
+        "read": false
+    },
+    {
+        "id": "notif_69fc5478742e51.54619647",
+        "offer_id": 30,
+        "type": "modification",
+        "headline": {
+            "fr": "Offre modifiée",
+            "en": "Offer updated",
+            "ar": "تم تعديل العرض"
+        },
+        "message": "designer",
+        "details": {
+            "type_service": "evenementiel",
+            "localisation": "ras jebel",
+            "prix": "100.00 TND"
+        },
+        "changes": {
+            "type_service": {
+                "from": "design",
+                "to": "evenementiel"
+            }
+        },
+        "link": "index.php?page=offre&offer_id=30",
+        "time": "2026-05-07T10:59:36+02:00",
+        "read": false
+    },
+    {
+        "id": "notif_69fb9a0de01c24.42839225",
+        "offer_id": 29,
+        "type": "modification",
+        "headline": {
+            "fr": "Offre modifiée",
+            "en": "Offer updated",
+            "ar": "تم تعديل العرض"
+        },
+        "message": "anniversaire",
+        "details": {
+            "type_service": "nettoyage",
+            "localisation": "bizerte",
+            "prix": "300.00 TND"
+        },
+        "changes": {
+            "date_expiration": {
+                "from": "2026-05-07 00:00:00",
+                "to": "2026-05-27 00:00:00"
+            }
+        },
+        "link": "index.php?page=offre&offer_id=29",
+        "time": "2026-05-06T21:44:13+02:00",
+        "read": false
+    },
+    {
+        "id": "notif_69fb94b64a08b3.50496229",
+        "offer_id": 16,
+        "type": "modification",
+        "headline": {
+            "fr": "Offre modifiée",
+            "en": "Offer updated",
+            "ar": "تم تعديل العرض"
+        },
+        "message": "proffessionnel",
+        "details": {
+            "type_service": "plomberie",
+            "localisation": "bnjk",
+            "prix": "78 965.00 TND"
+        },
+        "changes": {
+            "type_service": {
+                "from": "nettoyage",
+                "to": "plomberie"
+            }
+        },
+        "link": "index.php?page=offre&offer_id=16",
+        "time": "2026-05-06T21:21:26+02:00",
+        "read": false
+    },
+    {
+        "id": "notif_69fb94891e2982.54797158",
+        "offer_id": 16,
+        "type": "modification",
+        "headline": {
+            "fr": "Offre modifiée",
+            "en": "Offer updated",
+            "ar": "تم تعديل العرض"
+        },
+        "message": "proffessionnel",
+        "details": {
+            "type_service": "nettoyage",
+            "localisation": "bnjk",
+            "prix": "78 965.00 TND"
+        },
+        "changes": {
+            "date_expiration": {
+                "from": "2026-04-30 00:00:00",
+                "to": "2026-05-09 00:00:00"
+            },
+            "statut": {
+                "from": "fermee",
+                "to": "ouverte"
+            },
+            "type_service": {
+                "from": "plomberie",
+                "to": "nettoyage"
+            }
+        },
+        "link": "index.php?page=offre&offer_id=16",
+        "time": "2026-05-06T21:20:41+02:00",
+        "read": false
+    },
+    {
+        "id": "notif_69fb946a3b0897.01538624",
+        "offer_id": 29,
+        "type": "modification",
+        "headline": {
+            "fr": "Offre modifiée",
+            "en": "Offer updated",
+            "ar": "تم تعديل العرض"
+        },
+        "message": "anniversaire",
+        "details": {
+            "type_service": "nettoyage",
+            "localisation": "bizerte",
+            "prix": "300.00 TND"
+        },
+        "changes": {
+            "type_service": {
+                "from": "evenementiel",
+                "to": "nettoyage"
+            }
+        },
+        "link": "index.php?page=offre&offer_id=29",
+        "time": "2026-05-06T21:20:10+02:00",
+        "read": false
+    },
+    {
+        "id": "notif_69fb64ad16c836.53771473",
+        "offer_id": 14,
+        "type": "suppression",
+        "headline": {
+            "fr": "Offre supprimée",
+            "en": "Offer deleted",
+            "ar": "تم حذف العرض"
+        },
+        "message": "fe ew",
+        "details": {
+            "type_service": "juridique",
+            "localisation": "34.244304,9.854452",
+            "prix": "14.00"
+        },
+        "link": "index.php?page=offre",
+        "time": "2026-05-06T15:56:29+00:00",
+        "read": false
+    },
+    {
+        "id": "notif_69fb60969cce46.01598577",
+        "offer_id": 12,
+        "type": "modification",
+        "headline": {
+            "fr": "Offre modifiée",
+            "en": "Offer updated",
+            "ar": "تم تعديل العرض"
+        },
+        "message": "swd",
+        "details": {
+            "type_service": "plomberie",
+            "localisation": "35.087230,10.271499",
+            "prix": "10.00 TND"
+        },
+        "changes": {
+            "titre": {
+                "from": "swdf",
+                "to": "swd"
+            }
+        },
+        "link": "index.php?page=offre&offer_id=12",
+        "time": "2026-05-06T15:39:02+00:00",
+        "read": false
+    }
+]

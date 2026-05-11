@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GoService - Démarrage rapide</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 50px;
+            max-width: 600px;
+            width: 100%;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 40px;
+            font-size: 1.1em;
+        }
+        .links {
+            display: grid;
+            gap: 15px;
+        }
+        a {
+            display: block;
+            padding: 20px;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.1em;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+        .link-app {
+            background: #667eea;
+            color: white;
+        }
+        .link-app:hover {
+            background: #5568d3;
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+        .link-db {
+            background: #f093fb;
+            color: white;
+        }
+        .link-db:hover {
+            background: #d872e8;
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(240, 147, 251, 0.4);
+        }
+        .link-guide {
+            background: #4facfe;
+            color: white;
+        }
+        .link-guide:hover {
+            background: #3d9bdc;
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(79, 172, 254, 0.4);
+        }
+        .info {
+            background: #f0f4ff;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 40px;
+            color: #333;
+            line-height: 1.6;
+        }
+        .info strong {
+            color: #667eea;
+        }
+        .emoji {
+            font-size: 1.2em;
+            margin-right: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>GoService</h1>
+        <p class="subtitle">Plateforme de services - Démarrage rapide</p>
+        
+        <div class="links">
+            <a href="http://127.0.0.1:8000" class="link-app" target="_blank">
+                <span class="emoji">🚀</span>Accéder à l'application
+            </a>
+            
+            <a href="http://localhost:8888/phpMyAdmin5/index.php?db=goservice" class="link-db" target="_blank">
+                <span class="emoji">💾</span>Voir la base de données
+            </a>
+            
+            <a href="./PHPMYADMIN_GUIDE.md" class="link-guide" target="_blank">
+                <span class="emoji">📖</span>Guide d'accès
+            </a>
+        </div>
+        
+        <div class="info">
+            <strong>✅ Configuration prête !</strong><br><br>
+            <strong>Serveur PHP :</strong> http://127.0.0.1:8000<br>
+            <strong>Base de données :</strong> goservice (MAMP port 8889)<br>
+            <strong>Tables :</strong> 8 (users, services, events, forum_posts, forum_comments, offers, reclamations, bookings)<br><br>
+            <strong>Comptes de test :</strong><br>
+            • Admin: emna@goservice.com / 123456<br>
+            • Provider: amina@goservice.com / 123456<br>
+            • User: roufa@goservice.com / 123456
+        </div>
+    </div>
+</body>
+</html>
