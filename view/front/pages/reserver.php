@@ -6,6 +6,19 @@ require_once __DIR__ . '/../../../controller/ServiceController.php';
 require_once __DIR__ . '/../../../controller/ReservationController.php';
 require_once __DIR__ . '/../../../model/Reservation.php';
 
+function serviceAppRoot(): string {
+    $script = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '');
+    $root = dirname($script, 3);
+    if ($root === '/' || $root === '\\') {
+        return '';
+    }
+    return rtrim($root, '/');
+}
+
+function serviceAppUrl(string $path = ''): string {
+    return serviceAppRoot() . '/' . ltrim($path, '/');
+}
+
 $serviceController     = new ServiceController();
 $reservationController = new ReservationController();
 
@@ -63,8 +76,8 @@ $titre     = htmlspecialchars($service['titre']);
 $categorie = htmlspecialchars($service['nom_categorie'] ?? 'Service');
 $prix      = number_format((float)$service['prix'], 2, ',', '');
 $img       = !empty($service['image'])
-    ? '/GoService_v3/' . ltrim($service['image'], '/')
-    : '/GoService/assets/images/service/default.jpg';
+    ? serviceAppUrl($service['image'])
+    : serviceAppUrl('assets/images/service/default.jpg');
 ?>
 
 <style>

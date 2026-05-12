@@ -78,18 +78,9 @@ function savedTimeAgo($datetime): string {
 }
 
 $currentUserId = (int) savedSessionValue(['id_user', 'user_id', 'id'], 0);
-if ($currentUserId <= 0 && class_exists('config')) {
-    try {
-        $db = config::getConnexion();
-        $firstUser = $db->query('SELECT id_user FROM `user` ORDER BY id_user ASC LIMIT 1')->fetchColumn();
-        if ($firstUser) {
-            $currentUserId = (int) $firstUser;
-        }
-    } catch (Throwable $e) {
-    }
-}
 if ($currentUserId <= 0) {
-    $currentUserId = 1;
+    header('Location: ' . savedAppUrl('view/front/index.php?page=login&error=' . urlencode('Veuillez vous connecter pour voir vos posts sauvegardés.')));
+    exit;
 }
 
 $currentPage = max(1, (int) ($_GET['p'] ?? 1));
@@ -246,3 +237,4 @@ $postsToShow = array_slice($savedPosts, $offset, $postsPerPage);
         <?php endif; ?>
     <?php endif; ?>
 </main>
+

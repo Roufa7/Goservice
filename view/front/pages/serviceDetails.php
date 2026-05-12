@@ -3,6 +3,19 @@ require_once __DIR__ . '/../../../controller/ServiceController.php';
 
 $controller = new ServiceController();
 
+function serviceAppRoot(): string {
+    $script = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '');
+    $root = dirname($script, 3);
+    if ($root === '/' || $root === '\\') {
+        return '';
+    }
+    return rtrim($root, '/');
+}
+
+function serviceAppUrl(string $path = ''): string {
+    return serviceAppRoot() . '/' . ltrim($path, '/');
+}
+
 $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
 $service = $controller->getServiceWithCategory($id);
 
@@ -45,8 +58,8 @@ function svcRating(array $service): array {
 }
 
 $img = !empty($service['image'])
-    ? '/GoService_v3/' . ltrim($service['image'], '/')
-    : '/GoService/assets/images/service/default.jpg';
+    ? serviceAppUrl($service['image'])
+    : serviceAppUrl('assets/images/service/default.jpg');
 
 $isAvailable = svcIsAvailable($service);
 $statusLabel = svcStatusLabel($service);

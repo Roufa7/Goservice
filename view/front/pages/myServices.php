@@ -3,6 +3,19 @@ require_once __DIR__ . '/../../../controller/ServiceController.php';
 
 $serviceController = new ServiceController();
 
+function serviceAppRoot(): string {
+    $script = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '');
+    $root = dirname($script, 3);
+    if ($root === '/' || $root === '\\') {
+        return '';
+    }
+    return rtrim($root, '/');
+}
+
+function serviceAppUrl(string $path = ''): string {
+    return serviceAppRoot() . '/' . ltrim($path, '/');
+}
+
 /* provisoire pour ton module service */
 $id_provider = 1;
 
@@ -84,8 +97,8 @@ $totalEnAttente = count(array_filter($services, fn($s) => trim((string)($s['stat
 
                         <?php
                         $img = !empty($service['image'])
-                            ? '/GoService_v3/' . ltrim($service['image'], '/')
-                            : '/GoService/assets/images/service/default.jpg';
+                            ? serviceAppUrl($service['image'])
+                            : serviceAppUrl('assets/images/service/default.jpg');
                         ?>
 
                         <tr>

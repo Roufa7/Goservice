@@ -3,8 +3,32 @@ session_start();
 require_once __DIR__ . '/../model/User.php';
 require_once __DIR__ . '/../lib/MailService.php';
 
-$action = $_GET['action'] ?? '';
+function authAppRoot(): string {
+    $script = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '');
+    $root = dirname(dirname($script));
+    if ($root === '/' || $root === '\\' || $root === '.') {
+        return '';
+    }
+    return rtrim($root, '/');
+}
 
+function authFrontUrl(string $query = ''): string {
+    $url = authAppRoot() . '/view/front/index.php';
+    if ($query !== '') {
+        $url .= '?' . ltrim($query, '?');
+    }
+    return $url;
+}
+
+function authBackUrl(string $query = ''): string {
+    $url = authAppRoot() . '/view/back/index.php';
+    if ($query !== '') {
+        $url .= '?' . ltrim($query, '?');
+    }
+    return $url;
+}
+
+$action = $_GET['action'] ?? '';
 $userModel = new User();
 
 switch ($action) {
@@ -18,10 +42,8 @@ switch ($action) {
             $adresse = $_POST['adresse'] ?? '';
             $role = $_POST['role'] ?? 'user';
 
-            // Basic file upload handling for photo
             $photoPath = '';
             if (isset($_FILES['photo']) && $_FILES['photo']['error'] === UPLOAD_ERR_OK) {
-                // Ensure assets/uploads directory exists
                 $uploadDir = __DIR__ . '/../assets/uploads/';
                 if (!is_dir($uploadDir)) {
                     mkdir($uploadDir, 0777, true);
@@ -29,12 +51,10 @@ switch ($action) {
 
                 $fileName = time() . '_' . basename($_FILES['photo']['name']);
                 $targetFilePath = $uploadDir . $fileName;
-
-                // Validation du type de fichier (images uniquement)
                 $allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
                 $fileType = mime_content_type($_FILES['photo']['tmp_name']);
 
-                if (in_array($fileType, $allowedTypes) && move_uploaded_file($_FILES['photo']['tmp_name'], $targetFilePath)) {
+                if (in_array($fileType, $allowedTypes, true) && move_uploaded_file($_FILES['photo']['tmp_name'], $targetFilePath)) {
                     $photoPath = 'assets/uploads/' . $fileName;
                 }
             }
@@ -48,12 +68,12 @@ switch ($action) {
                     $_SESSION['user_role'] = $loginResult['user']['role'];
                     $_SESSION['user_name'] = $loginResult['user']['prenom'] . ' ' . $loginResult['user']['nom'];
                 }
-                header('Location: ../view/front/index.php?page=home&success=registered');
-                exit;
-            } else {
-                header('Location: ../view/front/index.php?page=register&error=' . urlencode($result['message']));
+                header('Location: ' . authFrontUrl('page=home&success=registered'));
                 exit;
             }
+
+            header('Location: ' . authFrontUrl('page=register&error=' . urlencode($result['message'])));
+            exit;
         }
         break;
 
@@ -68,17 +88,17 @@ switch ($action) {
                 $_SESSION['user_id'] = $result['user']['id_user'];
                 $_SESSION['user_role'] = $result['user']['role'];
                 $_SESSION['user_name'] = $result['user']['prenom'] . ' ' . $result['user']['nom'];
-                
+
                 if ($result['user']['role'] === 'admin') {
-                    header('Location: ../view/back/index.php');
+                    header('Location: ' . authBackUrl());
                 } else {
-                    header('Location: ../view/front/index.php?page=home');
+                    header('Location: ' . authFrontUrl('page=home'));
                 }
                 exit;
-            } else {
-                header('Location: ../view/front/index.php?page=login&error=' . urlencode($result['message']));
-                exit;
             }
+
+            header('Location: ' . authFrontUrl('page=login&error=' . urlencode($result['message'])));
+            exit;
         }
         break;
 
@@ -88,16 +108,13 @@ switch ($action) {
             $rawToken = $userModel->createPasswordResetToken($email);
 
             if ($rawToken) {
-                // Determine the protocol and host automatically
                 $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http';
                 $host = $_SERVER['HTTP_HOST'];
-                $resetLink = "$protocol://$host/view/front/index.php?page=reset_password&token=$rawToken";
-                
-                // Real Email sending
+                $resetLink = $protocol . '://' . $host . authFrontUrl('page=reset_password&token=' . urlencode($rawToken));
                 MailService::sendPasswordResetEmail($email, $resetLink);
             }
-            
-            header('Location: ../view/front/index.php?page=forgot_password&status=sent');
+
+            header('Location: ' . authFrontUrl('page=forgot_password&status=sent'));
             exit;
         }
         break;
@@ -109,7 +126,7 @@ switch ($action) {
             $confirmPassword = $_POST['confirm_password'] ?? '';
 
             if ($password !== $confirmPassword) {
-                header('Location: ../view/front/index.php?page=reset_password&token=' . $token . '&error=' . urlencode('Les mots de passe ne correspondent pas.'));
+                header('Location: ' . authFrontUrl('page=reset_password&token=' . urlencode($token) . '&error=' . urlencode('Les mots de passe ne correspondent pas.')));
                 exit;
             }
 
@@ -117,11 +134,11 @@ switch ($action) {
             if ($userId) {
                 if ($userModel->resetPasswordWithToken($userId, $password)) {
                     unset($_SESSION['mock_reset_link']);
-                    header('Location: ../view/front/index.php?page=login&success=password_reset');
+                    header('Location: ' . authFrontUrl('page=login&success=password_reset'));
                     exit;
                 }
             } else {
-                header('Location: ../view/front/index.php?page=login&error=' . urlencode('Le lien de rÃ©initialisation est invalide ou a expirÃ©.'));
+                header('Location: ' . authFrontUrl('page=login&error=' . urlencode('Le lien de réinitialisation est invalide ou a expiré.')));
                 exit;
             }
         }
@@ -130,12 +147,11 @@ switch ($action) {
     case 'logout':
         session_unset();
         session_destroy();
-        header('Location: ../view/front/index.php?page=home');
+        header('Location: ' . authFrontUrl('page=home'));
         exit;
-        break;
 
     default:
-        header('Location: ../view/front/index.php?page=home');
+        header('Location: ' . authFrontUrl('page=home'));
         exit;
 }
 ?>

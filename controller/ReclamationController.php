@@ -15,7 +15,16 @@ class ReclamationController
     {
         $action = $_GET['action'] ?? ($_POST['action'] ?? '');
         $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest';
-        $userId = $_SESSION['user_id'] ?? $_SESSION['id_user'] ?? 1;
+        $userId = (int) ($_SESSION['user_id'] ?? $_SESSION['id_user'] ?? 0);
+
+        if ($userId <= 0) {
+            if ($isAjax || $action !== '') {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => 'Veuillez vous connecter pour effectuer cette action.']);
+                exit;
+            }
+            return;
+        }
 
         // Fetch data for the view if it's a normal page load
         if ($_SERVER['REQUEST_METHOD'] === 'GET' && empty($action)) {
@@ -170,3 +179,4 @@ class ReclamationController
 $controller = new ReclamationController();
 $controller->handleRequest();
 ?>
+

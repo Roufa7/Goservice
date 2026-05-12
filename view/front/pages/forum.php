@@ -96,6 +96,25 @@ $currentUserName = $currentUser['name'];
 $currentUserAvatarLetter = $currentUser['avatar'];
 $currentUserRole = $currentUser['role'];
 $isForumAdmin = ($currentUserRole === 'admin');
+$isForumAuthenticated = ($currentUserId > 0);
+
+function forumRequireAuth(): void {
+    if (!empty($_SESSION['user_id']) || !empty($_SESSION['id_user']) || !empty($_SESSION['id'])) {
+        return;
+    }
+    header('Location: index.php?page=login&error=' . urlencode('Veuillez vous connecter pour effectuer cette action.'));
+    exit;
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $forumProtectedActions = ['publish_post', 'update_post', 'add_comment', 'report_post', 'report_comment', 'update_comment', 'delete_comment', 'delete_post'];
+    foreach ($forumProtectedActions as $forumProtectedAction) {
+        if (isset($_POST[$forumProtectedAction])) {
+            forumRequireAuth();
+            break;
+        }
+    }
+}
 
 $errors = ['titre'=>'','type_post'=>'','contenu'=>'','emoji_post'=>'','image'=>'','video'=>'','gif'=>'','comment'=>''];
 $old    = ['titre'=>'','type_post'=>'','statut_post'=>'En attente','contenu'=>'','emoji_post'=>''];
@@ -214,7 +233,18 @@ function forumVideoEmbedData(string $text): array {
 function forumUrl(array $extra=[]): string {
     $allowed=['page','search','filter','sort','mine']; $base=['page'=>'forum'];
     foreach($allowed as $key){ if(isset($_GET[$key])) $base[$key]=$_GET[$key]; }
-    return '/GoService/view/front/index.php?'.http_build_query(array_merge($base,$extra));
+    return forumAppUrl('view/front/index.php?'.http_build_query(array_merge($base,$extra)));
+}
+function forumAppRoot(): string {
+    $script = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '');
+    $root = dirname($script, 3);
+    if ($root === '/' || $root === '\\') {
+        return '';
+    }
+    return rtrim($root, '/');
+}
+function forumAppUrl(string $path = ''): string {
+    return forumAppRoot() . '/' . ltrim($path, '/');
 }
 function uploadImageFile(array $file,array &$errors,?string $oldPath=null): ?string {
     if(empty($file['name'])) return null;
@@ -332,7 +362,7 @@ function forumMediaUrl(?string $path): string {
     $path=trim((string)$path);
     if($path==='') return '';
     if(preg_match('~^https?://~i',$path)) return $path;
-    return '/GoService/'.ltrim($path,'/');
+    return forumAppUrl($path);
 }
 function updatePostSentimentForum(int $postId, string $titre, string $contenu): bool {
     if(!class_exists('config') || $postId <= 0) return false;
@@ -483,8 +513,8 @@ function forumRenderSharedOriginalBox(?array $original): string {
     $originalName=trim(($original['prenom']??'').' '.($original['nom']??''));
     if($originalName==='') $originalName='Utilisateur';
     $avatar=strtoupper(substr($originalName,0,1));
-    $imageUrl=!empty($original['image'])?'/GoService/'.ltrim($original['image'],'/'):'';
-    $videoUrl=!empty($original['video'])?'/GoService/'.ltrim($original['video'],'/'):'';
+    $imageUrl=!empty($original['image'])?forumAppUrl($original['image']):'';
+    $videoUrl=!empty($original['video'])?forumAppUrl($original['video']):'';
     $gifUrl=!empty($original['gif_post'])?forumMediaUrl($original['gif_post']):'';
     $embed=forumVideoEmbedData($original['contenu']??'');
     $clean=$embed['clean_text']??($original['contenu']??'');
@@ -780,7 +810,7 @@ body.dark,body.dark-mode,body[data-theme="dark"],body.theme-dark{
 }
 .forum-page{display:flex;flex-direction:column;gap:28px;width:100%;}
 .forum-hero-classic{position:relative;overflow:hidden;border-radius:32px;}
-.forum-hero-classic::before{content:"";position:absolute;inset:0;background:url('/GoService/assets/images/forum-hero.png') center/cover no-repeat;opacity:1;z-index:0;pointer-events:none;}
+.forum-hero-classic::before{content:"";position:absolute;inset:0;background:url('<?php echo e(forumAppUrl('assets/images/forum-hero.png')); ?>') center/cover no-repeat;opacity:1;z-index:0;pointer-events:none;}
 .forum-hero-classic::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(255,255,255,.78) 0%,rgba(255,255,255,.62) 34%,rgba(255,255,255,.18) 68%,rgba(255,255,255,.06) 100%);z-index:0;pointer-events:none;}
 body.dark .forum-hero-classic::after,body.dark-mode .forum-hero-classic::after,body[data-theme="dark"] .forum-hero-classic::after,body.theme-dark .forum-hero-classic::after{background:linear-gradient(90deg,rgba(8,18,30,.84) 0%,rgba(8,18,30,.70) 38%,rgba(8,18,30,.34) 70%,rgba(8,18,30,.14) 100%);}
 .forum-hero-classic>*{position:relative;z-index:1;}
@@ -1242,7 +1272,7 @@ body.dark .video-more-dropdown a:hover,body.dark .video-more-dropdown button:hov
     </section>
 
     <section class="action-bar reveal forum-action-bar">
-        <form method="GET" action="/GoService/view/front/index.php" class="forum-search-layout">
+        <form method="GET" action="<?php echo e(forumAppUrl('view/front/index.php')); ?>" class="forum-search-layout">
             <input type="hidden" name="page" value="forum">
             <?php if($mine): ?><input type="hidden" name="mine" value="1"><?php endif; ?>
             <div class="forum-search-main">
@@ -1252,16 +1282,16 @@ body.dark .video-more-dropdown a:hover,body.dark .video-more-dropdown button:hov
                 <div class="forum-top-actions">
                     <button class="solid-btn" type="submit">Rechercher</button>
                     <?php if($mine): ?>
-                        <a class="solid-btn" href="/GoService/view/front/index.php?page=forum&filter=<?php echo urlencode($filter); ?>&search=<?php echo urlencode($search); ?>&sort=<?php echo urlencode($sort); ?>">Tous les posts</a>
+                        <a class="solid-btn" href="<?php echo e(forumUrl(['filter'=>$filter,'search'=>$search,'sort'=>$sort])); ?>">Tous les posts</a>
                     <?php else: ?>
-                        <a class="solid-btn" href="/GoService/view/front/index.php?page=forum&mine=1&filter=<?php echo urlencode($filter); ?>&search=<?php echo urlencode($search); ?>&sort=<?php echo urlencode($sort); ?>">Mes posts</a>
+                        <a class="solid-btn" href="<?php echo e(forumUrl(['mine'=>1,'filter'=>$filter,'search'=>$search,'sort'=>$sort])); ?>">Mes posts</a>
                     <?php endif; ?>
-                    <a class="solid-btn" href="/GoService/view/front/pages/savedPosts.php">Posts enregistrés</a>
+                    <a class="solid-btn" href="<?php echo e(forumAppUrl('view/front/index.php?page=savedPosts')); ?>">Posts enregistrés</a>
                 </div>
             </div>
             <div class="forum-bottom-actions">
                 <div class="forum-filter-row">
-                    <?php foreach(['Tous','Question','Conseil','Discussion'] as $f): $active=($filter===$f)||($filter==='Tous'&&$f==='Tous'); $link='/GoService/view/front/index.php?page=forum'.($mine?'&mine=1':'').'&filter='.urlencode($f).'&search='.urlencode($search).'&sort='.urlencode($sort); ?>
+                    <?php foreach(['Tous','Question','Conseil','Discussion'] as $f): $active=($filter===$f)||($filter==='Tous'&&$f==='Tous'); $link=forumUrl(['mine'=>$mine?1:null,'filter'=>$f,'search'=>$search,'sort'=>$sort]); ?>
                     <a href="<?php echo e($link); ?>" class="forum-filter-btn <?php echo $active?'active':''; ?>"><?php echo $f==='Tous'?'Tous':$f.'s'; ?></a>
                     <?php endforeach; ?>
                 </div>
@@ -1308,8 +1338,8 @@ body.dark .video-more-dropdown a:hover,body.dark .video-more-dropdown button:hov
                     $fullname=trim(($post['prenom']??'').' '.($post['nom']??'')); if($fullname==='') $fullname='Utilisateur';
                     $isOwner = ((int)($post['id_user']??0) === $currentUserId);
                     $avatarLetter=strtoupper(substr($fullname,0,1));
-                    $imageUrl=!empty($post['image'])?'/GoService/'.ltrim($post['image'],'/'):'';
-                    $videoUrl=!empty($post['video'])?'/GoService/'.ltrim($post['video'],'/'):'';
+                    $imageUrl=!empty($post['image'])?forumAppUrl($post['image']):'';
+                    $videoUrl=!empty($post['video'])?forumAppUrl($post['video']):'';
                     $gifUrl=!empty($post['gif_post'])?forumMediaUrl($post['gif_post']):'';
                     $type=$post['type_post']??'Discussion';
                     $videoEmbedData=forumVideoEmbedData($post['contenu']??'');
@@ -1441,7 +1471,7 @@ body.dark .video-more-dropdown a:hover,body.dark .video-more-dropdown button:hov
                         <?php foreach($rootComments as $comment):
                             $commentId=isset($comment['id_commentaire'])?(int)$comment['id_commentaire']:0;
                             $commentAuthor=trim(($comment['prenom']??'').' '.($comment['nom']??'')); if($commentAuthor==='') $commentAuthor='Utilisateur';
-                            $commentImageUrl=!empty($comment['image_commentaire'])?'/GoService/'.ltrim($comment['image_commentaire'],'/'):'';
+                            $commentImageUrl=!empty($comment['image_commentaire'])?forumAppUrl($comment['image_commentaire']):'';
                             $commentReplies=$replyMap[$commentId]??[];
                             $isCommentOwner=((int)($comment['id_user']??0)===$currentUserId);
                         ?>
@@ -1505,7 +1535,7 @@ body.dark .video-more-dropdown a:hover,body.dark .video-more-dropdown button:hov
                                         <?php foreach($commentReplies as $reply):
                                             $replyId=(int)($reply['id_commentaire']??0);
                                             $replyAuthor=trim(($reply['prenom']??'').' '.($reply['nom']??'')); if($replyAuthor==='') $replyAuthor='Utilisateur';
-                                            $replyImageUrl=!empty($reply['image_commentaire'])?'/GoService/'.ltrim($reply['image_commentaire'],'/'):'';
+                                            $replyImageUrl=!empty($reply['image_commentaire'])?forumAppUrl($reply['image_commentaire']):'';
                                             $isReplyOwner=((int)($reply['id_user']??0)===$currentUserId);
                                         ?>
                                         <div class="reply-item" id="reply-thread-<?php echo $replyId; ?>">
@@ -1671,13 +1701,13 @@ body.dark .video-more-dropdown a:hover,body.dark .video-more-dropdown button:hov
                         <input type="file" name="image" id="image" accept=".jpg,.jpeg,.png,.webp,.gif" class="<?php echo invalidClass($errors['image']); ?>" style="display:none;">
                         <span class="field-error" id="err-image"><?php echo e($errors['image']); ?></span>
                         <div class="forum-upload-preview" id="forumUploadPreview"><img id="forumPreviewImg" src="" alt="Prévisualisation image"></div>
-                        <?php if($isEditMode&&$editPost&&!empty($editPost['image'])): ?><div class="forum-current-image show" id="forumCurrentImage"><img src="/GoService/<?php echo e($editPost['image']); ?>" alt="Image actuelle"></div><?php else: ?><div class="forum-current-image" id="forumCurrentImage"></div><?php endif; ?>
+                        <?php if($isEditMode&&$editPost&&!empty($editPost['image'])): ?><div class="forum-current-image show" id="forumCurrentImage"><img src="<?php echo e(forumAppUrl($editPost['image'])); ?>" alt="Image actuelle"></div><?php else: ?><div class="forum-current-image" id="forumCurrentImage"></div><?php endif; ?>
                     </div>
                     <div class="forum-form-field full-width" style="margin-top:14px;">
                         <input type="file" name="video" id="video" accept=".mp4,.webm,.ogg" class="<?php echo invalidClass($errors['video']); ?>" style="display:none;">
                         <span class="field-error" id="err-video"><?php echo e($errors['video']); ?></span>
                         <div class="forum-video-preview" id="forumVideoPreview"><video id="forumPreviewVideo" controls autoplay muted loop playsinline></video></div>
-                        <?php if($isEditMode&&$editPost&&!empty($editPost['video'])): ?><div class="forum-current-video show" id="forumCurrentVideo"><video controls autoplay muted loop playsinline><source src="/GoService/<?php echo e($editPost['video']); ?>"></video></div><?php else: ?><div class="forum-current-video" id="forumCurrentVideo"></div><?php endif; ?>
+                        <?php if($isEditMode&&$editPost&&!empty($editPost['video'])): ?><div class="forum-current-video show" id="forumCurrentVideo"><video controls autoplay muted loop playsinline><source src="<?php echo e(forumAppUrl($editPost['video'])); ?>"></video></div><?php else: ?><div class="forum-current-video" id="forumCurrentVideo"></div><?php endif; ?>
                     </div>
                     <div class="forum-form-actions">
                         <button type="button" class="outline-btn" id="cancelForumModal">Annuler</button>
@@ -1861,6 +1891,8 @@ let activeEmojiTarget=null,lastEmojiTrigger=null;
 const gifModal=document.getElementById('gifModal'),gifSearch=document.getElementById('gifSearch'),gifResults=document.getElementById('gifResults'),closeGifModal=document.getElementById('closeGifModal'),gifInput=document.getElementById('gif_post'),gifSelectedPreview=document.getElementById('gifSelectedPreview'),gifSelectedImg=document.getElementById('gifSelectedImg'),clearGifBtn=document.getElementById('clearGifBtn');
 const GIPHY_API_KEY='J8Isus6qXyh0ajM2mYYmHvKF5IZhlorl';
 const CURRENT_FORUM_USER_ID=<?php echo (int)$currentUserId; ?>;
+const FORUM_APP_ROOT=<?php echo json_encode(forumAppRoot(), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?>;
+const FORUM_INDEX_URL=<?php echo json_encode(forumAppUrl('view/front/index.php?page=forum'), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?>;
 let currentViewerPostData=null;
 
 /* ============================================================ EMOJIS */
@@ -1868,7 +1900,7 @@ const emojiGroups={smileys:['😀','😁','😂','🤣','😃','😄','😅','�
 
 /* ============================================================ MODAL POST */
 function openModal(){forumModal.classList.add('show');document.body.style.overflow='hidden';}
-function closeModal(goClean=false){forumModal.classList.remove('show');hideEmojiPicker();document.body.style.overflow='';if(goClean) window.location.href='/GoService/view/front/index.php?page=forum';}
+function closeModal(goClean=false){forumModal.classList.remove('show');hideEmojiPicker();document.body.style.overflow='';if(goClean) window.location.href=FORUM_INDEX_URL;}
 
 /* ============================================================ MEDIA VIEWER */
 function hideAllViewerModes(){imageViewerContent.classList.remove('show');videoViewerContent.classList.remove('show');imageViewerMain.innerHTML='';videoViewerMain.innerHTML='';const vp=document.getElementById('videoCommentsPanel');if(vp)vp.classList.remove('show');toggleVideoMoreMenu(false);}
@@ -1932,7 +1964,7 @@ function renderVideoMoreMenu(data){
     if(!menu) return;
     const postId=Number(data.id||0);
     if(data.is_owner){
-        menu.innerHTML=`<a href="/GoService/view/front/index.php?page=forum&edit=${postId}" onclick="localStorage.setItem('openForumModal','1')">✏️ Modifier</a><button type="button" class="danger" onclick="viewerDeletePost(${postId})">🗑 Supprimer</button>`;
+        menu.innerHTML=`<a href="${FORUM_INDEX_URL}&edit=${postId}" onclick="localStorage.setItem('openForumModal','1')">✏️ Modifier</a><button type="button" class="danger" onclick="viewerDeletePost(${postId})">🗑 Supprimer</button>`;
     }else{
         menu.innerHTML=`<button type="button" onclick="openReportModal(${postId});toggleVideoMoreMenu(false);">🚩 Signaler</button>`;
     }
@@ -2124,9 +2156,9 @@ function formatViewerComments(comments){
     const rootComments=[],repliesByParent={},currentPostId=document.getElementById('viewerPostId')?Number(document.getElementById('viewerPostId').value||0):Number((currentViewerPostData&&currentViewerPostData.id)||0);
     (Array.isArray(comments)?comments:[]).forEach(c=>{const pid=c.id_parent_commentaire?Number(c.id_parent_commentaire):0;if(pid>0){if(!repliesByParent[pid]) repliesByParent[pid]=[];repliesByParent[pid].push(c);}else rootComments.push(c);});
     return rootComments.map(comment=>{
-        const cid=Number(comment.id_commentaire||0),author=`${comment.prenom||''} ${comment.nom||''}`.trim()||'Utilisateur',aL=author.charAt(0).toUpperCase(),content=viewerEscapeHtml(comment.contenu_commentaire||''),rawContent=viewerEscapeJs(comment.contenu_commentaire||''),emoji=viewerEscapeHtml(comment.emoji_commentaire||''),rawEmoji=viewerEscapeJs(comment.emoji_commentaire||''),time=viewerEscapeHtml(comment.date_commentaire||''),img=comment.image_commentaire?`/GoService/${String(comment.image_commentaire).replace(/^\/+/,'')}`:'',safeAJ=viewerEscapeJs(author),replies=repliesByParent[cid]||[],isOwner=Number(comment.id_user||0)===CURRENT_FORUM_USER_ID;
+        const cid=Number(comment.id_commentaire||0),author=`${comment.prenom||''} ${comment.nom||''}`.trim()||'Utilisateur',aL=author.charAt(0).toUpperCase(),content=viewerEscapeHtml(comment.contenu_commentaire||''),rawContent=viewerEscapeJs(comment.contenu_commentaire||''),emoji=viewerEscapeHtml(comment.emoji_commentaire||''),rawEmoji=viewerEscapeJs(comment.emoji_commentaire||''),time=viewerEscapeHtml(comment.date_commentaire||''),img=comment.image_commentaire?`${FORUM_APP_ROOT}/${String(comment.image_commentaire).replace(/^\/+/,'')}`:'',safeAJ=viewerEscapeJs(author),replies=repliesByParent[cid]||[],isOwner=Number(comment.id_user||0)===CURRENT_FORUM_USER_ID;
         const menuHtml=viewerCommentMenuHtml(cid,currentPostId,0,isOwner,rawContent,rawEmoji);
-        const repliesHtml=replies.map(reply=>{const rid=Number(reply.id_commentaire||0),ra=`${reply.prenom||''} ${reply.nom||''}`.trim()||'Utilisateur',rL=ra.charAt(0).toUpperCase(),rc=viewerEscapeHtml(reply.contenu_commentaire||''),rrc=viewerEscapeJs(reply.contenu_commentaire||''),re=viewerEscapeHtml(reply.emoji_commentaire||''),rre=viewerEscapeJs(reply.emoji_commentaire||''),ri=reply.image_commentaire?`/GoService/${String(reply.image_commentaire).replace(/^\/+/,'')}`:'',sraJ=viewerEscapeJs(ra),rOwner=Number(reply.id_user||0)===CURRENT_FORUM_USER_ID,rMenu=viewerCommentMenuHtml(rid,currentPostId,cid,rOwner,rrc,rre);return `<div class="viewer-reply-item"><div class="mini-avatar">${rL}</div><div class="viewer-comment-content"><div class="viewer-reply-bubble viewer-comment-bubble"><div class="viewer-comment-head-row"><span class="viewer-comment-author">${viewerEscapeHtml(ra)}</span>${rMenu}</div>${rc?`<div>${rc}</div>`:''}${re?`<div style="margin-top:6px;">${re}</div>`:''}${ri?`<div style="margin-top:8px;"><img src="${ri}" style="max-width:180px;border-radius:10px;"></div>`:''}</div><div class="viewer-comment-meta"><span>${viewerEscapeHtml(reply.date_commentaire||'')}</span><button type="button" class="viewer-reply-btn" onclick="setViewerReplyTarget(${cid},'${sraJ}')">Répondre</button></div></div></div>`;}).join('');
+        const repliesHtml=replies.map(reply=>{const rid=Number(reply.id_commentaire||0),ra=`${reply.prenom||''} ${reply.nom||''}`.trim()||'Utilisateur',rL=ra.charAt(0).toUpperCase(),rc=viewerEscapeHtml(reply.contenu_commentaire||''),rrc=viewerEscapeJs(reply.contenu_commentaire||''),re=viewerEscapeHtml(reply.emoji_commentaire||''),rre=viewerEscapeJs(reply.emoji_commentaire||''),ri=reply.image_commentaire?`${FORUM_APP_ROOT}/${String(reply.image_commentaire).replace(/^\/+/,'')}`:'',sraJ=viewerEscapeJs(ra),rOwner=Number(reply.id_user||0)===CURRENT_FORUM_USER_ID,rMenu=viewerCommentMenuHtml(rid,currentPostId,cid,rOwner,rrc,rre);return `<div class="viewer-reply-item"><div class="mini-avatar">${rL}</div><div class="viewer-comment-content"><div class="viewer-reply-bubble viewer-comment-bubble"><div class="viewer-comment-head-row"><span class="viewer-comment-author">${viewerEscapeHtml(ra)}</span>${rMenu}</div>${rc?`<div>${rc}</div>`:''}${re?`<div style="margin-top:6px;">${re}</div>`:''}${ri?`<div style="margin-top:8px;"><img src="${ri}" style="max-width:180px;border-radius:10px;"></div>`:''}</div><div class="viewer-comment-meta"><span>${viewerEscapeHtml(reply.date_commentaire||'')}</span><button type="button" class="viewer-reply-btn" onclick="setViewerReplyTarget(${cid},'${sraJ}')">Répondre</button></div></div></div>`;}).join('');
         return `<div class="viewer-comment-item"><div class="mini-avatar">${aL}</div><div class="viewer-comment-content"><div class="viewer-comment-bubble"><div class="viewer-comment-head-row"><span class="viewer-comment-author">${viewerEscapeHtml(author)}</span>${menuHtml}</div>${content?`<div>${content}</div>`:''}${emoji?`<div style="margin-top:6px;">${emoji}</div>`:''}${img?`<div style="margin-top:8px;"><img src="${img}" style="max-width:220px;border-radius:10px;"></div>`:''}</div><div class="viewer-comment-meta"><span>${time}</span><button type="button" class="viewer-reply-btn" onclick="setViewerReplyTarget(${cid},'${safeAJ}')">Répondre</button></div>${replies.length?`<div class="viewer-replies">${repliesHtml}</div>`:''}</div></div>`;
     }).join('');
 }
@@ -2160,7 +2192,7 @@ let currentSharePostId=0,currentSharePostTitle='Post GoService',currentSharePost
 
 function buildForumPostUrl(postId){
     const PUBLIC_BASE = 'https://operate-pronto-jogging.ngrok-free.dev';
-    return PUBLIC_BASE + '/GoService/view/front/index.php?page=forum&open_post='
+    return FORUM_INDEX_URL + '&open_post='
         + postId
         + '&v=' + Date.now()
         + '#post-' + postId;
@@ -2252,7 +2284,7 @@ async function sharePostAdvanced(platform){
         if(data&&data.success){
             showAdvancedShareToast('Post partagé sur GoService ✅');
             const newId=data.new_post_id||currentSharePostId;
-            setTimeout(()=>{window.location.href='/GoService/view/front/index.php?page=forum&open_post='+encodeURIComponent(newId)+'#post-'+encodeURIComponent(newId);},650);
+            setTimeout(()=>{window.location.href=FORUM_INDEX_URL+'&open_post='+encodeURIComponent(newId)+'#post-'+encodeURIComponent(newId);},650);
         }else{
             showAdvancedShareToast('Partage GoService impossible');
         }
@@ -2652,7 +2684,7 @@ chatbotForm.addEventListener('submit', async function(e){
         const formData = new FormData();
         formData.append('messages', JSON.stringify(chatbotHistory));
 
-        const res = await fetch('/GoService/view/front/pages/chatbot_ollama.php', {
+        const res = await fetch(FORUM_APP_ROOT + '/view/front/pages/chatbot_ollama.php', {
             method: 'POST',
             body: formData
         });
@@ -2673,3 +2705,5 @@ chatbotForm.addEventListener('submit', async function(e){
 });
 </script>
 <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
+
