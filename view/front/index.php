@@ -11,6 +11,7 @@ $allowedPages = [
     'offre',
     'forum',
     'reclamation',
+    'avis',
     'events',
     'profile',
     'register',
