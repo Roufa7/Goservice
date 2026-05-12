@@ -2,12 +2,19 @@
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
-require_once dirname(__DIR__) . '/vendor/autoload.php';
+$mailAutoload = dirname(__DIR__) . '/vendor/autoload.php';
+if (file_exists($mailAutoload)) {
+    require_once $mailAutoload;
+}
 
 class MailService
 {
     public static function sendAdminNotification($reclamation)
     {
+        if (!class_exists('PHPMailer\\PHPMailer\\PHPMailer')) {
+            return false;
+        }
+
         $mail = new PHPMailer(true);
 
         try {

@@ -33,6 +33,11 @@ if (!in_array($page, $allowedPages, true)) {
     $page = 'home';
 }
 
+$controllerFile = dirname(__DIR__, 2) . '/controller/' . ucfirst($page) . 'Controller.php';
+if (file_exists($controllerFile)) {
+    require_once $controllerFile;
+}
+
 $view = __DIR__ . '/pages/' . $page . '.php';
 
 require __DIR__ . '/layouts/main.php';

@@ -1,4 +1,5 @@
 <?php
+require_once dirname(__DIR__) . '/config.php';
 require_once dirname(__DIR__) . '/model/Reclamation.php';
 
 class ReclamationController
@@ -7,15 +8,14 @@ class ReclamationController
 
     public function __construct()
     {
-        $database = new Database();
-        $this->db = $database->getConnection();
+        $this->db = config::getConnexion();
     }
 
     public function handleRequest()
     {
         $action = $_GET['action'] ?? ($_POST['action'] ?? '');
         $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest';
-        $userId = $_SESSION['user_id'] ?? 1;
+        $userId = $_SESSION['user_id'] ?? $_SESSION['id_user'] ?? 1;
 
         // Fetch data for the view if it's a normal page load
         if ($_SERVER['REQUEST_METHOD'] === 'GET' && empty($action)) {
