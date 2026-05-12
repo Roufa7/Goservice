@@ -19,6 +19,15 @@ $mainNav = [
     'Evenements' => 'index.php?page=events',
     'Reclam.' => 'index.php?page=reclamation',
 ];
+
+$eventsBackOfficeLink = '../back/index.php?page=dashboard';
+if (($page ?? '') === 'events') {
+    $selectedEventId = (int) (($eventFrontData['selectedEventId'] ?? 0));
+    $eventsBackOfficeLink = '../back/index.php?page=events';
+    if ($selectedEventId > 0) {
+        $eventsBackOfficeLink .= '&manage_event=' . $selectedEventId;
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -28,53 +37,18 @@ $mainNav = [
     <title><?php echo htmlspecialchars($title, ENT_QUOTES, 'UTF-8'); ?></title>
     <link rel="stylesheet" href="../../assets/css/style.css">
     <link rel="stylesheet" href="../../assets/css/face-id.css">
+    <?php if (($page ?? '') === 'events'): ?>
+        <link rel="stylesheet" href="../../assets/css/events.css">
+    <?php endif; ?>
     <style>
-        .main-nav {
-            gap: 12px;
-            flex-wrap: nowrap;
-            flex: 1 1 auto;
-            justify-content: center;
-            min-width: 0;
-        }
-
-        .main-nav a {
-            padding: 11px 16px;
-            font-size: 0.95rem;
-            white-space: nowrap;
-        }
-
-        .nav-actions {
-            gap: 10px;
-            flex-shrink: 0;
-            margin-left: 14px;
-        }
-
-        .nav-actions > span {
-            max-width: 170px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            display: inline-block;
-            vertical-align: middle;
-        }
-
-        .theme-btn {
-            min-width: 44px;
-            width: 44px;
-            height: 44px;
-            padding: 0;
-            font-size: 1rem;
-        }
-
+        .main-nav { gap: 12px; flex-wrap: nowrap; flex: 1 1 auto; justify-content: center; min-width: 0; }
+        .main-nav a { padding: 11px 16px; font-size: 0.95rem; white-space: nowrap; }
+        .nav-actions { gap: 10px; flex-shrink: 0; margin-left: 14px; }
+        .nav-actions > span { max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; vertical-align: middle; }
+        .theme-btn { min-width: 44px; width: 44px; height: 44px; padding: 0; font-size: 1rem; }
         @media (max-width: 1400px) {
-            .main-nav a {
-                padding: 10px 12px;
-                font-size: 0.9rem;
-            }
-
-            .nav-actions > span {
-                display: none;
-            }
+            .main-nav a { padding: 10px 12px; font-size: 0.9rem; }
+            .nav-actions > span { display: none; }
         }
     </style>
 </head>
@@ -86,19 +60,13 @@ $mainNav = [
     <header class="site-header">
         <div class="container nav-wrap">
             <a href="index.php?page=home" class="brand">
-                <img
-                    id="siteLogo"
-                    src="../../assets/images/logo.png"
-                    data-light="../../assets/images/logo.png"
-                    data-dark="../../assets/images/logo-white.png"
-                    alt="logo"
-                >
+                <img id="siteLogo" src="../../assets/images/logo.png" data-light="../../assets/images/logo.png" data-dark="../../assets/images/logo-white.png" alt="logo">
             </a>
 
             <nav class="main-nav">
                 <?php foreach ($mainNav as $label => $link): ?>
                     <a href="<?php echo $link; ?>" class="<?php echo $link === 'index.php?page=' . $page ? 'active' : ''; ?>">
-                        <?php echo $label; ?>
+                        <?php echo htmlspecialchars($label, ENT_QUOTES, 'UTF-8'); ?>
                     </a>
                 <?php endforeach; ?>
             </nav>
@@ -127,7 +95,6 @@ $mainNav = [
                 <h3>Plateforme digitale</h3>
                 <p>Services, offres, forum, reclamations, evenements et administration dans une experience coherente.</p>
             </div>
-
             <div>
                 <h4>Navigation</h4>
                 <a href="index.php?page=home">Accueil</a>
@@ -136,12 +103,11 @@ $mainNav = [
                 <a href="index.php?page=forum">Forum</a>
                 <a href="index.php?page=events">Evenements</a>
             </div>
-
             <div>
                 <h4>Espaces</h4>
                 <a href="index.php?page=profile">Profil</a>
                 <?php if (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'admin'): ?>
-                    <a href="../back/index.php?page=dashboard" style="color: var(--orange); font-weight: bold;">Back Office</a>
+                    <a href="<?php echo htmlspecialchars($eventsBackOfficeLink, ENT_QUOTES, 'UTF-8'); ?>" style="color: var(--orange); font-weight: bold;">Back Office</a>
                 <?php endif; ?>
             </div>
         </div>
@@ -150,10 +116,12 @@ $mainNav = [
     <script src="../../assets/js/theme.js"></script>
     <script src="../../assets/js/main.js"></script>
     <script src="../../assets/js/offer-validation.js"></script>
+    <?php if (($page ?? '') === 'events'): ?>
+        <script src="../../assets/js/events.js" defer></script>
+    <?php endif; ?>
     <div class="auth-modal" id="loginModal">
         <div class="auth-modal-box">
             <button class="auth-close" id="closeLoginModal">&times;</button>
-
             <h2>Connexion</h2>
             <?php if (isset($_GET['error'])): ?>
                 <p style="color: #ff4757; font-weight: bold; background: rgba(255, 71, 87, 0.1); padding: 10px; border-radius: 6px; text-align: center;">
@@ -161,37 +129,18 @@ $mainNav = [
                 </p>
             <?php endif; ?>
             <p>Connectez-vous avec votre email et votre mot de passe.</p>
-
             <form class="auth-form" action="../../controller/AuthController.php?action=login" method="POST">
                 <div class="field-block">
                     <label for="login_email">Email</label>
                     <input type="email" id="login_email" name="email" required>
                 </div>
-
                 <div class="field-block">
                     <label for="login_password">Mot de passe</label>
                     <input type="password" id="login_password" name="password" required>
                 </div>
-
                 <div class="captcha-wrap" style="text-align: center; margin-bottom: 15px; background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #eee;">
                     <span style="display: block; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 15px; color: #555; font-weight: bold;">Security Verification</span>
-
-                    <div id="captchaBox" style="
-                        display: inline-block;
-                        background: #fff;
-                        padding: 10px 20px;
-                        border-radius: 4px;
-                        border: 1px dashed #ccc;
-                        font-family: 'Courier New', Courier, monospace;
-                        font-size: 24px;
-                        font-weight: bold;
-                        color: #2c3e50;
-                        letter-spacing: 8px;
-                        user-select: none;
-                        position: relative;
-                        overflow: hidden;
-                        margin-bottom: 15px;
-                    ">
+                    <div id="captchaBox" style="display: inline-block; background: #fff; padding: 10px 20px; border-radius: 4px; border: 1px dashed #ccc; font-family: 'Courier New', Courier, monospace; font-size: 24px; font-weight: bold; color: #2c3e50; letter-spacing: 8px; user-select: none; position: relative; overflow: hidden; margin-bottom: 15px;">
                         <?php
                         if (!isset($_SESSION['captcha_code'])) {
                             $permitted_chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -205,15 +154,11 @@ $mainNav = [
                         <div style="position:absolute; top:40%; left:0; width:100%; height:1px; background:rgba(0,0,0,0.1); transform:rotate(5deg);"></div>
                         <div style="position:absolute; top:60%; left:0; width:100%; height:1px; background:rgba(0,0,0,0.1); transform:rotate(-5deg);"></div>
                     </div>
-
                     <button type="button" onclick="window.location.reload();" style="border:none; background:none; cursor:pointer; color: var(--orange); font-size: 1.2rem; vertical-align: middle;" title="Rafraichir">Refresh</button>
                     <input type="text" name="captcha_input" placeholder="ENTER THE CODE ABOVE" required style="width: 100%; text-align: center; font-weight: bold; letter-spacing: 2px;">
                 </div>
-
                 <button type="submit" class="solid-btn auth-submit">Se connecter</button>
-
                 <div style="text-align:center; margin:15px 0; color:#888;">- OU -</div>
-
                 <button type="button" id="btnFaceID" class="face-id-btn">
                     <span style="font-size:1.2rem;">Face ID</span> Se connecter avec Face ID
                 </button>
@@ -225,17 +170,14 @@ const loginModal = document.getElementById('loginModal');
 const openLoginModal = document.getElementById('openLoginModal');
 const closeLoginModal = document.getElementById('closeLoginModal');
 const openLoginModal2 = document.getElementById('openLoginModal2');
-
 if (openLoginModal && loginModal && closeLoginModal) {
     openLoginModal.addEventListener('click', function(e) {
         e.preventDefault();
         loginModal.classList.add('show');
     });
-
     closeLoginModal.addEventListener('click', function() {
         loginModal.classList.remove('show');
     });
-
     loginModal.addEventListener('click', function(e) {
         if (e.target === loginModal) {
             loginModal.classList.remove('show');
@@ -249,10 +191,8 @@ if (openLoginModal2) {
     });
 }
 </script>
-
 <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
 <script src="../../assets/js/face-enroll.js"></script>
 <script src="../../assets/js/face-login.js"></script>
 </body>
-
 </html>

@@ -33,9 +33,18 @@ if (!in_array($page, $allowedPages, true)) {
     $page = 'home';
 }
 
-$controllerFile = dirname(__DIR__, 2) . '/controller/' . ucfirst($page) . 'Controller.php';
-if (file_exists($controllerFile)) {
-    require_once $controllerFile;
+$eventFrontData = [];
+if ($page === 'events') {
+    require_once dirname(__DIR__, 2) . '/controller/EventFrontController.php';
+    $eventFrontController = new EventFrontController();
+    $eventFrontController->handleViewActions($_GET);
+    $eventFrontController->handleRequest();
+    $eventFrontData = $eventFrontController->getPageData($_GET);
+} else {
+    $controllerFile = dirname(__DIR__, 2) . '/controller/' . ucfirst($page) . 'Controller.php';
+    if (file_exists($controllerFile)) {
+        require_once $controllerFile;
+    }
 }
 
 $view = __DIR__ . '/pages/' . $page . '.php';

@@ -1,6 +1,18 @@
 <?php
-class config {
-    public static function getConnexion() {
+
+$autoload = __DIR__ . '/vendor/autoload.php';
+if (file_exists($autoload)) {
+    require_once $autoload;
+}
+
+if (class_exists(\Dotenv\Dotenv::class) && file_exists(__DIR__ . '/.env')) {
+    \Dotenv\Dotenv::createImmutable(__DIR__)->safeLoad();
+}
+
+class config
+{
+    public static function getConnexion()
+    {
         try {
             $pdo = new PDO(
                 'mysql:host=localhost;dbname=goservice;charset=utf8mb4',
@@ -8,7 +20,6 @@ class config {
                 ''
             );
             $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-            // IMPORTANT : forcer utf8mb4 pour les emojis
             $pdo->exec("SET NAMES utf8mb4");
             $pdo->exec("SET CHARACTER SET utf8mb4");
             return $pdo;
@@ -17,7 +28,33 @@ class config {
         }
     }
 
-    // SMTP Configuration
+    public static function env(string $key, ?string $default = null): ?string
+    {
+        $value = $_ENV[$key] ?? $_SERVER[$key] ?? getenv($key);
+
+        if ($value === false || $value === null || $value === '') {
+            return $default;
+        }
+
+        return (string) $value;
+    }
+
+    public static function hasMailConfiguration(): bool
+    {
+        foreach (['MAIL_HOST', 'MAIL_PORT', 'MAIL_USERNAME', 'MAIL_PASSWORD', 'MAIL_FROM'] as $key) {
+            if (self::env($key) === null) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public static function appName(): string
+    {
+        return self::env('APP_NAME', 'GoService Events') ?? 'GoService Events';
+    }
+
     const MAIL_HOST = 'smtp-relay.brevo.com';
     const MAIL_PORT = 587;
     const MAIL_USERNAME = 'aa7b80001@smtp-brevo.com';

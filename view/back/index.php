@@ -3,7 +3,6 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Protection du Back-office : seuls les admins peuvent entrer
 if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'admin') {
     header('Location: ../front/index.php?page=login&error=' . urlencode('Accès restreint aux administrateurs.'));
     exit;
@@ -36,10 +35,18 @@ if (!in_array($page, $allowedPages, true)) {
     $page = 'dashboard';
 }
 
-// 1. Controller Routing for MVC backend operations
-$controllerFile = dirname(__DIR__, 2) . '/controller/back/' . ucfirst($page) . 'Controller.php';
-if (file_exists($controllerFile)) {
-    require_once $controllerFile;
+$eventAdminData = [];
+if ($page === 'events') {
+    require_once dirname(__DIR__, 2) . '/controller/EventAdminController.php';
+    $eventAdminController = new EventAdminController();
+    $eventAdminController->handleViewActions($_GET);
+    $eventAdminController->handleRequest();
+    $eventAdminData = $eventAdminController->getPageData($_GET);
+} else {
+    $controllerFile = dirname(__DIR__, 2) . '/controller/back/' . ucfirst($page) . 'Controller.php';
+    if (file_exists($controllerFile)) {
+        require_once $controllerFile;
+    }
 }
 
 $view = __DIR__ . '/pages/' . $page . '.php';
