@@ -41,8 +41,9 @@ if ($page === 'events') {
     $eventFrontController->handleRequest();
     $eventFrontData = $eventFrontController->getPageData($_GET);
 } else {
+    $pagesWithStandaloneViews = ['profile', 'login', 'register', 'forgot_password', 'reset_password'];
     $controllerFile = dirname(__DIR__, 2) . '/controller/' . ucfirst($page) . 'Controller.php';
-    if (file_exists($controllerFile)) {
+    if (!in_array($page, $pagesWithStandaloneViews, true) && file_exists($controllerFile)) {
         require_once $controllerFile;
     }
 }

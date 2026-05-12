@@ -34,14 +34,9 @@ class SMTP
      * The PHPMailer SMTP version number.
      *
      * @var string
-<<<<<<< HEAD
-     */
-    const VERSION = '6.12.0';
-=======
      * @deprecated This constant will be removed in PHPMailer 8.0. Use `PHPMailer::VERSION` instead.
      */
     const VERSION = '7.0.2';
->>>>>>> origin/evenements
 
     /**
      * SMTP line break constant.
@@ -211,10 +206,7 @@ class SMTP
         'Haraka' => '/[\d]{3} Message Queued \((.*)\)/',
         'ZoneMTA' => '/[\d]{3} Message queued as (.*)/',
         'Mailjet' => '/[\d]{3} OK queued as (.*)/',
-<<<<<<< HEAD
-=======
         'Gsmtp' => '/[\d]{3} 2\.0\.0 OK (.*) - gsmtp/',
->>>>>>> origin/evenements
     ];
 
     /**
@@ -503,13 +495,9 @@ class SMTP
         //PHP 5.6.7 dropped inclusion of TLS 1.1 and 1.2 in STREAM_CRYPTO_METHOD_TLS_CLIENT
         //so add them back in manually if we can
         if (defined('STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT')) {
-<<<<<<< HEAD
-            $crypto_method |= STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT;
-=======
             // phpcs:ignore PHPCompatibility.Constants.NewConstants.stream_crypto_method_tlsv1_2_clientFound
             $crypto_method |= STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT;
             // phpcs:ignore PHPCompatibility.Constants.NewConstants.stream_crypto_method_tlsv1_1_clientFound
->>>>>>> origin/evenements
             $crypto_method |= STREAM_CRYPTO_METHOD_TLSv1_1_CLIENT;
         }
 
@@ -648,13 +636,6 @@ class SMTP
                 if (null === $OAuth) {
                     return false;
                 }
-<<<<<<< HEAD
-                $oauth = $OAuth->getOauth64();
-
-                //Start authentication
-                if (!$this->sendCommand('AUTH', 'AUTH XOAUTH2 ' . $oauth, 235)) {
-                    return false;
-=======
                 try {
                     $oauth = $OAuth->getOauth64();
                 } catch (\Exception $e) {
@@ -697,7 +678,6 @@ class SMTP
                     ) {
                         return false;
                     }
->>>>>>> origin/evenements
                 }
                 break;
             default:
@@ -790,8 +770,6 @@ class SMTP
         }
     }
 
-<<<<<<< HEAD
-=======
     private function iterateLines($s)
     {
         $start = 0;
@@ -811,7 +789,6 @@ class SMTP
         yield substr($s, $start);
     }
 
->>>>>>> origin/evenements
     /**
      * Send an SMTP DATA command.
      * Issues a data command and sends the msg_data to the server,
@@ -840,25 +817,16 @@ class SMTP
          * NOTE: this does not count towards line-length limit.
          */
 
-<<<<<<< HEAD
-        //Normalize line breaks before exploding
-        $lines = explode("\n", str_replace(["\r\n", "\r"], "\n", $msg_data));
-=======
         //Iterate over lines with normalized line breaks
         $lines = $this->iterateLines($msg_data);
->>>>>>> origin/evenements
 
         /* To distinguish between a complete RFC822 message and a plain message body, we check if the first field
          * of the first line (':' separated) does not contain a space then it _should_ be a header, and we will
          * process all lines before a blank line as headers.
          */
 
-<<<<<<< HEAD
-        $field = substr($lines[0], 0, strpos($lines[0], ':'));
-=======
         $first_line = $lines->current();
         $field = substr($first_line, 0, strpos($first_line, ':'));
->>>>>>> origin/evenements
         $in_headers = false;
         if (!empty($field) && strpos($field, ' ') === false) {
             $in_headers = true;
@@ -1402,9 +1370,6 @@ class SMTP
 
                 //stream_select returns false when the `select` system call is interrupted
                 //by an incoming signal, try the select again
-<<<<<<< HEAD
-                if (stripos($message, 'interrupted system call') !== false) {
-=======
                 if (
                     stripos($message, 'interrupted system call') !== false ||
                     (
@@ -1415,7 +1380,6 @@ class SMTP
                         stripos($message, 'stream_select(): Unable to select [' . SOCKET_EINTR . ']') !== false
                     )
                 ) {
->>>>>>> origin/evenements
                     $this->edebug(
                         'SMTP -> get_lines(): retrying stream_select',
                         self::DEBUG_LOWLEVEL
