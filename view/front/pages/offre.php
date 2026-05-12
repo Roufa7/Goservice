@@ -681,15 +681,15 @@ document.addEventListener('DOMContentLoaded', function() {
 <section class="admin-stats reveal" id="offreStatsBar">
     <article class="admin-stat">
         <strong id="offreStatCount"><?php echo htmlspecialchars((string) count($sortedOffersForList), ENT_QUOTES, 'UTF-8'); ?></strong>
-        <span id="offreStatCountLabel" data-label-all="<?php echo htmlspecialchars(app_text('Offres Actives','Active Offers','Ø§Ù„Ø¹Ø±ÙˆØ¶ Ø§Ù„Ù†Ø´Ø·Ø©'), ENT_QUOTES, 'UTF-8'); ?>" data-label-results="<?php echo htmlspecialchars(app_text('RÃ©sultats','Results','Ø§Ù„Ù†ØªØ§Ø¦Ø¬'), ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars(app_text('Offres Actives','Active Offers','Ø§Ù„Ø¹Ø±ÙˆØ¶ Ø§Ù„Ù†Ø´Ø·Ø©'), ENT_QUOTES, 'UTF-8'); ?></span>
+        <span id="offreStatCountLabel" data-label-all="<?php echo htmlspecialchars(app_text('Offres actives','Active Offers','Ø§Ù„Ø¹Ø±ÙˆØ¶ Ø§Ù„Ù†Ø´Ø·Ø©'), ENT_QUOTES, 'UTF-8'); ?>" data-label-results="<?php echo htmlspecialchars(app_text('Résultats','Results','Ø§Ù„Ù†ØªØ§Ø¦Ø¬'), ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars(app_text('Offres actives','Active Offers','Ø§Ù„Ø¹Ø±ÙˆØ¶ Ø§Ù„Ù†Ø´Ø·Ø©'), ENT_QUOTES, 'UTF-8'); ?></span>
     </article>
     <article class="admin-stat">
         <strong id="offreStatLocalized"><?php echo htmlspecialchars((string) count(array_filter($sortedOffersForList, static fn ($o) => !empty($o['localisation']))), ENT_QUOTES, 'UTF-8'); ?></strong>
-        <span><?php echo app_text('Offres LocalisÃ©es','Localized Offers','Ø§Ù„Ø¹Ø±ÙˆØ¶ Ø§Ù„Ù…Ø­Ù„ÙŠØ©'); ?></span>
+        <span><?php echo app_text('Offres localisées','Localized Offers','Ø§Ù„Ø¹Ø±ÙˆØ¶ Ø§Ù„Ù…Ø­Ù„ÙŠØ©'); ?></span>
     </article>
     <article class="admin-stat">
         <strong id="offreStatTypes"><?php echo htmlspecialchars((string) count(array_unique(array_column($sortedOffersForList, 'type_service'))), ENT_QUOTES, 'UTF-8'); ?></strong>
-        <span><?php echo app_text('Types de Services','Service Types','Ø£Ù†ÙˆØ§Ø¹ Ø§Ù„Ø®Ø¯Ù…Ø§Øª'); ?></span>
+        <span><?php echo app_text('Types de services','Service Types','Ø£Ù†ÙˆØ§Ø¹ Ø§Ù„Ø®Ø¯Ù…Ø§Øª'); ?></span>
     </article>
 </section>
 
@@ -698,12 +698,12 @@ document.addEventListener('DOMContentLoaded', function() {
         <?php if (empty($activeOffers)): ?>
             <article class="card offers-empty-state">
                 <h3><?php echo app_text('Aucune offre disponible pour le moment','No offers available at the moment','Ù„Ø§ ØªÙˆØ¬Ø¯ Ø¹Ø±ÙˆØ¶ Ù…ØªØ§Ø­Ø© Ø­Ø§Ù„ÙŠØ§Ù‹'); ?></h3>
-                <p><?php echo app_text('Revenez bientÃ´t pour dÃ©couvrir de nouvelles offres exclusives !','Check back soon for new exclusive offers!','Ø¹Ø¯ Ù„Ø§Ø­Ù‚Ø§Ù‹ Ù„Ø§ÙƒØªØ´Ø§Ù Ø¹Ø±ÙˆØ¶ Ø­ØµØ±ÙŠØ© Ø¬Ø¯ÙŠØ¯Ø©!'); ?></p>
+                <p><?php echo app_text('Revenez bientôt pour découvrir de nouvelles offres exclusives !','Check back soon for new exclusive offers!','Ø¹Ø¯ Ù„Ø§Ø­Ù‚Ø§Ù‹ Ù„Ø§ÙƒØªØ´Ø§Ù Ø¹Ø±ÙˆØ¶ Ø­ØµØ±ÙŠØ© Ø¬Ø¯ÙŠØ¯Ø©!'); ?></p>
             </article>
         <?php else: ?>
             <article class="card offers-empty-state js-offres-filter-empty" id="offresFilterEmpty" hidden>
-                <h3><?php echo app_text('Aucune offre ne correspond Ã  votre recherche','No offers match your search','Ù„Ø§ ØªÙˆØ¬Ø¯ Ø¹Ø±ÙˆØ¶ ØªØ·Ø§Ø¨Ù‚ Ø¨Ø­Ø«Ùƒ'); ?></h3>
-                <p><?php echo app_text('Essayez un autre mot-clÃ© ou un autre service.','Try another keyword or another service.','Ø¬Ø±Ù‘Ø¨ ÙƒÙ„Ù…Ø© Ù…ÙØªØ§Ø­ÙŠØ© Ø£Ø®Ø±Ù‰ Ø£Ùˆ Ø®Ø¯Ù…Ø© Ø£Ø®Ø±Ù‰.'); ?></p>
+                <h3><?php echo app_text('Aucune offre ne correspond à votre recherche','No offers match your search','Ù„Ø§ ØªÙˆØ¬Ø¯ Ø¹Ø±ÙˆØ¶ ØªØ·Ø§Ø¨Ù‚ Ø¨Ø­Ø«Ùƒ'); ?></h3>
+                <p><?php echo app_text('Essayez un autre mot-clé ou un autre service.','Try another keyword or another service.','Ø¬Ø±Ù‘Ø¨ ÙƒÙ„Ù…Ø© Ù…ÙØªØ§Ø­ÙŠØ© Ø£Ø®Ø±Ù‰ Ø£Ùˆ Ø®Ø¯Ù…Ø© Ø£Ø®Ø±Ù‰.'); ?></p>
             </article>
             <?php foreach ($sortedOffersForList as $offer): ?>
                 <?php
