@@ -132,7 +132,10 @@ $mine   = (($_GET['mine'] ?? '') === '1');
 
 function e($value){ return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8'); }
 function invalidClass($error){ return !empty($error) ? 'field-invalid' : ''; }
-function getLettersCount($text): int { $c=preg_replace('/[^a-zA-ZÃ€-Ã¿]/u','',$text); return mb_strlen($c); }
+function getLettersCount($text): int {
+    $c = preg_replace('/[^\p{L}]/u', '', (string) $text);
+    return mb_strlen($c ?: '');
+}
 function isEmojiOnlyForum(string $text): bool {
     $text=trim($text);
     if($text==='') return true;
@@ -1269,8 +1272,8 @@ body.dark .video-more-dropdown a:hover,body.dark .video-more-dropdown button:hov
 <div class="forum-page">
     <section class="page-hero reveal forum-hero-classic">
         <span class="section-badge">Forum social</span>
-        <h1 class="page-title">Forum & Ã©changes</h1>
-        <p class="page-intro">Publiez, partagez des images ou vidÃ©os, commentez, aimez et suivez les discussions dans une interface moderne inspirÃ©e des rÃ©seaux sociaux.</p>
+        <h1 class="page-title">Forum & échanges</h1>
+        <p class="page-intro">Publiez, partagez des images ou vidéos, commentez, aimez et suivez les discussions dans une interface moderne inspirée des réseaux sociaux.</p>
     </section>
 
     <section class="action-bar reveal forum-action-bar">
@@ -1299,22 +1302,22 @@ body.dark .video-more-dropdown a:hover,body.dark .video-more-dropdown button:hov
                 </div>
                 <div class="forum-sort-wrap">
                     <select name="sort" class="forum-sort-select" onchange="this.form.submit()">
-                        <option value="recent" <?php echo $sort==='recent'?'selected':''; ?>>Plus rÃ©cents</option>
-                        <option value="liked" <?php echo $sort==='liked'?'selected':''; ?>>Plus aimÃ©s</option>
-                        <option value="commented" <?php echo $sort==='commented'?'selected':''; ?>>Plus commentÃ©s</option>
+                        <option value="recent" <?php echo $sort==='recent'?'selected':''; ?>>Plus récents</option>
+                        <option value="liked" <?php echo $sort==='liked'?'selected':''; ?>>Plus aimés</option>
+                        <option value="commented" <?php echo $sort==='commented'?'selected':''; ?>>Plus commentés</option>
                     </select>
                 </div>
             </div>
         </form>
     </section>
 
-    <?php if(isset($_GET['published'])): ?><div class="success-message" style="max-width:1380px;margin:0 auto;width:100%;">Votre post a Ã©tÃ© envoyÃ© pour rÃ©vision par l'administrateur.</div><?php endif; ?>
-    <?php if(isset($_GET['updated'])): ?><div class="success-message" style="max-width:1380px;margin:0 auto;width:100%;">Post mis Ã  jour avec succÃ¨s.</div><?php endif; ?>
-    <?php if(isset($_GET['deleted'])): ?><div class="success-message" style="max-width:1380px;margin:0 auto;width:100%;">Post supprimÃ© avec succÃ¨s.</div><?php endif; ?>
+    <?php if(isset($_GET['published'])): ?><div class="success-message" style="max-width:1380px;margin:0 auto;width:100%;">Votre post a été envoyé pour révision par l'administrateur.</div><?php endif; ?>
+    <?php if(isset($_GET['updated'])): ?><div class="success-message" style="max-width:1380px;margin:0 auto;width:100%;">Post mis à jour avec succès.</div><?php endif; ?>
+    <?php if(isset($_GET['deleted'])): ?><div class="success-message" style="max-width:1380px;margin:0 auto;width:100%;">Post supprimé avec succès.</div><?php endif; ?>
     <?php if(isset($_GET['reported'])): ?><div class="success-message" style="max-width:1380px;margin:0 auto;width:100%;">Post signalé avec succès.</div><?php endif; ?>
-    <?php if(($_GET['error'] ?? '') === 'unauthorized'): ?><div class="success-message" style="max-width:1380px;margin:0 auto;width:100%;background:#fff3f3;color:#a33;border-color:#ffd0d0;">Action refusÃ©e : vous pouvez modifier ou supprimer seulement vos propres publications.</div><?php endif; ?>
-    <?php if(isset($_GET['comment_deleted'])): ?><div class="success-message" style="max-width:1380px;margin:0 auto;width:100%;">Commentaire supprimÃ© avec succÃ¨s.</div><?php endif; ?>
-    <?php if(isset($_GET['comment_updated'])): ?><div class="success-message" style="max-width:1380px;margin:0 auto;width:100%;">Commentaire modifiÃ© avec succÃ¨s.</div><?php endif; ?>
+    <?php if(($_GET['error'] ?? '') === 'unauthorized'): ?><div class="success-message" style="max-width:1380px;margin:0 auto;width:100%;background:#fff3f3;color:#a33;border-color:#ffd0d0;">Action refusée : vous pouvez modifier ou supprimer seulement vos propres publications.</div><?php endif; ?>
+    <?php if(isset($_GET['comment_deleted'])): ?><div class="success-message" style="max-width:1380px;margin:0 auto;width:100%;">Commentaire supprimé avec succès.</div><?php endif; ?>
+    <?php if(isset($_GET['comment_updated'])): ?><div class="success-message" style="max-width:1380px;margin:0 auto;width:100%;">Commentaire modifié avec succès.</div><?php endif; ?>
     <?php if(isset($_GET['comment_reported'])): ?><div class="success-message" style="max-width:1380px;margin:0 auto;width:100%;">Commentaire signalé avec succès.</div><?php endif; ?>
 
     <section class="forum-main-layout">
@@ -1368,16 +1371,16 @@ body.dark .video-more-dropdown a:hover,body.dark .video-more-dropdown button:hov
                         </div>
                         <div class="post-menu-wrap">
                             <span class="post-time-top"><?php echo e(timeAgo($post['date_publication']??'')); ?></span>
-                            <button class="post-menu-btn" type="button" onclick="togglePostMenu(<?php echo (int)$post['id_post']; ?>)">â‹¯</button>
+                            <button class="post-menu-btn" type="button" onclick="togglePostMenu(<?php echo (int)$post['id_post']; ?>)">⋯</button>
                             <div class="post-dropdown" id="post-menu-<?php echo (int)$post['id_post']; ?>">
                                 <?php if($isOwner): ?>
-                                    <a href="<?php echo e(forumUrl(['edit'=>(int)$post['id_post']])); ?>" onclick="localStorage.setItem('openForumModal','1')">âœï¸ Modifier</a>
+                                    <a href="<?php echo e(forumUrl(['edit'=>(int)$post['id_post']])); ?>" onclick="localStorage.setItem('openForumModal','1')">✏️ Modifier</a>
                                     <form method="POST" action="" onsubmit="return confirm('Supprimer ce post ?');">
                                         <input type="hidden" name="post_id" value="<?php echo (int)$post['id_post']; ?>">
-                                        <button type="submit" name="delete_post" style="width:100%;text-align:left;display:block;padding:10px;">ðŸ—‘ Supprimer</button>
+                                        <button type="submit" name="delete_post" style="width:100%;text-align:left;display:block;padding:10px;">🗑 Supprimer</button>
                                     </form>
                                 <?php else: ?>
-                                    <button type="button" onclick="openReportModal(<?php echo (int)$post['id_post']; ?>)">ðŸš© Signaler</button>
+                                    <button type="button" onclick="openReportModal(<?php echo (int)$post['id_post']; ?>)">🚩 Signaler</button>
                                 <?php endif; ?>
                             </div>
                         </div>
@@ -1386,15 +1389,15 @@ body.dark .video-more-dropdown a:hover,body.dark .video-more-dropdown button:hov
                     <h3 class="post-title"><?php echo e($post['titre']??''); ?></h3>
                     <div class="sentiment-zone">
 <?php if (($post['sentiment_post'] ?? '') === 'positif'): ?>
-            <span class="sentiment-badge positive">ðŸŸ¢ Positif</span>
+            <span class="sentiment-badge positive">🟢 Positif</span>
 <?php elseif (($post['sentiment_post'] ?? '') === 'negatif'): ?>
-            <span class="sentiment-badge negative">ðŸ”´ NÃ©gatif</span>
+            <span class="sentiment-badge negative">🔴 Négatif</span>
     <?php else: ?>
-        <span class="sentiment-badge neutral">âšª Neutre</span>
+        <span class="sentiment-badge neutral">⚪ Neutre</span>
     <?php endif; ?>
 
     <?php if (($post['toxicite_post'] ?? 0) == 1): ?>
-        <span class="sentiment-badge toxic">âš ï¸ Toxique</span>
+        <span class="sentiment-badge toxic">⚠️ Toxique</span>
     <?php endif; ?>
 </div>
                     <?php if(trim($cleanPostContent)!==''): ?><p class="post-content"><?php echo nl2br(e($cleanPostContent)); ?></p><?php endif; ?>
@@ -1417,7 +1420,7 @@ body.dark .video-more-dropdown a:hover,body.dark .video-more-dropdown button:hov
                         <div class="post-media-frame"><video controls playsinline preload="metadata"><source src="<?php echo e($videoEmbedData['embed']); ?>"></video><div class="post-media-overlay">Vidéo</div></div>
                         <?php endif; ?>
                     <?php elseif(empty($sharedOriginal)&&($videoEmbedData['type']??'')==='link'&&!empty($videoEmbedData['url'])): ?>
-                    <a href="<?php echo e($videoEmbedData['url']); ?>" target="_blank" class="post-link-card">ðŸ”— Ouvrir le lien</a>
+                    <a href="<?php echo e($videoEmbedData['url']); ?>" target="_blank" class="post-link-card">🔗 Ouvrir le lien</a>
                     <?php endif; ?>
 
                     <?php if(empty($sharedOriginal)&&!empty($imageUrl)): ?>
@@ -1436,10 +1439,10 @@ body.dark .video-more-dropdown a:hover,body.dark .video-more-dropdown button:hov
                         <form method="POST" action="">
                             <input type="hidden" name="toggle_like" value="1">
                             <input type="hidden" name="post_id" value="<?php echo (int)$post['id_post']; ?>">
-                            <button type="submit" class="post-reaction-btn"><span class="reaction-label"><?php echo !empty($post['is_liked'])?'â¤ï¸ Aimer':'ðŸ‘ Aimer'; ?></span><span class="reaction-count"><?php echo (int)($post['likes_count']??0); ?></span></button>
+                            <button type="submit" class="post-reaction-btn"><span class="reaction-label"><?php echo !empty($post['is_liked'])?'❤️ Aimer':'👍 Aimer'; ?></span><span class="reaction-count"><?php echo (int)($post['likes_count']??0); ?></span></button>
                         </form>
-                        <button class="post-reaction-btn" type="button" onclick="toggleCommentBox(<?php echo (int)$post['id_post']; ?>)"><span class="reaction-label">ðŸ’¬ Commenter</span><span class="reaction-count"><?php echo (int)($post['comments_count']??count($post['comments']??[])); ?></span></button>
-                        <button class="post-reaction-btn advanced-share-open" type="button" data-post-id="<?php echo (int)$post['id_post']; ?>" data-post-title="<?php echo e($post['titre']??'Post GoService'); ?>" data-post-content="<?php echo e(strip_tags($cleanPostContent??($post['contenu']??''))); ?>" data-post-user="<?php echo e($fullname); ?>" data-post-image="<?php echo e($imageUrl); ?>" data-post-video="<?php echo e($videoUrl); ?>" onclick="openAdvancedShareModalFromButton(this)"><span class="reaction-label">ðŸ” Partager</span><span class="reaction-count" id="share-count-<?php echo (int)$post['id_post']; ?>"><?php echo (int)($post['shares_count']??0); ?></span></button>
+                        <button class="post-reaction-btn" type="button" onclick="toggleCommentBox(<?php echo (int)$post['id_post']; ?>)"><span class="reaction-label">💬 Commenter</span><span class="reaction-count"><?php echo (int)($post['comments_count']??count($post['comments']??[])); ?></span></button>
+                        <button class="post-reaction-btn advanced-share-open" type="button" data-post-id="<?php echo (int)$post['id_post']; ?>" data-post-title="<?php echo e($post['titre']??'Post GoService'); ?>" data-post-content="<?php echo e(strip_tags($cleanPostContent??($post['contenu']??''))); ?>" data-post-user="<?php echo e($fullname); ?>" data-post-image="<?php echo e($imageUrl); ?>" data-post-video="<?php echo e($videoUrl); ?>" onclick="openAdvancedShareModalFromButton(this)"><span class="reaction-label">🔁 Partager</span><span class="reaction-count" id="share-count-<?php echo (int)$post['id_post']; ?>"><?php echo (int)($post['shares_count']??0); ?></span></button>
                         <form method="POST" action="">
                             <input type="hidden" name="toggle_save" value="1">
                             <input type="hidden" name="post_id" value="<?php echo (int)$post['id_post']; ?>">
@@ -1454,12 +1457,12 @@ body.dark .video-more-dropdown a:hover,body.dark .video-more-dropdown button:hov
                             <form method="POST" action="" enctype="multipart/form-data" novalidate class="comment-form">
                                 <input type="hidden" name="add_comment" value="1">
                                 <input type="hidden" name="post_id" value="<?php echo (int)$post['id_post']; ?>">
-                                <textarea name="comment_content" id="comment-content-<?php echo (int)$post['id_post']; ?>" class="comment-area comment-emoji-target" placeholder="Ã‰crire un commentaire..." required></textarea>
-                                <input type="text" name="emoji_content" id="emoji-hidden-<?php echo (int)$post['id_post']; ?>" value="" class="comment-emoji-input comment-emoji-target" placeholder="ðŸ˜Š">
+                                <textarea name="comment_content" id="comment-content-<?php echo (int)$post['id_post']; ?>" class="comment-area comment-emoji-target" placeholder="Écrire un commentaire..." required></textarea>
+                                <input type="text" name="emoji_content" id="emoji-hidden-<?php echo (int)$post['id_post']; ?>" value="" class="comment-emoji-input comment-emoji-target" placeholder="😊">
                                 <span class="field-error" id="err-comment-content-<?php echo (int)$post['id_post']; ?>"></span>
                                 <div class="comment-tools">
                                     <label class="comment-tool-btn" title="Ajouter une image">Image<input type="file" name="comment_image" accept=".jpg,.jpeg,.png,.webp,.gif" class="comment-hidden-input" id="comment-img-<?php echo (int)$post['id_post']; ?>"></label>
-                                    <button type="button" class="comment-tool-btn comment-emoji-btn" data-target="emoji-hidden-<?php echo (int)$post['id_post']; ?>" title="Ajouter un emoji">ðŸ˜Š</button>
+                                    <button type="button" class="comment-tool-btn comment-emoji-btn" data-target="emoji-hidden-<?php echo (int)$post['id_post']; ?>" title="Ajouter un emoji">😊</button>
                                     <button type="submit" name="add_comment" class="solid-btn">Publier</button>
                                 </div>
                             </form>
@@ -1485,13 +1488,13 @@ body.dark .video-more-dropdown a:hover,body.dark .video-more-dropdown button:hov
                                         <div class="comment-header-row">
                                             <strong class="comment-author"><?php echo e($commentAuthor); ?></strong>
                                             <div class="comment-menu-wrap">
-                                                <button type="button" class="comment-menu-btn" onclick="toggleCommentMenu('cmenu-<?php echo $commentId; ?>')">â‹¯</button>
+                                                <button type="button" class="comment-menu-btn" onclick="toggleCommentMenu('cmenu-<?php echo $commentId; ?>')">⋯</button>
                                                 <div class="comment-dropdown" id="cmenu-<?php echo $commentId; ?>">
                                                     <?php if($isCommentOwner): ?>
-                                                        <button type="button" onclick="startEditComment(<?php echo $commentId; ?>,<?php echo (int)$post['id_post']; ?>)">âœï¸ Modifier</button>
-                                                        <button type="button" class="danger" onclick="deleteComment(<?php echo $commentId; ?>,<?php echo (int)$post['id_post']; ?>,0)">ðŸ—‘ Supprimer</button>
+                                                        <button type="button" onclick="startEditComment(<?php echo $commentId; ?>,<?php echo (int)$post['id_post']; ?>)">✏️ Modifier</button>
+                                                        <button type="button" class="danger" onclick="deleteComment(<?php echo $commentId; ?>,<?php echo (int)$post['id_post']; ?>,0)">🗑 Supprimer</button>
                                                     <?php else: ?>
-                                                        <button type="button" onclick="openReportCommentModal(<?php echo $commentId; ?>,<?php echo (int)$post['id_post']; ?>)">ðŸš© Signaler</button>
+                                                        <button type="button" onclick="openReportCommentModal(<?php echo $commentId; ?>,<?php echo (int)$post['id_post']; ?>)">🚩 Signaler</button>
                                                     <?php endif; ?>
                                                 </div>
                                             </div>
@@ -1504,11 +1507,11 @@ body.dark .video-more-dropdown a:hover,body.dark .video-more-dropdown button:hov
                                         <form method="POST" action="" enctype="multipart/form-data" id="comment-edit-zone-<?php echo $commentId; ?>" style="display:none;" class="comment-edit-form">
                                             <input type="hidden" name="update_comment" value="1"><input type="hidden" name="comment_id" value="<?php echo $commentId; ?>"><input type="hidden" name="post_id" value="<?php echo (int)$post['id_post']; ?>">
                                             <textarea name="comment_content" class="comment-edit-area comment-emoji-target" id="comment-edit-input-<?php echo $commentId; ?>"><?php echo e($comment['contenu_commentaire']??''); ?></textarea>
-                                            <input type="text" name="emoji_content" id="edit-emoji-<?php echo $commentId; ?>" value="<?php echo e($comment['emoji_commentaire']??''); ?>" class="comment-emoji-input comment-emoji-target" placeholder="ðŸ˜Š">
+                                            <input type="text" name="emoji_content" id="edit-emoji-<?php echo $commentId; ?>" value="<?php echo e($comment['emoji_commentaire']??''); ?>" class="comment-emoji-input comment-emoji-target" placeholder="😊">
                                             <span class="field-error" id="err-edit-comment-<?php echo $commentId; ?>"></span>
                                             <div class="comment-tools">
                                                 <label class="comment-tool-btn" title="Modifier l'image">Image<input type="file" name="comment_image" accept=".jpg,.jpeg,.png,.webp,.gif" class="comment-hidden-input"></label>
-                                                <button type="button" class="comment-tool-btn comment-emoji-btn" data-target="edit-emoji-<?php echo $commentId; ?>">ðŸ˜Š</button>
+                                                <button type="button" class="comment-tool-btn comment-emoji-btn" data-target="edit-emoji-<?php echo $commentId; ?>">😊</button>
                                                 <button type="submit" class="comment-edit-save-btn">Enregistrer</button>
                                                 <button type="button" class="comment-edit-cancel-btn" onclick="cancelEditComment(<?php echo $commentId; ?>)">Annuler</button>
                                             </div>
@@ -1516,19 +1519,19 @@ body.dark .video-more-dropdown a:hover,body.dark .video-more-dropdown button:hov
                                     </div>
                                     <div class="comment-meta-row">
                                         <span class="comment-time"><?php echo e(timeAgo($comment['date_commentaire']??'')); ?></span>
-                                        <button type="button" class="reply-btn" data-root-id="<?php echo $commentId; ?>" data-author="<?php echo e($commentAuthor); ?>" data-holder-id="reply-holder-comment-<?php echo $commentId; ?>">RÃ©pondre</button>
+                                        <button type="button" class="reply-btn" data-root-id="<?php echo $commentId; ?>" data-author="<?php echo e($commentAuthor); ?>" data-holder-id="reply-holder-comment-<?php echo $commentId; ?>">Répondre</button>
                                     </div>
                                     <div class="inline-reply-holder" id="reply-holder-comment-<?php echo $commentId; ?>"></div>
                                     <div class="reply-box" id="reply-box-<?php echo $commentId; ?>" style="display:none;">
                                         <form method="POST" action="" enctype="multipart/form-data" novalidate class="reply-form">
                                             <input type="hidden" name="add_comment" value="1"><input type="hidden" name="post_id" value="<?php echo (int)$post['id_post']; ?>"><input type="hidden" name="parent_id" value="<?php echo $commentId; ?>">
-                                            <textarea name="comment_content" id="reply-content-<?php echo $commentId; ?>" class="comment-area reply-area comment-emoji-target" placeholder="Votre rÃ©ponse..." required></textarea>
-                                            <input type="text" name="emoji_content" id="emoji-reply-<?php echo $commentId; ?>" value="" class="comment-emoji-input comment-emoji-target" placeholder="ðŸ˜Š">
+                                            <textarea name="comment_content" id="reply-content-<?php echo $commentId; ?>" class="comment-area reply-area comment-emoji-target" placeholder="Votre réponse..." required></textarea>
+                                            <input type="text" name="emoji_content" id="emoji-reply-<?php echo $commentId; ?>" value="" class="comment-emoji-input comment-emoji-target" placeholder="😊">
                                             <span id="err-reply-content-<?php echo $commentId; ?>" class="field-error"></span>
                                             <div class="comment-tools">
                                                 <label class="comment-tool-btn reply-tool-btn">Image<input type="file" name="comment_image" accept=".jpg,.jpeg,.png,.webp,.gif" class="comment-hidden-input" id="reply-img-<?php echo $commentId; ?>"></label>
-                                                <button type="button" class="comment-tool-btn reply-tool-btn comment-emoji-btn" data-target="emoji-reply-<?php echo $commentId; ?>">ðŸ˜Š</button>
-                                                <button type="submit" name="add_comment" class="solid-btn reply-submit-btn">RÃ©pondre</button>
+                                                <button type="button" class="comment-tool-btn reply-tool-btn comment-emoji-btn" data-target="emoji-reply-<?php echo $commentId; ?>">😊</button>
+                                                <button type="submit" name="add_comment" class="solid-btn reply-submit-btn">Répondre</button>
                                             </div>
                                         </form>
                                     </div>
@@ -1547,13 +1550,13 @@ body.dark .video-more-dropdown a:hover,body.dark .video-more-dropdown button:hov
                                                     <div class="reply-header-row">
                                                         <strong class="comment-author"><?php echo e($replyAuthor); ?></strong>
                                                         <div class="comment-menu-wrap">
-                                                            <button type="button" class="comment-menu-btn" onclick="toggleCommentMenu('cmenu-reply-<?php echo $replyId; ?>')">â‹¯</button>
+                                                            <button type="button" class="comment-menu-btn" onclick="toggleCommentMenu('cmenu-reply-<?php echo $replyId; ?>')">⋯</button>
                                                             <div class="comment-dropdown" id="cmenu-reply-<?php echo $replyId; ?>">
                                                                 <?php if($isReplyOwner): ?>
-                                                                    <button type="button" onclick="startEditComment(<?php echo $replyId; ?>,<?php echo (int)$post['id_post']; ?>)">âœï¸ Modifier</button>
-                                                                    <button type="button" class="danger" onclick="deleteComment(<?php echo $replyId; ?>,<?php echo (int)$post['id_post']; ?>,<?php echo $commentId; ?>)">ðŸ—‘ Supprimer</button>
+                                                                    <button type="button" onclick="startEditComment(<?php echo $replyId; ?>,<?php echo (int)$post['id_post']; ?>)">✏️ Modifier</button>
+                                                                    <button type="button" class="danger" onclick="deleteComment(<?php echo $replyId; ?>,<?php echo (int)$post['id_post']; ?>,<?php echo $commentId; ?>)">🗑 Supprimer</button>
                                                                 <?php else: ?>
-                                                                    <button type="button" onclick="openReportCommentModal(<?php echo $replyId; ?>,<?php echo (int)$post['id_post']; ?>)">ðŸš© Signaler</button>
+                                                                    <button type="button" onclick="openReportCommentModal(<?php echo $replyId; ?>,<?php echo (int)$post['id_post']; ?>)">🚩 Signaler</button>
                                                                 <?php endif; ?>
                                                             </div>
                                                         </div>
@@ -1561,16 +1564,16 @@ body.dark .video-more-dropdown a:hover,body.dark .video-more-dropdown button:hov
                                                     <div id="comment-text-<?php echo $replyId; ?>">
                                                         <?php if(!empty($reply['contenu_commentaire'])): ?><div class="comment-text"><?php echo nl2br(e($reply['contenu_commentaire'])); ?></div><?php endif; ?>
                                                         <?php if(!empty($reply['emoji_commentaire'])): ?><div class="comment-emoji-line"><?php echo e($reply['emoji_commentaire']); ?></div><?php endif; ?>
-                                                        <?php if(!empty($replyImageUrl)): ?><div class="comment-image-wrap"><img src="<?php echo e($replyImageUrl); ?>" alt="Image rÃ©ponse" class="comment-image"></div><?php endif; ?>
+                                                        <?php if(!empty($replyImageUrl)): ?><div class="comment-image-wrap"><img src="<?php echo e($replyImageUrl); ?>" alt="Image réponse" class="comment-image"></div><?php endif; ?>
                                                     </div>
                                                     <form method="POST" action="" enctype="multipart/form-data" id="comment-edit-zone-<?php echo $replyId; ?>" style="display:none;" class="comment-edit-form">
                                                         <input type="hidden" name="update_comment" value="1"><input type="hidden" name="comment_id" value="<?php echo $replyId; ?>"><input type="hidden" name="post_id" value="<?php echo (int)$post['id_post']; ?>">
                                                         <textarea name="comment_content" class="comment-edit-area comment-emoji-target" id="comment-edit-input-<?php echo $replyId; ?>"><?php echo e($reply['contenu_commentaire']??''); ?></textarea>
-                                                        <input type="text" name="emoji_content" id="edit-emoji-<?php echo $replyId; ?>" value="<?php echo e($reply['emoji_commentaire']??''); ?>" class="comment-emoji-input comment-emoji-target" placeholder="ðŸ˜Š">
+                                                        <input type="text" name="emoji_content" id="edit-emoji-<?php echo $replyId; ?>" value="<?php echo e($reply['emoji_commentaire']??''); ?>" class="comment-emoji-input comment-emoji-target" placeholder="😊">
                                                         <span class="field-error" id="err-edit-comment-<?php echo $replyId; ?>"></span>
                                                         <div class="comment-tools">
                                                             <label class="comment-tool-btn reply-tool-btn">Image<input type="file" name="comment_image" accept=".jpg,.jpeg,.png,.webp,.gif" class="comment-hidden-input"></label>
-                                                            <button type="button" class="comment-tool-btn reply-tool-btn comment-emoji-btn" data-target="edit-emoji-<?php echo $replyId; ?>">ðŸ˜Š</button>
+                                                            <button type="button" class="comment-tool-btn reply-tool-btn comment-emoji-btn" data-target="edit-emoji-<?php echo $replyId; ?>">😊</button>
                                                             <button type="submit" class="comment-edit-save-btn">Enregistrer</button>
                                                             <button type="button" class="comment-edit-cancel-btn" onclick="cancelEditComment(<?php echo $replyId; ?>)">Annuler</button>
                                                         </div>
@@ -1578,7 +1581,7 @@ body.dark .video-more-dropdown a:hover,body.dark .video-more-dropdown button:hov
                                                 </div>
                                                 <div class="comment-meta-row">
                                                     <span class="comment-time"><?php echo e(timeAgo($reply['date_commentaire']??'')); ?></span>
-                                                    <button type="button" class="reply-btn" data-root-id="<?php echo $commentId; ?>" data-author="<?php echo e($replyAuthor); ?>" data-holder-id="reply-holder-reply-<?php echo $replyId; ?>">RÃ©pondre</button>
+                                                    <button type="button" class="reply-btn" data-root-id="<?php echo $commentId; ?>" data-author="<?php echo e($replyAuthor); ?>" data-holder-id="reply-holder-reply-<?php echo $replyId; ?>">Répondre</button>
                                                 </div>
                                                 <div class="inline-reply-holder" id="reply-holder-reply-<?php echo $replyId; ?>"></div>
                                             </div>
@@ -1631,11 +1634,11 @@ body.dark .video-more-dropdown a:hover,body.dark .video-more-dropdown button:hov
     document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 GMT; domain=' + location.hostname + '; path=/';
 })();
 </script>
-<!-- MODAL CRÃ‰ER/MODIFIER POST -->
+<!-- MODAL CRÉER/MODIFIER POST -->
 <div class="modal-overlay" id="forumModal">
     <div class="forum-modal">
         <div class="forum-modal-head">
-            <div class="forum-modal-title"><?php echo $isEditShareMode?'Modifier le partage':($isEditMode?'Modifier la publication':'CrÃ©er une publication'); ?></div>
+            <div class="forum-modal-title"><?php echo $isEditShareMode?'Modifier le partage':($isEditMode?'Modifier la publication':'Créer une publication'); ?></div>
             <button type="button" class="forum-modal-close" id="closeForumModal">x</button>
         </div>
         <div class="forum-modal-body">
@@ -1714,22 +1717,22 @@ body.dark .video-more-dropdown a:hover,body.dark .video-more-dropdown button:hov
         <div class="media-viewer-image-layout">
             <div class="media-viewer-image-main" id="imageViewerMain"></div>
             <div class="media-viewer-image-side">
-                <div class="viewer-post-head"><div class="viewer-user"><div class="mini-avatar" id="viewerUserAvatar">U</div><div class="viewer-user-meta"><strong id="viewerUserName">Utilisateur</strong><span id="viewerPostTime">Ã  l'instant</span></div></div></div>
+                <div class="viewer-post-head"><div class="viewer-user"><div class="mini-avatar" id="viewerUserAvatar">U</div><div class="viewer-user-meta"><strong id="viewerUserName">Utilisateur</strong><span id="viewerPostTime">à l'instant</span></div></div></div>
                 <div class="viewer-post-body"><div class="viewer-post-title" id="viewerPostTitle"></div><div id="viewerPostContent"></div></div>
-                <div class="viewer-stats" id="viewerStatsRow"><span id="viewerLikesWrap" style="display:none;">ðŸ‘ <span id="viewerLikesCount">0</span></span><span id="viewerCommentsWrap" style="display:none;">ðŸ’¬ <span id="viewerCommentsCount">0</span></span><span id="viewerSharesWrap" style="display:none;">ðŸ” <span id="viewerSharesCount">0</span></span></div>
+                <div class="viewer-stats" id="viewerStatsRow"><span id="viewerLikesWrap" style="display:none;">👍 <span id="viewerLikesCount">0</span></span><span id="viewerCommentsWrap" style="display:none;">💬 <span id="viewerCommentsCount">0</span></span><span id="viewerSharesWrap" style="display:none;">🔁 <span id="viewerSharesCount">0</span></span></div>
                 <div class="viewer-actions">
-                    <form method="POST" action="" style="margin:0;"><input type="hidden" name="toggle_like" value="1"><input type="hidden" name="post_id" id="viewerLikePostId" value=""><button class="viewer-action-btn" type="submit" id="viewerLikeBtn">ðŸ‘</button></form>
-                    <button class="viewer-action-btn" type="button" id="viewerCommentBtn">ðŸ’¬</button>
-                    <button class="viewer-action-btn" type="button" id="viewerShareBtn">ðŸ”</button>
-                    <form method="POST" action="" style="margin:0;"><input type="hidden" name="toggle_save" value="1"><input type="hidden" name="post_id" id="viewerSavePostId" value=""><button class="viewer-action-btn" type="submit" id="viewerSaveBtn">ðŸ”–</button></form>
+                    <form method="POST" action="" style="margin:0;"><input type="hidden" name="toggle_like" value="1"><input type="hidden" name="post_id" id="viewerLikePostId" value=""><button class="viewer-action-btn" type="submit" id="viewerLikeBtn">👍</button></form>
+                    <button class="viewer-action-btn" type="button" id="viewerCommentBtn">💬</button>
+                    <button class="viewer-action-btn" type="button" id="viewerShareBtn">🔁</button>
+                    <form method="POST" action="" style="margin:0;"><input type="hidden" name="toggle_save" value="1"><input type="hidden" name="post_id" id="viewerSavePostId" value=""><button class="viewer-action-btn" type="submit" id="viewerSaveBtn">🔖</button></form>
                 </div>
                 <div class="viewer-comments" id="viewerComments"></div>
                 <div class="viewer-comment-form-wrap viewer-compact-wrap">
                     <form method="POST" action="" enctype="multipart/form-data" id="viewerCommentForm" novalidate>
                         <input type="hidden" name="add_comment" value="1"><input type="hidden" name="post_id" id="viewerPostId" value=""><input type="hidden" name="parent_id" id="viewerParentId" value="">
-                        <div class="viewer-comment-mini" id="viewerCommentMini"><span>Ã‰crire un commentaire...</span></div>
+                        <div class="viewer-comment-mini" id="viewerCommentMini"><span>Écrire un commentaire...</span></div>
                         <div class="viewer-comment-expanded" id="viewerCommentExpanded">
-                            <textarea name="comment_content" id="viewerCommentContent" class="viewer-comment-input" placeholder="Ã‰crire un commentaire..."></textarea>
+                            <textarea name="comment_content" id="viewerCommentContent" class="viewer-comment-input" placeholder="Écrire un commentaire..."></textarea>
                             <input type="text" name="emoji_content" id="viewerEmojiHidden" value="" class="viewer-emoji-input comment-emoji-target" placeholder="Emoji">
                             <span class="field-error" id="err-viewerCommentContent"></span>
                             <div class="viewer-comment-actions">
@@ -1749,11 +1752,11 @@ body.dark .video-more-dropdown a:hover,body.dark .video-more-dropdown button:hov
         <div class="media-viewer-video-layout">
             <div class="media-viewer-video-main" id="videoViewerMain"></div>
             <div class="media-viewer-video-side">
-                <div class="media-viewer-action" id="reelLikesWrap" style="display:none;"><div class="viewer-side-icon">ðŸ‘</div><span id="reelLikesCount">0</span></div>
-                <button type="button" class="media-viewer-action reel-action-btn" id="reelCommentBtn"><div class="viewer-side-icon">ðŸ’¬</div><span id="reelCommentsCount">0</span></button>
-                <button type="button" class="media-viewer-action reel-action-btn" id="reelShareBtn"><div class="viewer-side-icon">ðŸ”</div><span id="reelSharesCount">0</span></button>
+                <div class="media-viewer-action" id="reelLikesWrap" style="display:none;"><div class="viewer-side-icon">👍</div><span id="reelLikesCount">0</span></div>
+                <button type="button" class="media-viewer-action reel-action-btn" id="reelCommentBtn"><div class="viewer-side-icon">💬</div><span id="reelCommentsCount">0</span></button>
+                <button type="button" class="media-viewer-action reel-action-btn" id="reelShareBtn"><div class="viewer-side-icon">🔁</div><span id="reelSharesCount">0</span></button>
                 <div class="media-viewer-action video-more-wrap">
-                    <button type="button" class="viewer-side-icon reel-action-icon" id="reelMoreBtn">â‹¯</button>
+                    <button type="button" class="viewer-side-icon reel-action-icon" id="reelMoreBtn">⋯</button>
                     <div class="video-more-dropdown" id="reelMoreDropdown"></div>
                 </div>
             </div>
@@ -1765,7 +1768,7 @@ body.dark .video-more-dropdown a:hover,body.dark .video-more-dropdown button:hov
                 <div class="video-panel-comments" id="videoViewerComments"></div>
                 <form method="POST" action="" enctype="multipart/form-data" id="videoCommentForm" class="video-comment-form" novalidate>
                     <input type="hidden" name="add_comment" value="1"><input type="hidden" name="post_id" id="videoCommentPostId" value=""><input type="hidden" name="parent_id" id="videoParentId" value="">
-                    <textarea name="comment_content" id="videoCommentContent" class="viewer-comment-input" placeholder="Ã‰crire un commentaire..."></textarea>
+                    <textarea name="comment_content" id="videoCommentContent" class="viewer-comment-input" placeholder="Écrire un commentaire..."></textarea>
                     <input type="text" name="emoji_content" id="videoEmojiHidden" value="" class="viewer-emoji-input comment-emoji-target" placeholder="Emoji">
                     <span class="field-error" id="err-videoCommentContent"></span>
                     <div class="viewer-comment-actions">
@@ -1815,8 +1818,8 @@ body.dark .video-more-dropdown a:hover,body.dark .video-more-dropdown button:hov
         <div class="forum-post-modal-body">
             <form method="POST" action="">
                 <input type="hidden" name="post_id" id="report-post-id" value=""><input type="hidden" name="report_post" value="1">
-                <div style="margin-bottom:16px;"><label style="display:block;font-weight:600;margin-bottom:8px;">Raison du signalement</label><select name="report_reason" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px;" required><option value="">Choisir une raison</option><option value="spam">Spam</option><option value="inappropriate">Contenu inappropriÃ©</option><option value="offensive">Contenu offensant</option><option value="misinformation">DÃ©sinformation</option><option value="other">Autre</option></select></div>
-                <div style="margin-bottom:16px;"><label style="display:block;font-weight:600;margin-bottom:8px;">DÃ©tails supplÃ©mentaires (optionnel)</label><textarea name="report_details" placeholder="Expliquez pourquoi vous signalez ce post..." style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px;min-height:100px;font-family:inherit;resize:vertical;"></textarea></div>
+                <div style="margin-bottom:16px;"><label style="display:block;font-weight:600;margin-bottom:8px;">Raison du signalement</label><select name="report_reason" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px;" required><option value="">Choisir une raison</option><option value="spam">Spam</option><option value="inappropriate">Contenu inapproprié</option><option value="offensive">Contenu offensant</option><option value="misinformation">Désinformation</option><option value="other">Autre</option></select></div>
+                <div style="margin-bottom:16px;"><label style="display:block;font-weight:600;margin-bottom:8px;">Détails supplémentaires (optionnel)</label><textarea name="report_details" placeholder="Expliquez pourquoi vous signalez ce post..." style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px;min-height:100px;font-family:inherit;resize:vertical;"></textarea></div>
                 <div style="display:flex;gap:10px;justify-content:flex-end;"><button type="button" onclick="closeReportModal()" class="ghost-btn">Annuler</button><button type="submit" class="solid-btn">Signaler</button></div>
             </form>
         </div>
@@ -1829,20 +1832,20 @@ body.dark .video-more-dropdown a:hover,body.dark .video-more-dropdown button:hov
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;"><h2 style="margin:0;font-size:22px;">Signaler ce commentaire</h2><button type="button" onclick="closeReportCommentModal()" style="width:38px;height:38px;border:none;border-radius:50%;background:#f2f4f8;font-size:20px;cursor:pointer;">x</button></div>
         <form method="POST" action="" id="reportCommentForm">
             <input type="hidden" name="report_comment" value="1"><input type="hidden" name="comment_id" id="report-comment-id" value=""><input type="hidden" name="post_id" id="report-comment-post-id" value="">
-            <div style="margin-bottom:16px;"><label style="display:block;font-weight:600;margin-bottom:8px;">Raison du signalement</label><select name="report_reason" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px;" required><option value="">Choisir une raison</option><option value="spam">Spam</option><option value="inappropriate">Contenu inappropriÃ©</option><option value="offensive">Contenu offensant</option><option value="misinformation">DÃ©sinformation</option><option value="other">Autre</option></select></div>
-            <div style="margin-bottom:20px;"><label style="display:block;font-weight:600;margin-bottom:8px;">DÃ©tails (optionnel)</label><textarea name="report_details" placeholder="Expliquez pourquoi..." style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px;min-height:90px;font-family:inherit;resize:vertical;box-sizing:border-box;"></textarea></div>
+            <div style="margin-bottom:16px;"><label style="display:block;font-weight:600;margin-bottom:8px;">Raison du signalement</label><select name="report_reason" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px;" required><option value="">Choisir une raison</option><option value="spam">Spam</option><option value="inappropriate">Contenu inapproprié</option><option value="offensive">Contenu offensant</option><option value="misinformation">Désinformation</option><option value="other">Autre</option></select></div>
+            <div style="margin-bottom:20px;"><label style="display:block;font-weight:600;margin-bottom:8px;">Détails (optionnel)</label><textarea name="report_details" placeholder="Expliquez pourquoi..." style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px;min-height:90px;font-family:inherit;resize:vertical;box-sizing:border-box;"></textarea></div>
             <div style="display:flex;gap:10px;justify-content:flex-end;"><button type="button" onclick="closeReportCommentModal()" style="padding:10px 20px;border:1px solid #ddd;border-radius:10px;background:#fff;cursor:pointer;font-weight:600;">Annuler</button><button type="submit" class="solid-btn">Signaler</button></div>
         </form>
     </div>
 </div>
 
-<!-- MODAL PARTAGE AVANCÃ‰ -->
+<!-- MODAL PARTAGE AVANCÉ -->
 <div class="advanced-share-modal" id="advancedShareModal">
     <div class="advanced-share-box">
         <div class="advanced-share-head"><h2>Partager</h2><button type="button" class="advanced-share-close" onclick="closeAdvancedShareModal()">x</button></div>
         <div class="advanced-share-body">
             <div class="advanced-share-user-row"><div class="mini-avatar" id="advancedShareAvatar">U</div><div><strong id="advancedShareUser">Utilisateur</strong></div></div>
-            <textarea class="advanced-share-caption" id="advancedShareCaption" placeholder="Ã‰crire une description pour votre partage..."></textarea>
+            <textarea class="advanced-share-caption" id="advancedShareCaption" placeholder="Écrire une description pour votre partage..."></textarea>
             <div class="advanced-share-emoji-row">
                 <input type="text" class="advanced-share-caption forum-emoji-input" id="advancedShareEmoji" placeholder="Ajouter des emojis 😊" style="min-height:46px;height:46px;border:1px solid var(--forum-border);border-radius:14px;background:var(--forum-bg-input);padding:0 14px;box-sizing:border-box;margin:0;">
                 <button type="button" class="advanced-share-emoji-btn emoji-open-btn" data-target="advancedShareEmoji" title="Choisir un emoji">Emoji</button>
@@ -1853,18 +1856,18 @@ body.dark .video-more-dropdown a:hover,body.dark .video-more-dropdown button:hov
             </div>
             <div class="advanced-share-label">Partager sur</div>
             <div class="advanced-share-grid">
-                <button type="button" class="advanced-share-option" onclick="sharePostAdvanced('facebook')"><span class="advanced-share-icon">ðŸ“˜</span><span>Facebook</span></button>
-                <button type="button" class="advanced-share-option" onclick="sharePostAdvanced('whatsapp')"><span class="advanced-share-icon">ðŸŸ¢</span><span>WhatsApp</span></button>
-                <button type="button" class="advanced-share-option" onclick="sharePostAdvanced('internal')"><span class="advanced-share-icon">ðŸš€</span><span>GoService</span></button>
-                <button type="button" class="advanced-share-option" onclick="sharePostAdvanced('copy')"><span class="advanced-share-icon">ðŸ”—</span><span>Copier le lien</span></button>
+                <button type="button" class="advanced-share-option" onclick="sharePostAdvanced('facebook')"><span class="advanced-share-icon">📘</span><span>Facebook</span></button>
+                <button type="button" class="advanced-share-option" onclick="sharePostAdvanced('whatsapp')"><span class="advanced-share-icon">🟢</span><span>WhatsApp</span></button>
+                <button type="button" class="advanced-share-option" onclick="sharePostAdvanced('internal')"><span class="advanced-share-icon">🚀</span><span>GoService</span></button>
+                <button type="button" class="advanced-share-option" onclick="sharePostAdvanced('copy')"><span class="advanced-share-icon">🔗</span><span>Copier le lien</span></button>
             </div>
             <p class="advanced-share-note" id="advancedShareNote"></p>
         </div>
     </div>
 </div>
-<div class="advanced-share-toast" id="advancedShareToast">Lien copiÃ© âœ…</div>
+<div class="advanced-share-toast" id="advancedShareToast">Lien copié ✅</div>
 
-<!-- FORMULAIRES CACHÃ‰S -->
+<!-- FORMULAIRES CACHÉS -->
 <form method="POST" action="" id="deletePostViewerForm" style="display:none;"><input type="hidden" name="delete_post" value="1"><input type="hidden" name="post_id" id="deletePostViewerId" value=""></form>
 <form method="POST" action="" id="deleteCommentForm" style="display:none;"><input type="hidden" name="delete_comment" value="1"><input type="hidden" name="comment_id" id="deleteCommentId" value=""><input type="hidden" name="post_id" id="deleteCommentPostId" value=""><input type="hidden" name="parent_id" id="deleteCommentParentId" value=""></form>
 <form method="POST" action="" id="updateCommentForm" style="display:none;"><input type="hidden" name="update_comment" value="1"><input type="hidden" name="comment_id" id="updateCommentId" value=""><input type="hidden" name="post_id" id="updateCommentPostId" value=""><input type="hidden" name="comment_content" id="updateCommentContent" value=""></form>
@@ -2067,8 +2070,8 @@ if(gifSearch) gifSearch.addEventListener('input',()=>{clearTimeout(gifSearchTime
 if(clearGifBtn) clearGifBtn.addEventListener('click',clearSelectedGif);
 
 /* ============================================================ VALIDATION POST */
-function getLettersCountJS(text){return text.replace(/[^a-zA-ZÃ€-Ã¿]/gu,'').length;}
-const rules={titre:{validate:v=>v.trim()!==''&&getLettersCountJS(v)>=3,message:'Titre valide.',error:'Le titre doit contenir au moins 3 lettres.'},type_post:{validate:v=>v!=='',message:'Type valide.',error:'Veuillez choisir le type du post.'},contenu:{validate:v=>v.trim().length>=5,message:'Description valide.',error:'La description doit contenir au moins 5 caractÃ¨res.'}};
+function getLettersCountJS(text){return (text || '').replace(/[^\p{L}]/gu,'').length;}
+const rules={titre:{validate:v=>v.trim()!==''&&getLettersCountJS(v)>=3,message:'Titre valide.',error:'Le titre doit contenir au moins 3 lettres.'},type_post:{validate:v=>v!=='',message:'Type valide.',error:'Veuillez choisir le type du post.'},contenu:{validate:v=>v.trim().length>=5,message:'Description valide.',error:'La description doit contenir au moins 5 caractères.'}};
 function setError(field,msg){field.classList.add('field-invalid');field.classList.remove('field-valid-input');const eb=document.getElementById('err-'+field.id);if(eb){eb.textContent=msg;eb.style.color='#dc2626';eb.className='field-error';}}
 function setValid(field,msg){field.classList.remove('field-invalid');field.classList.add('field-valid-input');const eb=document.getElementById('err-'+field.id);if(eb){eb.textContent=msg;eb.style.color='#22a559';eb.className='field-valid';}}
 function validateField(field){const rule=rules[field.id];if(!rule) return true;const v=field.value.trim();if(v===''){setError(field,rule.error);return false;}if(!rule.validate(field.value)){setError(field,rule.error);return false;}setValid(field,rule.message);return true;}

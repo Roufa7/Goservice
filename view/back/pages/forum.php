@@ -1585,7 +1585,7 @@ body.dark .forum-stats-box{background:#10263b;border-color:rgba(255,255,255,.08)
                     <h2>Statistiques</h2>
                     <p>Schémas dynamiques du forum</p>
                 </div>
-                <button type="button" class="forum-stats-close" id="closeForumStatsModal" onclick="document.getElementById('forumStatsModal').classList.remove('show');document.body.style.overflow='';">Ã—</button>
+                <button type="button" class="forum-stats-close" id="closeForumStatsModal" onclick="document.getElementById('forumStatsModal').classList.remove('show');document.body.style.overflow='';">×</button>
             </div>
             <div class="forum-stats-body">
                 <div class="forum-stat-kpi-grid">
@@ -1678,7 +1678,7 @@ body.dark .forum-stats-box{background:#10263b;border-color:rgba(255,255,255,.08)
                                 <?php endforeach; ?>
                             </div>
                         <?php endif; ?>
-                        <div class="forum-mini-note">Mise Ã  jour automatique aprÃ¨s chaque action.</div>
+                        <div class="forum-mini-note">Mise à jour automatique après chaque action.</div>
                     </div>
                 </div>
             </div>
@@ -2147,7 +2147,7 @@ body.dark .forum-stats-box{background:#10263b;border-color:rgba(255,255,255,.08)
                 <strong>Élément</strong><div id="reportDetailTarget" class="forum-report-detail-box"></div>
                 <strong>Type</strong><div id="reportDetailType"></div>
                 <strong>Motif</strong><div id="reportDetailReason"></div>
-                <strong>SignalÃ© par</strong><div id="reportDetailUser"></div>
+                <strong>Signalé par</strong><div id="reportDetailUser"></div>
                 <strong>Date</strong><div id="reportDetailDate"></div>
                 <strong>Total</strong><div id="reportDetailCount"></div>
             </div>
@@ -2164,7 +2164,7 @@ body.dark .forum-stats-box{background:#10263b;border-color:rgba(255,255,255,.08)
 
 
 <div class="forum-form-modal-head">
-            <h2><?php echo $isEditMode ? 'Modifier la publication' : 'CrÃ©er une publication'; ?></h2>
+            <h2><?php echo $isEditMode ? 'Modifier la publication' : 'Créer une publication'; ?></h2>
             <button type="button" class="forum-form-modal-close" id="closePostFormModal">&times;</button>
         </div>
 
@@ -2218,12 +2218,12 @@ body.dark .forum-stats-box{background:#10263b;border-color:rgba(255,255,255,.08)
                 </div>
 
                 <div class="forum-form-tools">
-                    <div>Ajouter Ã  votre publication</div>
+                    <div>Ajouter à votre publication</div>
                     <div class="forum-form-tool-icons">
-                        <button type="button" class="forum-tool-btn" id="triggerBackImage" aria-label="Image">ðŸ“·</button>
-                        <button type="button" class="forum-tool-btn" id="triggerBackVideo" aria-label="Video">ðŸŽ¥</button>
+                        <button type="button" class="forum-tool-btn" id="triggerBackImage" aria-label="Image">📷</button>
+                        <button type="button" class="forum-tool-btn" id="triggerBackVideo" aria-label="Video">🎥</button>
                         <button type="button" class="gif-media-btn" id="triggerBackGif" aria-label="GIF" title="Choisir un GIF"><span class="gif-text">GIF</span></button>
-                        <button type="button" class="forum-tool-btn" id="triggerBackEmoji" aria-label="Emoji">ðŸ˜Š</button>
+                        <button type="button" class="forum-tool-btn" id="triggerBackEmoji" aria-label="Emoji">😊</button>
                     </div>
                 </div>
 
@@ -2258,7 +2258,7 @@ body.dark .forum-stats-box{background:#10263b;border-color:rgba(255,255,255,.08)
                 <div class="forum-form-actions">
                     <button type="button" class="ghost-btn" id="cancelPostFormModal">Annuler</button>
                     <?php if ($isEditMode): ?>
-                        <button type="submit" name="update_post" class="solid-btn">Mettre Ã  jour</button>
+                        <button type="submit" name="update_post" class="solid-btn">Mettre à jour</button>
                     <?php else: ?>
                         <button type="submit" name="save_post" class="solid-btn">Publier</button>
                     <?php endif; ?>
@@ -2645,12 +2645,12 @@ if (editCommentModal) editCommentModal.addEventListener('click', e => { if (e.ta
 if (editCommentImage) {
     editCommentImage.addEventListener('change', function() {
         if (editCommentImageName) {
-            editCommentImageName.textContent = this.files && this.files[0] ? 'Image sÃ©lectionnÃ©e : ' + this.files[0].name : '';
+            editCommentImageName.textContent = this.files && this.files[0] ? 'Image sélectionnée : ' + this.files[0].name : '';
         }
     });
 }
 
-if (document.getElementById('editCommentBackForm')) document.getElementById('editCommentBackForm').addEventListener('submit', function(e){ const txt=editCommentContent.value.trim(); if(txt==='' || txt.replace(/[^a-zA-ZÃƒâ‚¬-ÃƒÂ¿]/gu,'').length<2){e.preventDefault(); alert('Le commentaire doit contenir au moins 2 lettres.');}});
+if (document.getElementById('editCommentBackForm')) document.getElementById('editCommentBackForm').addEventListener('submit', function(e){ const txt=editCommentContent.value.trim(); if(txt==='' || txt.replace(/[^a-zA-ZÀ-ÿ]/gu,'').length<2){e.preventDefault(); alert('Le commentaire doit contenir au moins 2 lettres.');}});
 
 
 const reportDetailModal = document.getElementById('reportDetailModal');
@@ -2658,7 +2658,7 @@ const closeReportDetailModal = document.getElementById('closeReportDetailModal')
 
 function openReportDetailModal(data) {
     if (!reportDetailModal) return;
-    document.getElementById('reportDetailTitle').textContent = data.title || 'DÃ©tails du signalement';
+    document.getElementById('reportDetailTitle').textContent = data.title || 'Détails du signalement';
     document.getElementById('reportDetailTarget').textContent = data.target || '-';
     document.getElementById('reportDetailType').textContent = data.type || '-';
     document.getElementById('reportDetailReason').textContent = data.reason || '-';
@@ -2864,19 +2864,19 @@ const backStatutPostField = document.getElementById('back_statut_post');
 const backContenuField = document.getElementById('back_contenu');
 
 function getLettersAndSpacesCountJS(text) {
-    const cleaned = text.replace(/[^a-zA-ZÃƒâ‚¬-ÃƒÂ¿\s]/gu, '');
+    const cleaned = (text || '').replace(/[^\p{L}\s]/gu, '');
     return cleaned.trim().length;
 }
 
 function hasOnlyLettersAndSpaces(text) {
-    return /^[a-zA-ZÃƒâ‚¬-ÃƒÂ¿\s]*$/.test(text);
+    return /^[\p{L}\s]*$/u.test(text || '');
 }
 
 const backRules = {
     back_titre: {
         validate: value => hasOnlyLettersAndSpaces(value) && getLettersAndSpacesCountJS(value) >= 3,
         message: 'Titre valide.',
-        error: 'Le titre doit contenir au moins 3 caractÃƒÂ¨res.'
+        error: 'Le titre doit contenir au moins 3 caractères.'
     },
     back_type_post: {
         validate: value => value !== '',
@@ -2891,7 +2891,7 @@ const backRules = {
     back_contenu: {
         validate: value => getLettersAndSpacesCountJS(value) >= 5,
         message: 'Description valide.',
-        error: 'La description doit contenir au moins 5 lettres. Les liens externes sont acceptÃƒÂ©s.'
+        error: 'La description doit contenir au moins 5 lettres. Les liens externes sont acceptés.'
     }
 };
 
@@ -3162,7 +3162,7 @@ function exportForumTableOnly(){
             <div class="print-brand">
                 <img src="<?php echo e(forumBackAppRoot() . '/assets/images/logo.png'); ?>" alt="GoService">
                 <div>
-                    <h1 class="print-title">ModÃ©ration du forum</h1>
+                    <h1 class="print-title">Modération du forum</h1>
                 </div>
             </div>
             <div class="print-meta">${now}</div>

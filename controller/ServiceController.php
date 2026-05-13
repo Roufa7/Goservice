@@ -1,7 +1,7 @@
 <?php
 
 require_once __DIR__ . '/../config.php';
-require_once __DIR__ . '/../Model/Service.php';
+require_once __DIR__ . '/../model/Service.php';
 
 class ServiceController
 {

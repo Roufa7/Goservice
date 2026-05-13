@@ -253,7 +253,7 @@ foreach ($userApplications as $application) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $userId <= 0) {
-    $message = app_text('Veuillez vous connecter pour effectuer cette action.','Please log in to perform this action.','???? ????? ?????? ?????? ??? ???????.');
+    $message = app_text('Veuillez vous connecter pour effectuer cette action.','Please log in to perform this action.','يرجى تسجيل الدخول لتنفيذ هذا الإجراء.');
     $messageType = 'error';
 } elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     $action = (string) $_POST['action'];
@@ -433,10 +433,10 @@ $recommendationsUserId = $userId;
 <?php endif; ?>
 
 <section class="page-hero reveal">
-    <span class="section-badge"><?php echo app_text('Offres Spéciales', 'Special Offers', '???? ????'); ?></span>
-    <h1 class="page-title"><?php echo app_text('Découvrez nos meilleures offres', 'Discover our top offers', '????? ???? ??????'); ?></h1>
+    <span class="section-badge"><?php echo app_text('Offres Spéciales', 'Special Offers', 'عروض خاصة'); ?></span>
+    <h1 class="page-title"><?php echo app_text('Découvrez nos meilleures offres', 'Discover our top offers', 'اكتشف أفضل عروضنا'); ?></h1>
     <p class="page-intro">
-        <?php echo app_text('Des offres exclusives et des réductions exceptionnelles sur les services de nos meilleurs prestataires.', 'Exclusive offers and special discounts from top providers.', '???? ????? ??????? ????? ?? ???? ????? ???????.'); ?>
+        <?php echo app_text('Des offres exclusives et des réductions exceptionnelles sur les services de nos meilleurs prestataires.', 'Exclusive offers and special discounts from top providers.', 'عروض حصرية وتخفيضات استثنائية على خدمات أفضل مزودينا.'); ?>
     </p>
 </section>
 
@@ -545,13 +545,13 @@ document.addEventListener('DOMContentLoaded', function() {
             <?php endforeach; ?>
         </select>
         <select name="sort" id="offerSortSelect">
-            <option value="date_desc" <?php echo $sortOption === 'date_desc' ? 'selected' : ''; ?>><?php echo app_text('Plus récentes','Most recent','??????'); ?></option>
-            <option value="date_asc" <?php echo $sortOption === 'date_asc' ? 'selected' : ''; ?>><?php echo app_text('Plus anciennes','Oldest','??????'); ?></option>
-            <option value="titre_asc" <?php echo $sortOption === 'titre_asc' ? 'selected' : ''; ?>><?php echo app_text('Titre: A a Z','Title: A to Z','???????: ? ??? ?'); ?></option>
-            <option value="titre_desc" <?php echo $sortOption === 'titre_desc' ? 'selected' : ''; ?>><?php echo app_text('Titre: Z a A','Title: Z to A','???????: ? ??? ?'); ?></option>
-            <option value="prix_asc" <?php echo $sortOption === 'prix_asc' ? 'selected' : ''; ?>><?php echo app_text('Prix: Croissant','Price: Low to High','?????: ?? ????? ??????'); ?></option>
-            <option value="prix_desc" <?php echo $sortOption === 'prix_desc' ? 'selected' : ''; ?>><?php echo app_text('Prix: Décroissant','Price: High to Low','?????: ?? ?????? ?????'); ?></option>
-            <option value="type_asc" <?php echo $sortOption === 'type_asc' ? 'selected' : ''; ?>><?php echo app_text('Type: A a Z','Type: A to Z','?????: ? ??? ?'); ?></option>
+            <option value="date_desc" <?php echo $sortOption === 'date_desc' ? 'selected' : ''; ?>><?php echo app_text('Plus récentes','Most recent','الأحدث'); ?></option>
+            <option value="date_asc" <?php echo $sortOption === 'date_asc' ? 'selected' : ''; ?>><?php echo app_text('Plus anciennes','Oldest','الأقدم'); ?></option>
+            <option value="titre_asc" <?php echo $sortOption === 'titre_asc' ? 'selected' : ''; ?>><?php echo app_text('Titre: A a Z','Title: A to Z','العنوان: من أ إلى ي'); ?></option>
+            <option value="titre_desc" <?php echo $sortOption === 'titre_desc' ? 'selected' : ''; ?>><?php echo app_text('Titre: Z a A','Title: Z to A','العنوان: من ي إلى أ'); ?></option>
+            <option value="prix_asc" <?php echo $sortOption === 'prix_asc' ? 'selected' : ''; ?>><?php echo app_text('Prix: Croissant','Price: Low to High','السعر: من الأقل إلى الأعلى'); ?></option>
+            <option value="prix_desc" <?php echo $sortOption === 'prix_desc' ? 'selected' : ''; ?>><?php echo app_text('Prix: Décroissant','Price: High to Low','السعر: من الأعلى إلى الأقل'); ?></option>
+            <option value="type_asc" <?php echo $sortOption === 'type_asc' ? 'selected' : ''; ?>><?php echo app_text('Type: A a Z','Type: A to Z','النوع: من أ إلى ي'); ?></option>
         </select>
     </form>
 
@@ -657,17 +657,17 @@ document.addEventListener('DOMContentLoaded', function() {
             aria-controls="offreRecommendationsPanel"
             aria-expanded="false"
         >
-            <?php echo app_text('Recommendations','Recommendations','????????'); ?>
+            <?php echo app_text('Recommendations','Recommendations','التوصيات'); ?>
         </button>
 
-        <a class="solid-btn" href="#mes-candidatures"><?php echo app_text('Mes Candidatures','My applications','??????'); ?></a>
+        <a class="solid-btn" href="#mes-candidatures"><?php echo app_text('Mes Candidatures','My applications','طلباتي'); ?></a>
     </div>
 </section>
 
 <section class="admin-panel reveal offer-recommendations-panel" id="offreRecommendationsPanel" hidden>
     <div class="offer-recommendations-header">
-        <span class="section-badge"><?php echo app_text('Recommendations','Recommendations','????????'); ?></span>
-        <p class="muted"><?php echo app_text('Offres suggérées selon votre profil et votre historique.','Suggested offers based on your profile and history.','???? ?????? ??? ???? ?????.'); ?></p>
+        <span class="section-badge"><?php echo app_text('Recommendations','Recommendations','التوصيات'); ?></span>
+        <p class="muted"><?php echo app_text('Offres suggérées selon votre profil et votre historique.','Suggested offers based on your profile and history.','عروض مقترحة حسب ملفك وسجلك.'); ?></p>
     </div>
     <div id="offreRecommendationsState" class="offer-recommendations-state" hidden></div>
     <div id="offreRecommendationsList" class="offer-recommendations-list"></div>
@@ -676,7 +676,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <section class="admin-stats reveal" id="offreStatsBar">
     <article class="admin-stat">
         <strong id="offreStatCount"><?php echo htmlspecialchars((string) count($sortedOffersForList), ENT_QUOTES, 'UTF-8'); ?></strong>
-        <span id="offreStatCountLabel" data-label-all="<?php echo htmlspecialchars(app_text('Offres actives','Active Offers','العروض النشطة'), ENT_QUOTES, 'UTF-8'); ?>" data-label-results="<?php echo htmlspecialchars(app_text('R�sultats','Results','النتائج'), ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars(app_text('Offres actives','Active Offers','العروض النشطة'), ENT_QUOTES, 'UTF-8'); ?></span>
+        <span id="offreStatCountLabel" data-label-all="<?php echo htmlspecialchars(app_text('Offres actives','Active Offers','العروض النشطة'), ENT_QUOTES, 'UTF-8'); ?>" data-label-results="<?php echo htmlspecialchars(app_text('Résultats','Results','النتائج'), ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars(app_text('Offres actives','Active Offers','العروض النشطة'), ENT_QUOTES, 'UTF-8'); ?></span>
     </article>
     <article class="admin-stat">
         <strong id="offreStatLocalized"><?php echo htmlspecialchars((string) count(array_filter($sortedOffersForList, static fn ($o) => !empty($o['localisation']))), ENT_QUOTES, 'UTF-8'); ?></strong>
@@ -772,7 +772,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <div class="apply-column">
         <?php if (!empty($activeOffers)): ?>
                 <article class="panel apply-panel" id="postuler-offre">
-                <span class="section-badge"><?php echo $editingApplicationId > 0 ? app_text('Modifier candidature','Edit application','????? ?????') : app_text('Postuler','Apply','???????'); ?></span>
+                <span class="section-badge"><?php echo $editingApplicationId > 0 ? app_text('Modifier candidature','Edit application','تعديل الطلب') : app_text('Postuler','Apply','التقديم'); ?></span>
 
                 <form method="POST" enctype="multipart/form-data" id="applicationForm" class="application-form" novalidate data-require-cv="<?php echo $editingApplicationId > 0 ? 'false' : 'true'; ?>">
                     <input type="hidden" name="action" value="<?php echo $editingApplicationId > 0 ? 'update_application' : 'submit_application'; ?>">
@@ -816,7 +816,7 @@ document.addEventListener('DOMContentLoaded', function() {
             </article>
         <?php else: ?>
             <article class="panel apply-panel" id="postuler-offre">
-                <span class="section-badge"><?php echo app_text('Postuler','Apply','???????'); ?></span>
+                <span class="section-badge"><?php echo app_text('Postuler','Apply','التقديم'); ?></span>
                 <div class="application-empty-state">
                     <strong><?php echo app_text('Aucune offre active disponible','No active offers available','لا توجد عروض نشطة متاحة'); ?></strong>
                     <p><?php echo app_text('Vous ne pouvez pas postuler pour le moment car il n\'y a aucune offre active dans le catalogue.','You cannot apply at the moment as there are no active offers in the catalog.','لا يمكنك التقديم في الوقت الحالي لأنه لا توجد عروض نشطة في الكتالوج.'); ?></p>
@@ -825,13 +825,13 @@ document.addEventListener('DOMContentLoaded', function() {
         <?php endif; ?>
 
         <div class="panel benefits-panel">
-            <span class="section-badge"><?php echo app_text('Avantages','Benefits','????????'); ?></span>
+            <span class="section-badge"><?php echo app_text('Avantages','Benefits','المزايا'); ?></span>
             <div class="feature-list">
-                <div class="feature-item"><?php echo app_text('Offres exclusives','Exclusive offers','???? ?????'); ?></div>
-                <div class="feature-item"><?php echo app_text('Prestataires vérifiés','Verified providers','????? ????? ???????'); ?></div>
-                <div class="feature-item"><?php echo app_text('Paiement sécurisé','Secure payment','??? ???'); ?></div>
-                <div class="feature-item"><?php echo app_text('Support client 24/7','24/7 Customer support','??? ??????? 24/7'); ?></div>
-                <div class="feature-item"><?php echo app_text('Garantie satisfaction','Satisfaction guarantee','???? ?????'); ?></div>
+                <div class="feature-item"><?php echo app_text('Offres exclusives','Exclusive offers','عروض حصرية'); ?></div>
+                <div class="feature-item"><?php echo app_text('Prestataires vérifiés','Verified providers','مزودون موثقون'); ?></div>
+                <div class="feature-item"><?php echo app_text('Paiement sécurisé','Secure payment','دفع آمن'); ?></div>
+                <div class="feature-item"><?php echo app_text('Support client 24/7','24/7 Customer support','دعم العملاء 24/7'); ?></div>
+                <div class="feature-item"><?php echo app_text('Garantie satisfaction','Satisfaction guarantee','ضمان الرضا'); ?></div>
             </div>
         </div>
     </div>
@@ -865,7 +865,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <section class="admin-panel reveal my-applications-panel" id="mes-candidatures">
-    <span class="section-badge"><?php echo app_text('Mes Candidatures','My applications','??????'); ?></span>
+    <span class="section-badge"><?php echo app_text('Mes Candidatures','My applications','طلباتي'); ?></span>
 
     <?php if (empty($userApplications)): ?>
         <div class="application-empty-state" style="margin-top: 14px;">
@@ -1899,7 +1899,7 @@ body.dark .application-status-danger {
             }
             var titleHtml = '<h3 class="offer-recommendation-title">' + escapeHtmlRec(titleRaw) + '</h3>';
             var locRaw = String(item.localisation || '').trim();
-            var city = escapeHtmlRec(locRaw || '<?php echo addslashes(app_text('Lieu non precise','Location not specified','?????? ??? ????')); ?>');
+            var city = escapeHtmlRec(locRaw || '<?php echo addslashes(app_text('Lieu non precise','Location not specified','الموقع غير محدد')); ?>');
             var score = Math.round(Number(item.score || 0));
 
             card.innerHTML =
