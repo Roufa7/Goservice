@@ -1,0 +1,25 @@
+{
+    "name": "goservice/v3",
+    "description": "GoService - Plateforme de services avec géolocalisation, mailing, QR Code et IA",
+    "type": "project",
+    "require": {
+        "php": ">=7.4",
+        "willdurand/geocoder": "^4.3",
+        "php-http/curl-client": "^2.0",
+        "nyholm/psr7": "^1.4",
+        "phpmailer/phpmailer": "7.0",
+        "endroid/qr-code": "4.8",
+        "php-ai/php-ml": "^0.10.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "GoService\\": "src/"
+        }
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "allow-plugins": {
+            "php-http/discovery": true
+        }
+    }
+}
