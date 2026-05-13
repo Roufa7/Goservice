@@ -137,17 +137,17 @@ $img       = !empty($service['image'])
 <div class="rsv-wrap">
     <div class="rsv-head">
         <div class="rsv-head-top">
-            <a href="index.php?page=serviceDetails&id=<?php echo $id_service; ?>" class="rsv-back">← Retour au service</a>
+            <a href="index.php?page=serviceDetails&id=<?php echo $id_service; ?>" class="rsv-back"><?php echo htmlspecialchars(app_text('← Retour au service', '← Back to service', '← العودة إلى الخدمة'), ENT_QUOTES, 'UTF-8'); ?></a>
         </div>
-        <h1>Réserver ce service</h1>
-        <p>Remplissez le formulaire ci-dessous. Le prestataire vous confirmera votre réservation sous 24h.</p>
+        <h1><?php echo htmlspecialchars(app_text('Réserver ce service', 'Book this service', 'احجز هذه الخدمة'), ENT_QUOTES, 'UTF-8'); ?></h1>
+        <p><?php echo htmlspecialchars(app_text('Remplissez le formulaire ci-dessous. Le prestataire vous confirmera votre réservation sous 24h.', 'Fill in the form below. The provider will confirm your booking within 24 hours.', 'املأ النموذج أدناه. سيؤكد مقدم الخدمة حجزك خلال 24 ساعة.'), ENT_QUOTES, 'UTF-8'); ?></p>
     </div>
 
     <div class="rsv-grid">
 
         <!-- FORMULAIRE -->
         <div class="rsv-form-card">
-            <div class="rsv-form-title">Vos informations</div>
+            <div class="rsv-form-title"><?php echo htmlspecialchars(app_text('Vos informations', 'Your information', 'معلوماتك'), ENT_QUOTES, 'UTF-8'); ?></div>
 
             <?php if (!empty($errors)): ?>
             <div class="rsv-alert-err">

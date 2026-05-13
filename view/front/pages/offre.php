@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../../../config.php';
 require_once __DIR__ . '/../../../view/i18n.php';
 require_once __DIR__ . '/../../../model/Offer.php';
@@ -339,7 +339,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $userId 
                         'statut' => 'en attente',
                     ]);
 
-                    $message = '✅ Candidature soumise avec succès ! Nous vous recontacterons bientôt.';
+                    $message = '✅ Candidature soumise avec succès ! Nous vous recontacterons bientôtôt.';
                     $messageType = 'success';
                 }
 
@@ -433,10 +433,10 @@ $recommendationsUserId = $userId;
 <?php endif; ?>
 
 <section class="page-hero reveal">
-    <span class="section-badge"><?php echo app_text('Offres Speciales', 'Special Offers', '???? ????'); ?></span>
-    <h1 class="page-title"><?php echo app_text('Decouvrez nos meilleures offres', 'Discover our top offers', '????? ???? ??????'); ?></h1>
+    <span class="section-badge"><?php echo app_text('Offres Spéciales', 'Special Offers', '???? ????'); ?></span>
+    <h1 class="page-title"><?php echo app_text('Découvrez nos meilleures offres', 'Discover our top offers', '????? ???? ??????'); ?></h1>
     <p class="page-intro">
-        <?php echo app_text('Des offres exclusives et des reductions exceptionnelles sur les services de nos meilleurs prestataires.', 'Exclusive offers and special discounts from top providers.', '???? ????? ??????? ????? ?? ???? ????? ???????.'); ?>
+        <?php echo app_text('Des offres exclusives et des réductions exceptionnelles sur les services de nos meilleurs prestataires.', 'Exclusive offers and special discounts from top providers.', '???? ????? ??????? ????? ?? ???? ????? ???????.'); ?>
     </p>
 </section>
 
@@ -545,12 +545,12 @@ document.addEventListener('DOMContentLoaded', function() {
             <?php endforeach; ?>
         </select>
         <select name="sort" id="offerSortSelect">
-            <option value="date_desc" <?php echo $sortOption === 'date_desc' ? 'selected' : ''; ?>><?php echo app_text('Plus recentes','Most recent','??????'); ?></option>
+            <option value="date_desc" <?php echo $sortOption === 'date_desc' ? 'selected' : ''; ?>><?php echo app_text('Plus récentes','Most recent','??????'); ?></option>
             <option value="date_asc" <?php echo $sortOption === 'date_asc' ? 'selected' : ''; ?>><?php echo app_text('Plus anciennes','Oldest','??????'); ?></option>
             <option value="titre_asc" <?php echo $sortOption === 'titre_asc' ? 'selected' : ''; ?>><?php echo app_text('Titre: A a Z','Title: A to Z','???????: ? ??? ?'); ?></option>
             <option value="titre_desc" <?php echo $sortOption === 'titre_desc' ? 'selected' : ''; ?>><?php echo app_text('Titre: Z a A','Title: Z to A','???????: ? ??? ?'); ?></option>
             <option value="prix_asc" <?php echo $sortOption === 'prix_asc' ? 'selected' : ''; ?>><?php echo app_text('Prix: Croissant','Price: Low to High','?????: ?? ????? ??????'); ?></option>
-            <option value="prix_desc" <?php echo $sortOption === 'prix_desc' ? 'selected' : ''; ?>><?php echo app_text('Prix: Decroissant','Price: High to Low','?????: ?? ?????? ?????'); ?></option>
+            <option value="prix_desc" <?php echo $sortOption === 'prix_desc' ? 'selected' : ''; ?>><?php echo app_text('Prix: Décroissant','Price: High to Low','?????: ?? ?????? ?????'); ?></option>
             <option value="type_asc" <?php echo $sortOption === 'type_asc' ? 'selected' : ''; ?>><?php echo app_text('Type: A a Z','Type: A to Z','?????: ? ??? ?'); ?></option>
         </select>
     </form>
@@ -588,14 +588,6 @@ document.addEventListener('DOMContentLoaded', function() {
     ?>
 
     <div class="icon-actions">
-        <div class="lang-switch lang-switch-dropdown" style="display:inline-block; margin-right:12px; position:relative; z-index:40;">
-            <button type="button" class="ghost-btn lang-switch-toggle offer-mini-btn" aria-haspopup="true" aria-expanded="false" aria-label="<?php echo app_text('Choisir la langue','Choose language','???? ?????'); ?>">Lang</button>
-            <div class="lang-switch-menu" hidden style="position:absolute; top:calc(100% + 10px); right:0; min-width:132px; background:#ffffff; border:1px solid rgba(20,39,56,.12); border-radius:16px; box-shadow:0 16px 30px rgba(20,39,56,.16); padding:8px; z-index:9999; backdrop-filter: blur(8px);">
-                <a href="<?php echo app_lang_url('fr'); ?>" style="display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; border-radius:10px; color:#0b2545; font-weight:700; text-decoration:none; transition:background .2s ease;">FR <span style="opacity:.55; font-size:12px;">FR</span></a>
-                <a href="<?php echo app_lang_url('en'); ?>" style="display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; border-radius:10px; color:#0b2545; font-weight:700; text-decoration:none; transition:background .2s ease;">EN <span style="opacity:.55; font-size:12px;">EN</span></a>
-                <a href="<?php echo app_lang_url('ar'); ?>" style="display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; border-radius:10px; color:#0b2545; font-weight:700; text-decoration:none; transition:background .2s ease;">AR <span style="opacity:.55; font-size:12px;">AR</span></a>
-            </div>
-        </div>
         <div class="notif-wrap" style="margin-right:12px;">
             <button id="offreNotifToggle" class="ghost-btn notif-btn offer-mini-btn" type="button" aria-haspopup="true" aria-expanded="false">Alerts<?php if ($unreadCount>0): ?><span class="notif-badge"><?php echo (int)$unreadCount; ?></span><?php endif; ?></button>
             <div class="notif-dropdown" id="offreNotifDropdown" hidden>
@@ -675,7 +667,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <section class="admin-panel reveal offer-recommendations-panel" id="offreRecommendationsPanel" hidden>
     <div class="offer-recommendations-header">
         <span class="section-badge"><?php echo app_text('Recommendations','Recommendations','????????'); ?></span>
-        <p class="muted"><?php echo app_text('Offres suggerees selon votre profil et votre historique.','Suggested offers based on your profile and history.','???? ?????? ??? ???? ?????.'); ?></p>
+        <p class="muted"><?php echo app_text('Offres suggérées selon votre profil et votre historique.','Suggested offers based on your profile and history.','???? ?????? ??? ???? ?????.'); ?></p>
     </div>
     <div id="offreRecommendationsState" class="offer-recommendations-state" hidden></div>
     <div id="offreRecommendationsList" class="offer-recommendations-list"></div>
@@ -684,11 +676,11 @@ document.addEventListener('DOMContentLoaded', function() {
 <section class="admin-stats reveal" id="offreStatsBar">
     <article class="admin-stat">
         <strong id="offreStatCount"><?php echo htmlspecialchars((string) count($sortedOffersForList), ENT_QUOTES, 'UTF-8'); ?></strong>
-        <span id="offreStatCountLabel" data-label-all="<?php echo htmlspecialchars(app_text('Offres actives','Active Offers','العروض النشطة'), ENT_QUOTES, 'UTF-8'); ?>" data-label-results="<?php echo htmlspecialchars(app_text('R�sultats','Results','النتائج'), ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars(app_text('Offres actives','Active Offers','العروض النشطة'), ENT_QUOTES, 'UTF-8'); ?></span>
+        <span id="offreStatCountLabel" data-label-all="<?php echo htmlspecialchars(app_text('Offres actives','Active Offers','العروض النشطة'), ENT_QUOTES, 'UTF-8'); ?>" data-label-results="<?php echo htmlspecialchars(app_text('R�sultats','Results','النتائج'), ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars(app_text('Offres actives','Active Offers','العروض النشطة'), ENT_QUOTES, 'UTF-8'); ?></span>
     </article>
     <article class="admin-stat">
         <strong id="offreStatLocalized"><?php echo htmlspecialchars((string) count(array_filter($sortedOffersForList, static fn ($o) => !empty($o['localisation']))), ENT_QUOTES, 'UTF-8'); ?></strong>
-        <span><?php echo app_text('Offres localis�es','Localized Offers','العروض المحلية'); ?></span>
+        <span><?php echo app_text('Offres localisées','Localized Offers','العروض المحلية'); ?></span>
     </article>
     <article class="admin-stat">
         <strong id="offreStatTypes"><?php echo htmlspecialchars((string) count(array_unique(array_column($sortedOffersForList, 'type_service'))), ENT_QUOTES, 'UTF-8'); ?></strong>
@@ -701,12 +693,12 @@ document.addEventListener('DOMContentLoaded', function() {
         <?php if (empty($activeOffers)): ?>
             <article class="card offers-empty-state">
                 <h3><?php echo app_text('Aucune offre disponible pour le moment','No offers available at the moment','لا توجد عروض متاحة حالياً'); ?></h3>
-                <p><?php echo app_text('Revenez bient�t pour d�couvrir de nouvelles offres exclusives !','Check back soon for new exclusive offers!','عد لاحقاً لاكتشاف عروض حصرية جديدة!'); ?></p>
+                <p><?php echo app_text('Revenez bientôt pour découvrir de nouvelles offres exclusives !','Check back soon for new exclusive offers!','عد لاحقاً لاكتشاف عروض حصرية جديدة!'); ?></p>
             </article>
         <?php else: ?>
             <article class="card offers-empty-state js-offres-filter-empty" id="offresFilterEmpty" hidden>
-                <h3><?php echo app_text('Aucune offre ne correspond � votre recherche','No offers match your search','لا توجد عروض تطابق بحثك'); ?></h3>
-                <p><?php echo app_text('Essayez un autre mot-cl� ou un autre service.','Try another keyword or another service.','جرّب كلمة مفتاحية أخرى أو خدمة أخرى.'); ?></p>
+                <h3><?php echo app_text('Aucune offre ne correspond � votre recherche','No offers match your search','لا توجد عروض تطابق بحثك'); ?></h3>
+                <p><?php echo app_text('Essayez un autre mot-cl� ou un autre service.','Try another keyword or another service.','جرّب كلمة مفتاحية أخرى أو خدمة أخرى.'); ?></p>
             </article>
             <?php foreach ($sortedOffersForList as $offer): ?>
                 <?php
@@ -836,8 +828,8 @@ document.addEventListener('DOMContentLoaded', function() {
             <span class="section-badge"><?php echo app_text('Avantages','Benefits','????????'); ?></span>
             <div class="feature-list">
                 <div class="feature-item"><?php echo app_text('Offres exclusives','Exclusive offers','???? ?????'); ?></div>
-                <div class="feature-item"><?php echo app_text('Prestataires verifies','Verified providers','????? ????? ???????'); ?></div>
-                <div class="feature-item"><?php echo app_text('Paiement securise','Secure payment','??? ???'); ?></div>
+                <div class="feature-item"><?php echo app_text('Prestataires vérifiés','Verified providers','????? ????? ???????'); ?></div>
+                <div class="feature-item"><?php echo app_text('Paiement sécurisé','Secure payment','??? ???'); ?></div>
                 <div class="feature-item"><?php echo app_text('Support client 24/7','24/7 Customer support','??? ??????? 24/7'); ?></div>
                 <div class="feature-item"><?php echo app_text('Garantie satisfaction','Satisfaction guarantee','???? ?????'); ?></div>
             </div>
@@ -1931,7 +1923,7 @@ body.dark .application-status-danger {
             showRecommendationsState('<?php echo addslashes(app_text('Connectez-vous pour voir des offres personnalisées.','Sign in to see personalized offers.','سجّل الدخول لرؤية عروض مخصصة.')); ?>');
             return Promise.resolve();
         }
-        showRecommendationsState('<?php echo addslashes(app_text('Chargement des recommandations...','Loading recommendations...','جار تحميل التوصيات...')); ?>');
+        showRecommendationsState('<?php echo addslashes(app_text('Chargement des Recommandations...','Loading recommendations...','جار تحميل التوصيات...')); ?>');
 
         var baseApi = new URL('../../api/recommendations.php', window.location.href);
         baseApi.searchParams.set('userId', String(recommendationsUserId));
@@ -1958,7 +1950,7 @@ body.dark .application-status-danger {
                 renderRecommendations(payload);
             })
             .catch(function() {
-                showRecommendationsState('<?php echo addslashes(app_text('Impossible de charger les recommandations pour le moment.','Unable to load recommendations right now.','تعذر تحميل التوصيات حالياً.')); ?>');
+                showRecommendationsState('<?php echo addslashes(app_text('Impossible de charger les Recommandations pour le moment.','Unable to load recommendations right now.','تعذر تحميل التوصيات حالياً.')); ?>');
             });
     }
 
@@ -1989,6 +1981,8 @@ body.dark .application-status-danger {
     }
 })();
 </script>
+
+
 
 
 

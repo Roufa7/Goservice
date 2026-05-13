@@ -15,16 +15,16 @@ class MailService {
         try {
             // Server settings
             $mail->isSMTP();
-            $mail->Host       = config::MAIL_HOST;
+            $mail->Host       = (string) config::env('MAIL_HOST', config::MAIL_HOST);
             $mail->SMTPAuth   = true;
-            $mail->Username   = config::MAIL_USERNAME;
-            $mail->Password   = config::MAIL_PASSWORD;
+            $mail->Username   = (string) config::env('MAIL_USERNAME', config::MAIL_USERNAME);
+            $mail->Password   = (string) config::env('MAIL_PASSWORD', config::MAIL_PASSWORD);
             $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-            $mail->Port       = config::MAIL_PORT;
+            $mail->Port       = (int) config::env('MAIL_PORT', '587');
             $mail->CharSet    = 'UTF-8';
 
             // Recipients
-            $mail->setFrom(config::MAIL_FROM, config::MAIL_FROM_NAME);
+            $mail->setFrom(config::env('MAIL_FROM', config::MAIL_FROM), config::env('MAIL_FROM_NAME', config::MAIL_FROM_NAME));
             $mail->addAddress($toEmail);
 
             // Content

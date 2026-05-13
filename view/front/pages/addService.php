@@ -1,19 +1,114 @@
 <?php
 require_once __DIR__ . '/../../../controller/CategorieController.php';
+require_once __DIR__ . '/../../../view/i18n.php';
 
 $categorieController = new CategorieController();
 $categories = $categorieController->listCategories();
 ?>
 
 <section class="page-hero reveal">
-    <span class="section-badge">Service</span>
-    <h1 class="page-title">Ajouter un service</h1>
-    <p class="page-intro">
-        Remplissez les informations du nouveau service.
-    </p>
+    <span class="section-badge"><?php echo htmlspecialchars(app_text('Service', 'Service', 'خدمة'), ENT_QUOTES, 'UTF-8'); ?></span>
+    <h1 class="page-title"><?php echo htmlspecialchars(app_text('Ajouter un service', 'Add a service', 'إضافة خدمة'), ENT_QUOTES, 'UTF-8'); ?></h1>
+    <p class="page-intro"><?php echo htmlspecialchars(app_text('Remplissez les informations du nouveau service.', 'Fill in the details of the new service.', 'املأ معلومات الخدمة الجديدة.'), ENT_QUOTES, 'UTF-8'); ?></p>
 </section>
 
 <style>
+.add-service-wrap {
+    width: min(1080px, calc(100% - 36px));
+    margin: 0 auto 42px;
+}
+
+.add-service-box {
+    background: linear-gradient(180deg, rgba(19,40,61,0.97), rgba(13,29,46,0.98));
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 28px;
+    padding: 30px;
+    box-shadow: 0 20px 50px rgba(6,18,31,0.24);
+}
+
+.add-service-form {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+}
+
+.add-service-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px 20px;
+}
+
+.add-service-form .field-block {
+    gap: 10px;
+}
+
+.add-service-form .field-block label {
+    color: #f3f7fb;
+    font-size: 0.92rem;
+    letter-spacing: 0.02em;
+    padding-left: 0;
+}
+
+.add-service-form input[type="text"],
+.add-service-form input[type="email"],
+.add-service-form input[type="number"],
+.add-service-form select,
+.add-service-form textarea {
+    width: 100%;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 14px;
+    background: rgba(255,255,255,0.05);
+    color: #f8fbff;
+    padding: 14px 16px;
+    font-size: 15px;
+    outline: none;
+    transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
+}
+
+.add-service-form input::placeholder,
+.add-service-form textarea::placeholder {
+    color: rgba(232,239,246,0.68);
+}
+
+.add-service-form input:focus,
+.add-service-form select:focus,
+.add-service-form textarea:focus {
+    border-color: rgba(238,88,40,0.8);
+    box-shadow: 0 0 0 3px rgba(238,88,40,0.16);
+    background: rgba(255,255,255,0.07);
+}
+
+.add-service-form input[disabled] {
+    color: rgba(255,255,255,0.62);
+    background: rgba(255,255,255,0.08);
+}
+
+.add-service-form textarea {
+    resize: vertical;
+    min-height: 170px;
+}
+
+.char-counter {
+    margin-top: 8px;
+    color: rgba(232,239,246,0.74);
+    font-size: 13px;
+    text-align: right;
+}
+
+.add-service-actions {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+}
+
+.add-service-actions .solid-btn,
+.add-service-actions .outline-btn {
+    min-width: 170px;
+    justify-content: center;
+}
+
 .full-width {
     width: 100%;
 }
@@ -80,126 +175,134 @@ $categories = $categorieController->listCategories();
     object-fit: cover;
     box-shadow: 0 8px 24px rgba(0,0,0,0.22);
 }
+
+.field-note {
+    color: #8898aa;
+    font-size: 13px;
+    margin-top: 6px;
+}
+
+.field-state-error,
+.field-state-ok {
+    display: none;
+    font-size: 13px;
+    margin-top: 8px;
+}
+
+.field-state-error {
+    color: #ff6b6b;
+}
+
+.field-state-ok {
+    color: #28a745;
+}
+
+@media (max-width: 820px) {
+    .add-service-box {
+        padding: 22px 18px;
+    }
+
+    .add-service-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .add-service-actions .solid-btn,
+    .add-service-actions .outline-btn {
+        width: 100%;
+    }
+}
 </style>
 
 <section class="add-service-wrap reveal">
     <div class="add-service-box">
         <form action="index.php?page=saveService" method="POST" enctype="multipart/form-data" class="add-service-form" id="addServiceForm" novalidate>
-
             <input type="hidden" name="statut" value="En attente">
 
             <div class="add-service-grid">
                 <div class="field-block">
-                    <label for="titre">TITRE DU SERVICE</label>
-                    <input
-                        type="text"
-                        id="titre"
-                        name="titre"
-                        placeholder="Ex : Plombier urgence"
-                        autocomplete="off"
-                    >
-                    <div id="err_titre" style="display:none; color:#ff6b6b; font-size:13px; margin-top:8px;"></div>
-                    <div id="ok_titre" style="display:none; color:#28a745; font-size:13px; margin-top:6px;"></div>
+                    <label for="titre"><?php echo htmlspecialchars(app_text('Titre du service', 'Service title', 'عنوان الخدمة'), ENT_QUOTES, 'UTF-8'); ?></label>
+                    <input type="text" id="titre" name="titre" placeholder="<?php echo htmlspecialchars(app_text('Ex : Plombier urgence', 'Ex: Emergency plumber', 'مثال: سباك للطوارئ'), ENT_QUOTES, 'UTF-8'); ?>" autocomplete="off">
+                    <div id="err_titre" class="field-state-error"></div>
+                    <div id="ok_titre" class="field-state-ok"></div>
                 </div>
 
                 <div class="field-block">
-                    <label for="id_categorie">CATÉGORIE</label>
+                    <label for="id_categorie"><?php echo htmlspecialchars(app_text('Catégorie', 'Category', 'الفئة'), ENT_QUOTES, 'UTF-8'); ?></label>
                     <select id="id_categorie" name="id_categorie">
-                        <option value="">-- Choisir une catégorie --</option>
+                        <option value=""><?php echo htmlspecialchars(app_text('-- Choisir une catégorie --', '-- Choose a category --', '-- اختر فئة --'), ENT_QUOTES, 'UTF-8'); ?></option>
                         <?php foreach ($categories as $cat): ?>
-                            <option value="<?php echo (int)$cat['id_categorie']; ?>">
-                                <?php echo htmlspecialchars($cat['nom']); ?>
-                            </option>
+                            <option value="<?php echo (int) $cat['id_categorie']; ?>"><?php echo htmlspecialchars((string) $cat['nom'], ENT_QUOTES, 'UTF-8'); ?></option>
                         <?php endforeach; ?>
                     </select>
-                    <div id="err_categorie" style="display:none; color:#ff6b6b; font-size:13px; margin-top:8px;"></div>
-                    <div id="ok_categorie" style="display:none; color:#28a745; font-size:13px; margin-top:6px;"></div>
+                    <div id="err_categorie" class="field-state-error"></div>
+                    <div id="ok_categorie" class="field-state-ok"></div>
                 </div>
 
                 <div class="field-block">
-                    <label for="prix">PRIX (€)</label>
-                    <input
-                        type="text"
-                        id="prix"
-                        name="prix"
-                        placeholder="Ex : 50"
-                        autocomplete="off"
-                    >
-                    <div id="err_prix" style="display:none; color:#ff6b6b; font-size:13px; margin-top:8px;"></div>
-                    <div id="ok_prix" style="display:none; color:#28a745; font-size:13px; margin-top:6px;"></div>
+                    <label for="prix"><?php echo htmlspecialchars(app_text('Prix (€)', 'Price (€)', 'السعر (€)'), ENT_QUOTES, 'UTF-8'); ?></label>
+                    <input type="text" id="prix" name="prix" placeholder="<?php echo htmlspecialchars(app_text('Ex : 50', 'Ex: 50', 'مثال: 50'), ENT_QUOTES, 'UTF-8'); ?>" autocomplete="off">
+                    <div id="err_prix" class="field-state-error"></div>
+                    <div id="ok_prix" class="field-state-ok"></div>
                 </div>
 
                 <div class="field-block">
-                    <label for="disponibilite">DISPONIBILITÉ</label>
+                    <label for="disponibilite"><?php echo htmlspecialchars(app_text('Disponibilité', 'Availability', 'التوفر'), ENT_QUOTES, 'UTF-8'); ?></label>
                     <select id="disponibilite" name="disponibilite">
-                        <option value="">-- Choisir --</option>
-                        <option value="Disponible">Disponible</option>
-                        <option value="Indisponible">Indisponible</option>
+                        <option value=""><?php echo htmlspecialchars(app_text('-- Choisir --', '-- Choose --', '-- اختر --'), ENT_QUOTES, 'UTF-8'); ?></option>
+                        <option value="Disponible"><?php echo htmlspecialchars(app_text('Disponible', 'Available', 'متاح'), ENT_QUOTES, 'UTF-8'); ?></option>
+                        <option value="Indisponible"><?php echo htmlspecialchars(app_text('Indisponible', 'Unavailable', 'غير متاح'), ENT_QUOTES, 'UTF-8'); ?></option>
                     </select>
-                    <div id="err_disponibilite" style="display:none; color:#ff6b6b; font-size:13px; margin-top:8px;"></div>
-                    <div id="ok_disponibilite" style="display:none; color:#28a745; font-size:13px; margin-top:6px;"></div>
+                    <div id="err_disponibilite" class="field-state-error"></div>
+                    <div id="ok_disponibilite" class="field-state-ok"></div>
                 </div>
 
                 <div class="field-block">
-                    <label>STATUT</label>
-                    <input type="text" value="En attente" disabled>
-                    <div style="color:#8898aa; font-size:13px; margin-top:6px;">
-                        Le statut sera défini automatiquement à l’ajout.
-                    </div>
+                    <label><?php echo htmlspecialchars(app_text('Statut', 'Status', 'الحالة'), ENT_QUOTES, 'UTF-8'); ?></label>
+                    <input type="text" value="<?php echo htmlspecialchars(app_text('En attente', 'Pending', 'قيد الانتظار'), ENT_QUOTES, 'UTF-8'); ?>" disabled>
+                    <div class="field-note"><?php echo htmlspecialchars(app_text('Le statut sera défini automatiquement à l’ajout.', 'The status will be assigned automatically when the service is added.', 'سيتم تحديد الحالة تلقائياً عند إضافة الخدمة.'), ENT_QUOTES, 'UTF-8'); ?></div>
                 </div>
             </div>
 
             <div class="field-block">
-                <label for="description">DESCRIPTION</label>
-                <textarea
-                    id="description"
-                    name="description"
-                    rows="6"
-                    placeholder="Décrivez le service en détail..."
-                ></textarea>
+                <label for="description"><?php echo htmlspecialchars(app_text('Description', 'Description', 'الوصف'), ENT_QUOTES, 'UTF-8'); ?></label>
+                <textarea id="description" name="description" rows="6" placeholder="<?php echo htmlspecialchars(app_text('Décrivez le service en détail...', 'Describe the service in detail...', 'صف الخدمة بالتفصيل...'), ENT_QUOTES, 'UTF-8'); ?>"></textarea>
                 <div class="char-counter"><span id="descCount">0</span> / 500</div>
-                <div id="err_description" style="display:none; color:#ff6b6b; font-size:13px; margin-top:8px;"></div>
-                <div id="ok_description" style="display:none; color:#28a745; font-size:13px; margin-top:6px;"></div>
+                <div id="err_description" class="field-state-error"></div>
+                <div id="ok_description" class="field-state-ok"></div>
             </div>
 
             <div class="field-block full-width">
-                <label for="image">IMAGE DU SERVICE</label>
+                <label for="image"><?php echo htmlspecialchars(app_text('Image du service', 'Service image', 'صورة الخدمة'), ENT_QUOTES, 'UTF-8'); ?></label>
 
                 <label class="upload-box preview-mode" for="image" id="uploadBox">
                     <div class="preview-content" id="previewContent">
                         <div class="upload-placeholder" id="uploadPlaceholder">
                             <div class="upload-icon">📷</div>
-                            <div class="upload-title">Cliquez ou glissez une image ici</div>
-                            <div class="upload-subtitle">JPG, PNG, WEBP — max 5 Mo</div>
+                            <div class="preview-file-name"><?php echo htmlspecialchars(app_text('Cliquez ou glissez une image ici', 'Click or drop an image here', 'انقر أو اسحب صورة هنا'), ENT_QUOTES, 'UTF-8'); ?></div>
+                            <div class="field-note"><?php echo htmlspecialchars(app_text('JPG, PNG, WEBP — max 5 Mo', 'JPG, PNG, WEBP — max 5 MB', '‏JPG وPNG وWEBP — الحد الأقصى 5 ميغابايت'), ENT_QUOTES, 'UTF-8'); ?></div>
                         </div>
 
                         <div class="image-preview-wrapper" id="imagePreviewWrapper" style="display:none;">
-                            <div class="preview-file-name" id="fileName">Aucun fichier sélectionné</div>
-                            <img id="imagePreview" src="" alt="Aperçu image du service">
+                            <div class="preview-file-name" id="fileName"><?php echo htmlspecialchars(app_text('Aucun fichier sélectionné', 'No file selected', 'لم يتم اختيار ملف'), ENT_QUOTES, 'UTF-8'); ?></div>
+                            <img id="imagePreview" src="" alt="<?php echo htmlspecialchars(app_text('Aperçu image du service', 'Service image preview', 'معاينة صورة الخدمة'), ENT_QUOTES, 'UTF-8'); ?>">
                         </div>
                     </div>
 
                     <input type="file" id="image" name="image" accept=".jpg,.jpeg,.png,.webp,.gif" hidden>
                 </label>
 
-                <div id="err_image" style="display:none; color:#ff6b6b; font-size:13px; margin-top:8px;"></div>
-                <div id="ok_image" style="display:none; color:#28a745; font-size:13px; margin-top:6px;"></div>
+                <div id="err_image" class="field-state-error"></div>
+                <div id="ok_image" class="field-state-ok"></div>
             </div>
 
-            <!-- ══ Adresse + Mini-carte ══ -->
             <div class="field-block full-width">
-                <label>📍 ADRESSE DU PRESTATAIRE
-                    <span style="font-size:11px;color:var(--muted);font-weight:400;"> — optionnel, pour apparaître sur la carte</span>
+                <label>📍 <?php echo htmlspecialchars(app_text('Adresse du prestataire', 'Provider address', 'عنوان مقدم الخدمة'), ENT_QUOTES, 'UTF-8'); ?>
+                    <span style="font-size:11px;color:var(--muted);font-weight:400;"><?php echo htmlspecialchars(app_text('— optionnel, pour apparaître sur la carte', '— optional, to appear on the map', '— اختياري، للظهور على الخريطة'), ENT_QUOTES, 'UTF-8'); ?></span>
                 </label>
                 <div style="display:flex;gap:10px;align-items:center;">
-                    <input type="text" id="adresse" name="adresse"
-                        placeholder="Ex : Avenue Habib Bourguiba, Tunis, Tunisie"
-                        autocomplete="off" style="flex:1;">
-                    <button type="button" id="btnPreviewMap"
-                        style="background:linear-gradient(135deg,#ee5828,#c94718);color:#fff;border:none;
-                               padding:10px 16px;border-radius:10px;cursor:pointer;font-weight:700;
-                               font-size:12px;white-space:nowrap;height:42px;">
-                        🗺️ Prévisualiser
+                    <input type="text" id="adresse" name="adresse" placeholder="<?php echo htmlspecialchars(app_text('Ex : Avenue Habib Bourguiba, Tunis, Tunisie', 'Ex: Habib Bourguiba Avenue, Tunis, Tunisia', 'مثال: شارع الحبيب بورقيبة، تونس، تونس'), ENT_QUOTES, 'UTF-8'); ?>" autocomplete="off" style="flex:1;">
+                    <button type="button" id="btnPreviewMap" style="background:linear-gradient(135deg,#ee5828,#c94718);color:#fff;border:none;padding:10px 16px;border-radius:10px;cursor:pointer;font-weight:700;font-size:12px;white-space:nowrap;height:42px;">
+                        <?php echo htmlspecialchars(app_text('🗺️ Prévisualiser', '🗺️ Preview', '🗺️ معاينة'), ENT_QUOTES, 'UTF-8'); ?>
                     </button>
                 </div>
                 <div id="miniMapWrap" style="display:none;margin-top:12px;border-radius:14px;overflow:hidden;height:200px;border:2px solid #ee5828;">
@@ -208,8 +311,8 @@ $categories = $categorieController->listCategories();
             </div>
 
             <div class="add-service-actions">
-                <button type="submit" class="solid-btn">✓ Enregistrer</button>
-                <a href="index.php?page=services" class="outline-btn">Annuler</a>
+                <button type="submit" class="solid-btn"><?php echo htmlspecialchars(app_text('✓ Enregistrer', '✓ Save', '✓ حفظ'), ENT_QUOTES, 'UTF-8'); ?></button>
+                <a href="index.php?page=services" class="outline-btn"><?php echo htmlspecialchars(app_text('Annuler', 'Cancel', 'إلغاء'), ENT_QUOTES, 'UTF-8'); ?></a>
             </div>
         </form>
     </div>
@@ -217,265 +320,38 @@ $categories = $categorieController->listCategories();
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    const form = document.getElementById("addServiceForm");
-    const titre = document.getElementById("titre");
-    const prix = document.getElementById("prix");
-    const description = document.getElementById("description");
-    const categorie = document.getElementById("id_categorie");
-    const disponibilite = document.getElementById("disponibilite");
-    const image = document.getElementById("image");
-    const fileName = document.getElementById("fileName");
-    const imagePreview = document.getElementById("imagePreview");
-    const imagePreviewWrapper = document.getElementById("imagePreviewWrapper");
-    const uploadPlaceholder = document.getElementById("uploadPlaceholder");
-    const descCount = document.getElementById("descCount");
-
-    const rules = {
-        titre: {
-            validate: v => /^[A-Za-zÀ-ÿ\s]{3,}$/u.test(v.trim()),
-            errorMsg: "✕ Le titre doit contenir uniquement des lettres et des espaces, avec au moins 3 caractères.",
-            successMsg: "✓ Titre valide."
-        },
-        description: {
-            validate: v => v.trim().length >= 5,
-            errorMsg: "✕ La description doit contenir au moins 5 caractères.",
-            successMsg: "✓ Description valide."
-        },
-        categorie: {
-            validate: v => v !== "",
-            errorMsg: "✕ Veuillez choisir une catégorie.",
-            successMsg: "✓ Catégorie sélectionnée."
-        },
-        prix: {
-            validate: v => v.trim() !== "" && !isNaN(v) && Number(v) > 0,
-            errorMsg: "✕ Le prix doit être un nombre positif.",
-            successMsg: "✓ Prix valide."
-        },
-        disponibilite: {
-            validate: v => v !== "",
-            errorMsg: "✕ Veuillez choisir la disponibilité.",
-            successMsg: "✓ Disponibilité sélectionnée."
-        }
-    };
-
-    function setInvalid(field, errorId, successId, message) {
-        field.style.border = "1px solid #ff6b6b";
-        field.style.boxShadow = "0 0 0 1px rgba(255,107,107,0.15)";
-
-        const errorBox = document.getElementById(errorId);
-        const successBox = document.getElementById(successId);
-
-        errorBox.textContent = message;
-        errorBox.style.display = "block";
-
-        successBox.textContent = "";
-        successBox.style.display = "none";
-    }
-
-    function setValid(field, errorId, successId, message) {
-        field.style.border = "1px solid #28a745";
-        field.style.boxShadow = "0 0 0 1px rgba(40,167,69,0.15)";
-
-        const errorBox = document.getElementById(errorId);
-        const successBox = document.getElementById(successId);
-
-        errorBox.textContent = "";
-        errorBox.style.display = "none";
-
-        successBox.textContent = message;
-        successBox.style.display = "block";
-    }
-
-    function validateTitre() {
-        if (!rules.titre.validate(titre.value)) {
-            setInvalid(titre, "err_titre", "ok_titre", rules.titre.errorMsg);
-            return false;
-        }
-        setValid(titre, "err_titre", "ok_titre", rules.titre.successMsg);
-        return true;
-    }
-
-    function validateCategorie() {
-        if (!rules.categorie.validate(categorie.value)) {
-            setInvalid(categorie, "err_categorie", "ok_categorie", rules.categorie.errorMsg);
-            return false;
-        }
-        setValid(categorie, "err_categorie", "ok_categorie", rules.categorie.successMsg);
-        return true;
-    }
-
-    function validatePrix() {
-        if (!rules.prix.validate(prix.value)) {
-            setInvalid(prix, "err_prix", "ok_prix", rules.prix.errorMsg);
-            return false;
-        }
-        setValid(prix, "err_prix", "ok_prix", rules.prix.successMsg);
-        return true;
-    }
-
-    function validateDisponibilite() {
-        if (!rules.disponibilite.validate(disponibilite.value)) {
-            setInvalid(disponibilite, "err_disponibilite", "ok_disponibilite", rules.disponibilite.errorMsg);
-            return false;
-        }
-        setValid(disponibilite, "err_disponibilite", "ok_disponibilite", rules.disponibilite.successMsg);
-        return true;
-    }
-
-    function validateDescription() {
-        if (!rules.description.validate(description.value)) {
-            setInvalid(description, "err_description", "ok_description", rules.description.errorMsg);
-            return false;
-        }
-        setValid(description, "err_description", "ok_description", rules.description.successMsg);
-        return true;
-    }
-
-    function resetPreview() {
-        fileName.textContent = "Aucun fichier sélectionné";
-        imagePreview.src = "";
-        imagePreviewWrapper.style.display = "none";
-        uploadPlaceholder.style.display = "flex";
-    }
-
-    function validateImage() {
-        const errorBox = document.getElementById("err_image");
-        const successBox = document.getElementById("ok_image");
-
-        if (image.files.length === 0) {
-            errorBox.textContent = "✕ Veuillez choisir une image.";
-            errorBox.style.display = "block";
-            successBox.textContent = "";
-            successBox.style.display = "none";
-            resetPreview();
-            return false;
-        }
-
-        const allowed = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
-        const file = image.files[0];
-        const ext = file.name.split('.').pop().toLowerCase();
-
-        if (!allowed.includes(ext)) {
-            errorBox.textContent = "✕ Format non autorisé. Utilisez JPG, PNG, WEBP ou GIF.";
-            errorBox.style.display = "block";
-            successBox.textContent = "";
-            successBox.style.display = "none";
-            resetPreview();
-            return false;
-        }
-
-        if (file.size > 5 * 1024 * 1024) {
-            errorBox.textContent = "✕ L'image ne doit pas dépasser 5 Mo.";
-            errorBox.style.display = "block";
-            successBox.textContent = "";
-            successBox.style.display = "none";
-            resetPreview();
-            return false;
-        }
-
-        errorBox.textContent = "";
-        errorBox.style.display = "none";
-        successBox.textContent = "✓ Image valide.";
-        successBox.style.display = "block";
-        return true;
-    }
+    const description = document.getElementById('description');
+    const descCount = document.getElementById('descCount');
+    const image = document.getElementById('image');
+    const fileName = document.getElementById('fileName');
+    const imagePreview = document.getElementById('imagePreview');
+    const imagePreviewWrapper = document.getElementById('imagePreviewWrapper');
+    const uploadPlaceholder = document.getElementById('uploadPlaceholder');
 
     if (description && descCount) {
-        const updateCount = () => {
-            descCount.textContent = description.value.length;
+        const syncCount = () => {
+            descCount.textContent = String(description.value.length);
         };
-        description.addEventListener('input', updateCount);
-        updateCount();
+        description.addEventListener('input', syncCount);
+        syncCount();
     }
 
-    if (image) {
+    if (image && fileName && imagePreview && imagePreviewWrapper && uploadPlaceholder) {
         image.addEventListener('change', function () {
-            if (this.files && this.files[0]) {
-                const file = this.files[0];
-                const allowed = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
-                const ext = file.name.split('.').pop().toLowerCase();
-
-                if (!allowed.includes(ext) || file.size > 5 * 1024 * 1024) {
-                    validateImage();
-                    return;
-                }
-
-                fileName.textContent = file.name;
-
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    imagePreview.src = e.target.result;
-                    imagePreviewWrapper.style.display = "flex";
-                    uploadPlaceholder.style.display = "none";
-                };
-                reader.readAsDataURL(file);
-            } else {
-                resetPreview();
+            const file = image.files && image.files[0];
+            if (!file) {
+                return;
             }
 
-            validateImage();
+            fileName.textContent = file.name;
+            const reader = new FileReader();
+            reader.onload = function (event) {
+                imagePreview.src = String(event.target?.result || '');
+                imagePreviewWrapper.style.display = 'flex';
+                uploadPlaceholder.style.display = 'none';
+            };
+            reader.readAsDataURL(file);
         });
     }
-
-    titre.addEventListener("input", validateTitre);
-    categorie.addEventListener("change", validateCategorie);
-    prix.addEventListener("input", validatePrix);
-    disponibilite.addEventListener("change", validateDisponibilite);
-    description.addEventListener("input", validateDescription);
-
-    form.addEventListener("submit", function(e) {
-        const okTitre = validateTitre();
-        const okCategorie = validateCategorie();
-        const okPrix = validatePrix();
-        const okDisponibilite = validateDisponibilite();
-        const okDescription = validateDescription();
-        const okImage = validateImage();
-
-        if (!(okTitre && okCategorie && okPrix && okDisponibilite && okDescription && okImage)) {
-            e.preventDefault();
-        }
-    });
 });
-</script>
-
-<!-- Leaflet mini-map preview -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script>
-(function(){
-    let miniMap = null, miniMarker = null;
-
-    document.getElementById('btnPreviewMap').addEventListener('click', function(){
-        const adresse = document.getElementById('adresse').value.trim();
-        if (!adresse) { alert('Veuillez saisir une adresse d\'abord.'); return; }
-
-        const wrap = document.getElementById('miniMapWrap');
-        wrap.style.display = 'block';
-
-        if (!miniMap) {
-            miniMap = L.map('miniMap').setView([34.0, 9.0], 6);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© <a href="https://openstreetmap.org">OpenStreetMap</a>', maxZoom: 18
-            }).addTo(miniMap);
-        }
-
-        fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(adresse),
-              { headers: {'Accept-Language': 'fr'} })
-            .then(r => r.json())
-            .then(data => {
-                if (!data.length) { alert('Adresse introuvable. Soyez plus précis (ex: Tunis, Tunisie).'); return; }
-                const lat = parseFloat(data[0].lat), lng = parseFloat(data[0].lon);
-                miniMap.setView([lat, lng], 14);
-                const icon = L.divIcon({
-                    html: '<div style="background:#ee5828;width:20px;height:20px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid #fff;box-shadow:0 3px 8px rgba(0,0,0,.3);"></div>',
-                    iconSize:[20,20], iconAnchor:[10,20], className:''
-                });
-                if (miniMarker) miniMap.removeLayer(miniMarker);
-                miniMarker = L.marker([lat, lng], {icon}).addTo(miniMap)
-                    .bindPopup('<b>📍 ' + adresse + '</b>').openPopup();
-                setTimeout(() => miniMap.invalidateSize(), 100);
-            })
-            .catch(() => alert('Erreur de connexion au service de géocodage.'));
-    });
-})();
 </script>

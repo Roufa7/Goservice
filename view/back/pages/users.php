@@ -8,6 +8,26 @@ $searchRole = $_GET['role_filter'] ?? 'all';
 $sortBy = $_GET['sort_by'] ?? 'id_user';
 
 $usersList = $userModel->searchUsers($searchQuery, $searchRole, $sortBy);
+
+if (isset($_GET['export_users'])) {
+    header('Content-Type: text/csv; charset=UTF-8');
+    header('Content-Disposition: attachment; filename="goservice-users.csv"');
+    echo "\xEF\xBB\xBF";
+    $out = fopen('php://output', 'w');
+    fputcsv($out, ['ID', 'Nom', 'Prenom', 'Email', 'Role', 'Telephone']);
+    foreach (($usersList ?? []) as $uRow) {
+        fputcsv($out, [
+            $uRow['id_user'] ?? '',
+            $uRow['nom'] ?? '',
+            $uRow['prenom'] ?? '',
+            $uRow['email'] ?? '',
+            $uRow['role'] ?? '',
+            $uRow['telephone'] ?? ($uRow['phone'] ?? '')
+        ]);
+    }
+    fclose($out);
+    exit;
+}
 $stats = $userModel->getUserStats();
 
 $totalUsers = $stats['total'] ?? 0;
@@ -36,7 +56,7 @@ $totalClients = $stats['user'] ?? 0;
 
     <div class="export-bar" style="display: flex; gap: 10px;">
         <a href="index.php?page=user_add" class="solid-btn" style="text-decoration:none;">Ajouter un utilisateur</a>
-        <button class="outline-btn">Exporter</button>
+        <a class="outline-btn" style="text-decoration:none;" href="index.php?page=users&amp;search=<?php echo urlencode($searchQuery); ?>&amp;role_filter=<?php echo urlencode($searchRole); ?>&amp;sort_by=<?php echo urlencode($sortBy); ?>&amp;export_users=csv">Exporter</a>
     </div>
 </section>
 

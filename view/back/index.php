@@ -51,6 +51,32 @@ if ($page === 'events') {
 
 $view = __DIR__ . '/pages/' . $page . '.php';
 
+if ($page === 'users' && isset($_GET['export_users'])) {
+    require_once dirname(__DIR__, 2) . '/model/User.php';
+    $userModel = new User();
+    $searchQuery = $_GET['search'] ?? '';
+    $searchRole = $_GET['role_filter'] ?? 'all';
+    $sortBy = $_GET['sort_by'] ?? 'id_user';
+    $usersList = $userModel->searchUsers($searchQuery, $searchRole, $sortBy);
+    header('Content-Type: text/csv; charset=UTF-8');
+    header('Content-Disposition: attachment; filename="goservice-users.csv"');
+    echo "\xEF\xBB\xBF";
+    $out = fopen('php://output', 'w');
+    fputcsv($out, ['ID', 'Nom', 'Prenom', 'Email', 'Role', 'Telephone']);
+    foreach (($usersList ?? []) as $uRow) {
+        fputcsv($out, [
+            $uRow['id_user'] ?? '',
+            $uRow['nom'] ?? '',
+            $uRow['prenom'] ?? '',
+            $uRow['email'] ?? '',
+            $uRow['role'] ?? '',
+            $uRow['telephone'] ?? ($uRow['phone'] ?? '')
+        ]);
+    }
+    fclose($out);
+    exit;
+}
+
 $standalonePages = ['exportServicesPdf', 'exportCategoriesPdf'];
 if (in_array($page, $standalonePages, true)) {
     require $view;

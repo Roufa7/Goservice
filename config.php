@@ -9,8 +9,9 @@ if (class_exists(\Dotenv\Dotenv::class) && file_exists(__DIR__ . '/.env')) {
     \Dotenv\Dotenv::createImmutable(__DIR__)->safeLoad();
 }
 
-class config
-{
+if (!class_exists('config')) {
+    class config
+    {
     public static function getConnexion()
     {
         try {
@@ -55,11 +56,32 @@ class config
         return self::env('APP_NAME', 'GoService Events') ?? 'GoService Events';
     }
 
-    const MAIL_HOST = 'smtp-relay.brevo.com';
+    // Mail configuration reads from .env, with fallback to constants for backwards compatibility
+    public static function getMailConfig(string $key): ?string
+    {
+        $envValue = self::env('MAIL_' . $key);
+        if ($envValue !== null) {
+            return $envValue;
+        }
+        
+        $fallbacks = [
+            'HOST' => 'sandbox.smtp.mailtrap.io',
+            'PORT' => '587',
+            'USERNAME' => '',
+            'PASSWORD' => '',
+            'FROM' => '',
+            'FROM_NAME' => 'GoService Events',
+        ];
+        
+        return $fallbacks[$key] ?? null;
+    }
+
+    const MAIL_HOST = 'sandbox.smtp.mailtrap.io';
     const MAIL_PORT = 587;
-    const MAIL_USERNAME = 'aa7b80001@smtp-brevo.com';
-    const MAIL_PASSWORD = 'VOTRE_MOT_DE_PASSE_SMTP_ICI';
-    const MAIL_FROM = 'barrani.makram1@gmail.com';
+    const MAIL_USERNAME = '';
+    const MAIL_PASSWORD = '';
+    const MAIL_FROM = '';
     const MAIL_FROM_NAME = 'GoService';
+    }
 }
 ?>

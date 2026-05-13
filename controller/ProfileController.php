@@ -21,12 +21,34 @@ switch ($action) {
             $email = $_POST['email'] ?? '';
             $telephone = $_POST['telephone'] ?? '';
             $adresse = $_POST['adresse'] ?? '';
+            $photoPath = null;
+
+            if (isset($_FILES['photo']) && ($_FILES['photo']['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK) {
+                $uploadDir = __DIR__ . '/../assets/uploads/';
+                if (!is_dir($uploadDir)) {
+                    mkdir($uploadDir, 0777, true);
+                }
+
+                $fileType = mime_content_type($_FILES['photo']['tmp_name']);
+                $allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+
+                if (in_array($fileType, $allowedTypes, true)) {
+                    $fileName = time() . '_' . basename($_FILES['photo']['name']);
+                    $targetFilePath = $uploadDir . $fileName;
+                    if (move_uploaded_file($_FILES['photo']['tmp_name'], $targetFilePath)) {
+                        $photoPath = 'assets/uploads/' . $fileName;
+                    }
+                }
+            }
             
-            $success = $userModel->updateProfile($userId, $nom, $prenom, $email, $telephone, $adresse);
+            $success = $userModel->updateProfile($userId, $nom, $prenom, $email, $telephone, $adresse, $photoPath);
             
             if ($success) {
                 // Update session name just in case it changed
                 $_SESSION['user_name'] = $prenom . ' ' . $nom;
+                if ($photoPath) {
+                    $_SESSION['user_photo'] = $photoPath;
+                }
                 header('Location: ../view/front/index.php?page=profile&success=1');
             } else {
                 header('Location: ../view/front/index.php?page=profile&error=1');

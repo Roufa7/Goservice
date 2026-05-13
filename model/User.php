@@ -131,15 +131,20 @@ class User {
         }
     }
 
-    public function updateProfile($id, $nom, $prenom, $email, $telephone, $adresse) {
+    public function updateProfile($id, $nom, $prenom, $email, $telephone, $adresse, $photo = null) {
         try {
             $this->pdo->beginTransaction();
             
             $stmtUser = $this->pdo->prepare("UPDATE user SET email = ? WHERE id_user = ?");
             $stmtUser->execute([$email, $id]);
             
-            $stmtProfile = $this->pdo->prepare("UPDATE profile SET nom = ?, prenom = ?, telephone = ?, adresse = ? WHERE id_user = ?");
-            $stmtProfile->execute([$nom, $prenom, $telephone, $adresse, $id]);
+            if ($photo !== null && $photo !== '') {
+                $stmtProfile = $this->pdo->prepare("UPDATE profile SET nom = ?, prenom = ?, telephone = ?, adresse = ?, photo = ? WHERE id_user = ?");
+                $stmtProfile->execute([$nom, $prenom, $telephone, $adresse, $photo, $id]);
+            } else {
+                $stmtProfile = $this->pdo->prepare("UPDATE profile SET nom = ?, prenom = ?, telephone = ?, adresse = ? WHERE id_user = ?");
+                $stmtProfile->execute([$nom, $prenom, $telephone, $adresse, $id]);
+            }
             
             $this->pdo->commit();
             return true;
@@ -220,10 +225,29 @@ class User {
                 'events_count' => 0
             ];
 
-            // Count services (linked to id_user now)
-            $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM service WHERE id_user = ?");
-            $stmt->execute([$userId]);
-            $stats['services_count'] = (int)$stmt->fetchColumn();
+            // Count services with either the newer id_user link or the provider relation.
+            try {
+                $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM service WHERE id_user = ?");
+                $stmt->execute([$userId]);
+                $stats['services_count'] = (int)$stmt->fetchColumn();
+            } catch (PDOException $e) {
+                $stats['services_count'] = 0;
+            }
+
+            if ($stats['services_count'] === 0) {
+                try {
+                    $stmt = $this->pdo->prepare("
+                        SELECT COUNT(*)
+                        FROM service s
+                        INNER JOIN provider p ON p.id_provider = s.id_provider
+                        WHERE p.id_user = ?
+                    ");
+                    $stmt->execute([$userId]);
+                    $stats['services_count'] = (int)$stmt->fetchColumn();
+                } catch (PDOException $e) {
+                    $stats['services_count'] = 0;
+                }
+            }
 
             // Count offers/applications (candidature)
             $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM candidature WHERE id_user = ?");

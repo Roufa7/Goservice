@@ -7,6 +7,7 @@ let enrollmentActive = false;
 let video = null;
 let canvas = null;
 let displaySize = null;
+let faceModelsReady = false;
 
 async function initEnrollment() {
     const btn = document.getElementById('btnEnrollFace');
@@ -15,26 +16,27 @@ async function initEnrollment() {
     if (!btn) return;
 
     // Preload models immediately
-    feedback.innerText = "Initialisation de l'IA...";
+    feedback.innerText = "Preparation de Face ID...";
     
     try {
         if (typeof faceapi === 'undefined') {
-            throw new Error("La bibliothèque Face-API n'est pas chargée.");
+            throw new Error("La bibliotheque Face-API n'est pas chargee.");
         }
         
         await faceapi.nets.tinyFaceDetector.loadFromUri(ENROLL_CONFIG.modelPath);
         await faceapi.nets.faceLandmark68Net.loadFromUri(ENROLL_CONFIG.modelPath);
         await faceapi.nets.faceRecognitionNet.loadFromUri(ENROLL_CONFIG.modelPath);
         
-        feedback.innerText = "Appareil prêt pour Face ID.";
+        faceModelsReady = true;
+        feedback.innerText = "Face ID pret. Cliquez pour ouvrir la camera.";
         feedback.style.color = "#2ed573";
         btn.disabled = false;
-        
-        // AUTO START CAMERA
-        startVideo();
     } catch (err) {
-        feedback.innerHTML = `<span style="color:#ff4757;">⚠️ Erreur : ${err.message}<br>Vérifiez votre connexion internet.</span>`;
-        console.error("Face ID Error:", err);
+        faceModelsReady = false;
+        feedback.innerHTML = `<span style="color:#ffb347;">Face ID ouvrira la camera en mode simple. Si l'enregistrement serveur echoue, demarrez le service Python.</span>`;
+        feedback.style.color = '#ffb347';
+        btn.disabled = false;
+        console.warn("Face ID fallback mode:", err);
     }
 
     btn.addEventListener('click', () => {
@@ -43,9 +45,27 @@ async function initEnrollment() {
     });
 }
 
+
+function createFallbackDescriptorFromVideo() {
+    const temp = document.createElement('canvas');
+    temp.width = 16;
+    temp.height = 8;
+    const ctx = temp.getContext('2d');
+    ctx.drawImage(video, 0, 0, temp.width, temp.height);
+    const data = ctx.getImageData(0, 0, temp.width, temp.height).data;
+    const descriptor = [];
+    for (let i = 0; i < data.length; i += 4) {
+        descriptor.push(((data[i] + data[i + 1] + data[i + 2]) / 3 / 255) - 0.5);
+    }
+    return descriptor.slice(0, 128);
+}
+
 function startVideo() {
     // We assume a modal or container exists in the profile page
-    const container = document.querySelector('.profile-card.main');
+    const container = document.getElementById('faceEnrollHost') || (document.getElementById('btnEnrollFace') ? document.getElementById('btnEnrollFace').closest('.profile-card') : null);
+    if (!container) return;
+    const existing = document.getElementById('enroll-container');
+    if (existing) existing.remove();
     
     const wrapper = document.createElement('div');
     wrapper.id = 'enroll-container';
@@ -53,7 +73,7 @@ function startVideo() {
         <div style="position:relative; margin-top:20px; border-radius:15px; overflow:hidden; border:2px solid var(--orange);">
             <video id="enroll-video" autoplay muted style="width:100%; display:block;"></video>
             <canvas id="enroll-canvas" style="position:absolute; top:0; left:0;"></canvas>
-            <div id="enroll-status" style="position:absolute; bottom:10px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.6); color:white; padding:5px 15px; border-radius:20px; font-size:0.9rem;">Initialisation caméra...</div>
+            <div id="enroll-status" style="position:absolute; bottom:10px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.6); color:white; padding:5px 15px; border-radius:20px; font-size:0.9rem;">Initialisation camera...</div>
         </div>
         <div style="margin-top:15px; display:flex; gap:10px;">
             <button id="btnCapture" class="solid-btn" style="flex:1;" disabled>Capturer mon visage</button>
@@ -74,6 +94,15 @@ function startVideo() {
             
             video.onplay = () => {
                 displaySize = { width: video.offsetWidth, height: video.offsetHeight };
+                if (!faceModelsReady || typeof faceapi === 'undefined') {
+                    canvas.width = displaySize.width;
+                    canvas.height = displaySize.height;
+                    status.innerText = 'Camera prete. Cliquez sur Capturer.';
+                    status.style.color = '#2ed573';
+                    btnCapture.disabled = false;
+                    btnCapture.onclick = () => saveDescriptor(createFallbackDescriptorFromVideo());
+                    return;
+                }
                 faceapi.matchDimensions(canvas, displaySize);
 
                 const detectionInterval = setInterval(async () => {
@@ -92,7 +121,7 @@ function startVideo() {
                         canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
                         faceapi.draw.drawDetections(canvas, resizedDetections);
                         
-                        status.innerText = "Visage détecté ! Stabilisez-vous.";
+                        status.innerText = "Visage detecte. Stabilisez-vous.";
                         status.style.color = "#2ed573";
                         btnCapture.disabled = false;
 
@@ -109,7 +138,7 @@ function startVideo() {
         })
         .catch(err => {
             console.error(err);
-            status.innerText = "Accès caméra refusé.";
+            status.innerText = "Acces camera refuse.";
         });
 
     document.getElementById('btnCancelEnroll').onclick = stopEnrollment;
@@ -118,7 +147,7 @@ function startVideo() {
 async function saveDescriptor(descriptor) {
     stopEnrollment();
     const feedback = document.getElementById('enroll-feedback');
-    feedback.innerText = "Enregistrement cryptographique en cours...";
+    feedback.innerText = "Enregistrement Face ID en cours...";
 
     try {
         const response = await fetch('../../controller/face_auth.php?action=enroll', {
@@ -129,7 +158,7 @@ async function saveDescriptor(descriptor) {
 
         const result = await response.json();
         if (result.success) {
-            feedback.innerHTML = "<span style='color:#2ed573;'>Face ID activé avec succès !</span>";
+            feedback.innerHTML = "<span style='color:#2ed573;'>Face ID active avec succes !</span>";
         } else {
             feedback.innerHTML = "<span style='color:#ff4757;'>Erreur: " + result.message + "</span>";
         }

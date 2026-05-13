@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 include_once(__DIR__ . '/../config.php');
 include_once(__DIR__ . '/../model/Offer.php');
 // Load i18n helper so controller can store translated notification headlines
@@ -131,10 +131,10 @@ class OfferController {
         $value = strtolower(trim((string) $status));
 
         if ($this->useFrenchSchema()) {
-            return ($value === 'fermee' || $value === 'fermÃ©e' || $value === 'inactive' || $value === 'expiree') ? 'fermee' : 'ouverte';
+            return ($value === 'fermee' || $value === 'fermée' || $value === 'inactive' || $value === 'expiree') ? 'fermee' : 'ouverte';
         }
 
-        return ($value === 'fermee' || $value === 'fermÃ©e' || $value === 'inactive' || $value === 'expiree') ? 'inactive' : 'active';
+        return ($value === 'fermee' || $value === 'fermée' || $value === 'inactive' || $value === 'expiree') ? 'inactive' : 'active';
     }
 
     private function mapPayloadToEntity(array $data): Offer {
@@ -250,10 +250,10 @@ class OfferController {
                     'offer_id' => (int)$id,
                     'type' => 'suppression',
                     'headline' => is_callable('app_text') ? [
-                        'fr' => 'Offre supprimÃ©e',
+                        'fr' => 'Offre supprimée',
                         'en' => 'Offer deleted',
                         'ar' => 'ØªÙ… Ø­Ø°Ù Ø§Ù„Ø¹Ø±Ø¶',
-                    ] : 'Offre supprimÃ©e',
+                    ] : 'Offre supprimée',
                     'message' => (string) ($existing['titre'] ?? 'Offre'),
                     'details' => [
                         'type_service' => (string) ($existing['type_service'] ?? ''),
@@ -435,10 +435,10 @@ class OfferController {
                                 'offer_id' => $id,
                                 'type' => 'modification',
                                 'headline' => is_callable('app_text') ? [
-                                    'fr' => 'Offre modifiÃ©e',
+                                    'fr' => 'Offre modifiée',
                                     'en' => 'Offer updated',
                                     'ar' => 'ØªÙ… ØªØ¹Ø¯ÙŠÙ„ Ø§Ù„Ø¹Ø±Ø¶',
-                                ] : 'Offre modifiÃ©e',
+                                ] : 'Offre modifiée',
                                 'message' => (string) $offer->getTitre(),
                                 'details' => [
                                     'type_service' => (string) $offer->getTypeService(),

@@ -11,6 +11,17 @@ if (isset($_GET['delete']) && is_numeric($_GET['delete'])) {
     exit;
 }
 
+// Mise à jour du statut
+if (isset($_POST['update_statut']) && isset($_POST['reservation_id']) && isset($_POST['new_statut'])) {
+    $reservation_id = (int)$_POST['reservation_id'];
+    $new_statut = in_array($_POST['new_statut'], ['Confirmée', 'Annulée', 'En attente'], true) 
+        ? $_POST['new_statut'] 
+        : 'En attente';
+    $controller->updateStatut($reservation_id, $new_statut);
+    header('Location: index.php?page=reservations&updated=1');
+    exit;
+}
+
 $reservations = $controller->listReservations();
 $stats        = $controller->getStats();
 ?>
@@ -18,6 +29,12 @@ $stats        = $controller->getStats();
 <?php if (isset($_GET['deleted'])): ?>
 <div style="background:rgba(76,175,80,0.1);border:1px solid rgba(76,175,80,0.25);color:#2e7d32;border-radius:10px;padding:12px 16px;margin-bottom:18px;font-size:14px;">
     ✓ Réservation supprimée.
+</div>
+<?php endif; ?>
+
+<?php if (isset($_GET['updated'])): ?>
+<div style="background:rgba(76,175,80,0.1);border:1px solid rgba(76,175,80,0.25);color:#2e7d32;border-radius:10px;padding:12px 16px;margin-bottom:18px;font-size:14px;">
+    ✓ Statut de la réservation mis à jour.
 </div>
 <?php endif; ?>
 
@@ -63,6 +80,25 @@ $stats        = $controller->getStats();
     border:1px solid rgba(239,68,68,0.18);
     cursor:pointer;
     font-family:inherit;
+}
+.btn-status{
+    padding:6px 12px;
+    border-radius:8px;
+    font-size:11px;
+    font-weight:700;
+    cursor:pointer;
+    font-family:inherit;
+    border:1px solid;
+}
+.btn-confirm{
+    background:rgba(76,175,80,0.09);
+    color:#2e7d32;
+    border-color:rgba(76,175,80,0.25);
+}
+.btn-cancel{
+    background:rgba(239,68,68,0.09);
+    color:#c62828;
+    border-color:rgba(239,68,68,0.18);
 }
 </style>
 
@@ -160,6 +196,30 @@ $stats        = $controller->getStats();
 
                     <td>
                         <div class="rsv-actions">
+                            <?php if ($r['statut'] === 'En attente'): ?>
+                                <form method="POST" style="display:inline;">
+                                    <input type="hidden" name="reservation_id" value="<?php echo $r['id_reservation']; ?>">
+                                    <input type="hidden" name="new_statut" value="Confirmée">
+                                    <button type="submit" name="update_statut" class="btn-status btn-confirm" title="Confirmer">✓ Confirmer</button>
+                                </form>
+                                <form method="POST" style="display:inline;">
+                                    <input type="hidden" name="reservation_id" value="<?php echo $r['id_reservation']; ?>">
+                                    <input type="hidden" name="new_statut" value="Annulée">
+                                    <button type="submit" name="update_statut" class="btn-status btn-cancel" title="Annuler">✕ Annuler</button>
+                                </form>
+                            <?php elseif ($r['statut'] === 'Confirmée'): ?>
+                                <form method="POST" style="display:inline;">
+                                    <input type="hidden" name="reservation_id" value="<?php echo $r['id_reservation']; ?>">
+                                    <input type="hidden" name="new_statut" value="Annulée">
+                                    <button type="submit" name="update_statut" class="btn-status btn-cancel" title="Annuler">✕ Annuler</button>
+                                </form>
+                            <?php elseif ($r['statut'] === 'Annulée'): ?>
+                                <form method="POST" style="display:inline;">
+                                    <input type="hidden" name="reservation_id" value="<?php echo $r['id_reservation']; ?>">
+                                    <input type="hidden" name="new_statut" value="En attente">
+                                    <button type="submit" name="update_statut" class="btn-status btn-confirm" title="Réactiver">⟲ Réactiver</button>
+                                </form>
+                            <?php endif; ?>
                             <form method="GET" style="display:inline;" onsubmit="return confirm('Supprimer cette réservation ?')">
                                 <input type="hidden" name="page" value="reservations">
                                 <input type="hidden" name="delete" value="<?php echo $r['id_reservation']; ?>">

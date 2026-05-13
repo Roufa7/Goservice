@@ -44,3 +44,48 @@ Réponds en français, naturellement, court et utile.
         return trim($result['message']['content'] ?? "Je n'ai pas reçu de réponse.");
     }
 }
+
+// POST handler for AJAX chat requests
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    header('Content-Type: application/json; charset=utf-8');
+    
+    $message = trim($_POST['message'] ?? '');
+    
+    if (empty($message)) {
+        http_response_code(400);
+        echo json_encode(['reply' => "Veuillez écrire un message.", 'error' => true], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+    
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+    
+    // Initialize chat history in session
+    if (!isset($_SESSION['chatbot_history'])) {
+        $_SESSION['chatbot_history'] = [];
+    }
+    
+    // Add user message to history
+    $_SESSION['chatbot_history'][] = [
+        'role' => 'user',
+        'content' => $message
+    ];
+    
+    // Keep only last 10 messages for context
+    if (count($_SESSION['chatbot_history']) > 10) {
+        $_SESSION['chatbot_history'] = array_slice($_SESSION['chatbot_history'], -10);
+    }
+    
+    $service = new OllamaChatbotService();
+    $reply = $service->chat($_SESSION['chatbot_history']);
+    
+    // Add assistant response to history
+    $_SESSION['chatbot_history'][] = [
+        'role' => 'assistant',
+        'content' => $reply
+    ];
+    
+    echo json_encode(['reply' => $reply, 'error' => false], JSON_UNESCAPED_UNICODE);
+    exit;
+}

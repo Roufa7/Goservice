@@ -119,14 +119,123 @@ $statutAffiche = $serviceData['statut'] ?? 'En attente';
 ?>
 
 <section class="page-hero reveal">
-    <span class="section-badge">Service</span>
-    <h1 class="page-title">Modifier mon service</h1>
-    <p class="page-intro">
-        Mettez à jour les informations de votre service.
-    </p>
+    <span class="section-badge"><?php echo htmlspecialchars(app_text('Service', 'Service', 'خدمة'), ENT_QUOTES, 'UTF-8'); ?></span>
+    <h1 class="page-title"><?php echo htmlspecialchars(app_text('Modifier mon service', 'Edit my service', 'تعديل خدمتي'), ENT_QUOTES, 'UTF-8'); ?></h1>
+    <p class="page-intro"><?php echo htmlspecialchars(app_text('Mettez à jour les informations de votre service.', 'Update the information of your service.', 'حدّث معلومات خدمتك.'), ENT_QUOTES, 'UTF-8'); ?></p>
 </section>
 
 <style>
+.add-service-wrap {
+    width: min(1080px, calc(100% - 36px));
+    margin: 0 auto 42px;
+}
+
+.add-service-box {
+    background: linear-gradient(180deg, rgba(19,40,61,0.97), rgba(13,29,46,0.98));
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 28px;
+    padding: 30px;
+    box-shadow: 0 20px 50px rgba(6,18,31,0.24);
+}
+
+.add-service-form {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+}
+
+.add-service-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px 20px;
+}
+
+.add-service-form .field-block {
+    gap: 10px;
+}
+
+.add-service-form .field-block label {
+    color: #f3f7fb;
+    font-size: 0.92rem;
+    letter-spacing: 0.02em;
+    padding-left: 0;
+}
+
+.add-service-form input[type="text"],
+.add-service-form input[type="email"],
+.add-service-form input[type="number"],
+.add-service-form select,
+.add-service-form textarea {
+    width: 100%;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 14px;
+    background: rgba(255,255,255,0.05);
+    color: #f8fbff;
+    padding: 14px 16px;
+    font-size: 15px;
+    outline: none;
+    transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
+}
+
+.add-service-form input::placeholder,
+.add-service-form textarea::placeholder {
+    color: rgba(232,239,246,0.68);
+}
+
+.add-service-form input:focus,
+.add-service-form select:focus,
+.add-service-form textarea:focus {
+    border-color: rgba(238,88,40,0.8);
+    box-shadow: 0 0 0 3px rgba(238,88,40,0.16);
+    background: rgba(255,255,255,0.07);
+}
+
+.add-service-form input[disabled] {
+    color: rgba(255,255,255,0.62);
+    background: rgba(255,255,255,0.08);
+}
+
+.add-service-form textarea {
+    resize: vertical;
+    min-height: 170px;
+}
+
+.char-counter {
+    margin-top: 8px;
+    color: rgba(232,239,246,0.74);
+    font-size: 13px;
+    text-align: right;
+}
+
+.upload-icon {
+    font-size: 36px;
+}
+
+.upload-title {
+    color: #f7fbff;
+    font-weight: 800;
+    font-size: 16px;
+}
+
+.upload-subtitle {
+    color: rgba(232,239,246,0.72);
+    font-size: 13px;
+}
+
+.add-service-actions {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+}
+
+.add-service-actions .solid-btn,
+.add-service-actions .outline-btn {
+    min-width: 170px;
+    justify-content: center;
+}
+
 .full-width {
     width: 100%;
 }
@@ -210,6 +319,21 @@ $statutAffiche = $serviceData['statut'] ?? 'En attente';
     height: 54px;
     object-fit: cover;
     border-radius: 8px;
+}
+
+@media (max-width: 820px) {
+    .add-service-box {
+        padding: 22px 18px;
+    }
+
+    .add-service-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .add-service-actions .solid-btn,
+    .add-service-actions .outline-btn {
+        width: 100%;
+    }
 }
 </style>
 

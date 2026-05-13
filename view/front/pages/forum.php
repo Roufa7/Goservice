@@ -62,7 +62,7 @@ function forumResolveCurrentUser(): array {
         } catch (Throwable $e) {}
     }
 
-    // Fallback pour tester le module forum avant l'intégration du module User.
+    // Fallback pour tester le module forum avant l'intÃ©gration du module User.
     if ($id <= 0 && class_exists('config')) {
         try {
             $db = config::getConnexion();
@@ -132,7 +132,7 @@ $mine   = (($_GET['mine'] ?? '') === '1');
 
 function e($value){ return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8'); }
 function invalidClass($error){ return !empty($error) ? 'field-invalid' : ''; }
-function getLettersCount($text): int { $c=preg_replace('/[^a-zA-ZÀ-ÿ]/u','',$text); return mb_strlen($c); }
+function getLettersCount($text): int { $c=preg_replace('/[^a-zA-ZÃ€-Ã¿]/u','',$text); return mb_strlen($c); }
 function isEmojiOnlyForum(string $text): bool {
     $text=trim($text);
     if($text==='') return true;
@@ -148,13 +148,15 @@ function timeAgo($datetime){
         $now=new DateTime('now',new DateTimeZone('Africa/Tunis'));
         $date=new DateTime($datetime,new DateTimeZone('Africa/Tunis'));
         $diff=$now->getTimestamp()-$date->getTimestamp();
-        if($diff<=0) return "à l'instant";
-        if($diff<60) return "à l'instant";
-        if($diff<3600) return floor($diff/60).' min ago';
-        if($diff<86400) return floor($diff/3600).' h ago';
-        if($diff<604800) return floor($diff/86400).' day ago';
-        if($diff<2592000) return floor($diff/604800).' week ago';
-        return floor($diff/2592000).' month ago';
+        $lang=app_lang();
+        $now_text = match($lang) { 'en'=>'just now','ar'=>'الآن','fr'=>'À l\'instant',default=>'À l\'instant' };
+        if($diff<=0) return $now_text;
+        if($diff<60) return $now_text;
+        if($diff<3600) { $mins=floor($diff/60); return match($lang) { 'en'=>"{$mins}m ago",'ar'=>"منذ {$mins} دقيقة",'fr'=>"il y a {$mins} min",default=>"il y a {$mins} min" }; }
+        if($diff<86400) { $hrs=floor($diff/3600); return match($lang) { 'en'=>"{$hrs}h ago",'ar'=>"منذ {$hrs} ساعة",'fr'=>"il y a {$hrs} h",default=>"il y a {$hrs} h" }; }
+        if($diff<604800) { $days=floor($diff/86400); return match($lang) { 'en'=>"{$days}d ago",'ar'=>"منذ {$days} يوم",'fr'=>"il y a {$days} j",default=>"il y a {$days} j" }; }
+        if($diff<2592000) { $weeks=floor($diff/604800); return match($lang) { 'en'=>"{$weeks}w ago",'ar'=>"منذ {$weeks} أسبوع",'fr'=>"il y a {$weeks} sem",default=>"il y a {$weeks} sem" }; }
+        $months=floor($diff/2592000); return match($lang) { 'en'=>"{$months}mo ago",'ar'=>"منذ {$months} شهر",'fr'=>"il y a {$months} mois",default=>"il y a {$months} mois" };
     }catch(Exception $e){ return ''; }
 }
 function dateOnly($datetime){ if(empty($datetime)) return ''; $t=strtotime($datetime); if(!$t) return ''; return date('Y-m-d',$t); }
@@ -275,8 +277,8 @@ function uploadVideoFile(array $file,array &$errors,?string $oldPath=null): ?str
 function uploadCommentImageFile(array $file,array &$errors,?string $oldPath=null): ?string {
     if(empty($file['name'])) return null;
     $ext=strtolower(pathinfo($file['name'],PATHINFO_EXTENSION));
-    if(!in_array($ext,['jpg','jpeg','png','webp','gif'],true)){ $errors['comment']='Formats image autorisés : JPG, JPEG, PNG, WEBP, GIF.'; return null; }
-    if($file['size']>3*1024*1024){ $errors['comment']="L'image du commentaire ne doit pas dépasser 3 Mo."; return null; }
+    if(!in_array($ext,['jpg','jpeg','png','webp','gif'],true)){ $errors['comment']='Formats image autorisÃ©s : JPG, JPEG, PNG, WEBP, GIF.'; return null; }
+    if($file['size']>3*1024*1024){ $errors['comment']="L'image du commentaire ne doit pas dÃ©passer 3 Mo."; return null; }
     $dir=__DIR__.'/../../../uploads/comments/'; if(!is_dir($dir)) mkdir($dir,0777,true);
     $name=uniqid('comment_img_',true).'.'.$ext;
     if(move_uploaded_file($file['tmp_name'],$dir.$name)){
@@ -541,7 +543,7 @@ function forumRenderSharedOriginalBox(?array $original): string {
                 <div class="mini-avatar shared-mini-avatar"><?php echo e($avatar); ?></div>
                 <div>
                     <strong><?php echo e($originalName); ?></strong>
-                    <div class="shared-original-meta"><?php echo e(timeAgo($original['date_publication']??'')); ?> · 🌐</div>
+                    <div class="shared-original-meta"><?php echo e(timeAgo($original['date_publication']??'')); ?> Â· ðŸŒ</div>
                 </div>
             </div>
             <div class="shared-original-title"><?php echo e($original['titre']??'Publication originale'); ?></div>
@@ -583,7 +585,7 @@ function forumShareInsideGoService(PostController $postController,int $originalP
 
     try{
         // Comme Facebook : le nouveau post contient seulement le texte du partage,
-        // et le post original reste dans une carte imbriquée avec ses données.
+        // et le post original reste dans une carte imbriquÃ©e avec ses donnÃ©es.
         $newPost=new Post(null,$title,$finalContent,null,null,$typePost,'Approuvé',$userId);
         $postController->addPost($newPost);
        $newId=forumFindLastPostId($userId,$title,$finalContent);
@@ -665,7 +667,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'&&(isset($_POST['publish_post'])||isset($_
             $old['statut_post']=$editPost['statut_post']??'Approuvé';
 
             if($old['contenu']==='') $errors['contenu']='Le contenu du partage est obligatoire.';
-            elseif(mb_strlen($old['contenu'])<2) $errors['contenu']='Le contenu du partage doit contenir au moins 2 caractères.';
+            elseif(mb_strlen($old['contenu'])<2) $errors['contenu']='Le contenu du partage doit contenir au moins 2 caractÃ¨res.';
             if(!isEmojiOnlyForum($old['emoji_post'])) $errors['emoji_post']='Le champ emoji accepte uniquement des emojis.';
 
             $hasErrors=false; foreach($errors as $err){ if(!empty($err)){ $hasErrors=true; break; } }
@@ -678,7 +680,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'&&(isset($_POST['publish_post'])||isset($_
 
     if($old['titre']==='') $errors['titre']='Le titre est obligatoire.'; elseif(getLettersCount($old['titre'])<3) $errors['titre']='Le titre doit contenir au moins 3 lettres.';
     if($old['type_post']==='') $errors['type_post']='Veuillez choisir le type du post.';
-    if($old['contenu']==='') $errors['contenu']='La description est obligatoire.'; elseif(mb_strlen($old['contenu'])<5) $errors['contenu']='La description doit contenir au moins 5 caractères.';
+    if($old['contenu']==='') $errors['contenu']='La description est obligatoire.'; elseif(mb_strlen($old['contenu'])<5) $errors['contenu']='La description doit contenir au moins 5 caractÃ¨res.';
     if(!isEmojiOnlyForum($old['emoji_post'])) $errors['emoji_post']='Le champ emoji accepte uniquement des emojis.';
     if($gifPost!=='' && !preg_match('~^https?://~i',$gifPost)) $errors['gif']='GIF invalide.';
     $hasErrors=false; foreach($errors as $err){ if(!empty($err)){ $hasErrors=true; break; } }
@@ -1267,8 +1269,8 @@ body.dark .video-more-dropdown a:hover,body.dark .video-more-dropdown button:hov
 <div class="forum-page">
     <section class="page-hero reveal forum-hero-classic">
         <span class="section-badge">Forum social</span>
-        <h1 class="page-title">Forum & échanges</h1>
-        <p class="page-intro">Publiez, partagez des images ou vidéos, commentez, aimez et suivez les discussions dans une interface moderne inspirée des réseaux sociaux.</p>
+        <h1 class="page-title">Forum & Ã©changes</h1>
+        <p class="page-intro">Publiez, partagez des images ou vidÃ©os, commentez, aimez et suivez les discussions dans une interface moderne inspirÃ©e des rÃ©seaux sociaux.</p>
     </section>
 
     <section class="action-bar reveal forum-action-bar">
@@ -1297,22 +1299,22 @@ body.dark .video-more-dropdown a:hover,body.dark .video-more-dropdown button:hov
                 </div>
                 <div class="forum-sort-wrap">
                     <select name="sort" class="forum-sort-select" onchange="this.form.submit()">
-                        <option value="recent" <?php echo $sort==='recent'?'selected':''; ?>>Plus récents</option>
-                        <option value="liked" <?php echo $sort==='liked'?'selected':''; ?>>Plus aimés</option>
-                        <option value="commented" <?php echo $sort==='commented'?'selected':''; ?>>Plus commentés</option>
+                        <option value="recent" <?php echo $sort==='recent'?'selected':''; ?>>Plus rÃ©cents</option>
+                        <option value="liked" <?php echo $sort==='liked'?'selected':''; ?>>Plus aimÃ©s</option>
+                        <option value="commented" <?php echo $sort==='commented'?'selected':''; ?>>Plus commentÃ©s</option>
                     </select>
                 </div>
             </div>
         </form>
     </section>
 
-    <?php if(isset($_GET['published'])): ?><div class="success-message" style="max-width:1380px;margin:0 auto;width:100%;">Votre post a été envoyé pour révision par l'administrateur.</div><?php endif; ?>
-    <?php if(isset($_GET['updated'])): ?><div class="success-message" style="max-width:1380px;margin:0 auto;width:100%;">Post mis à jour avec succès.</div><?php endif; ?>
-    <?php if(isset($_GET['deleted'])): ?><div class="success-message" style="max-width:1380px;margin:0 auto;width:100%;">Post supprimé avec succès.</div><?php endif; ?>
+    <?php if(isset($_GET['published'])): ?><div class="success-message" style="max-width:1380px;margin:0 auto;width:100%;">Votre post a Ã©tÃ© envoyÃ© pour rÃ©vision par l'administrateur.</div><?php endif; ?>
+    <?php if(isset($_GET['updated'])): ?><div class="success-message" style="max-width:1380px;margin:0 auto;width:100%;">Post mis Ã  jour avec succÃ¨s.</div><?php endif; ?>
+    <?php if(isset($_GET['deleted'])): ?><div class="success-message" style="max-width:1380px;margin:0 auto;width:100%;">Post supprimÃ© avec succÃ¨s.</div><?php endif; ?>
     <?php if(isset($_GET['reported'])): ?><div class="success-message" style="max-width:1380px;margin:0 auto;width:100%;">Post signalé avec succès.</div><?php endif; ?>
-    <?php if(($_GET['error'] ?? '') === 'unauthorized'): ?><div class="success-message" style="max-width:1380px;margin:0 auto;width:100%;background:#fff3f3;color:#a33;border-color:#ffd0d0;">Action refusée : vous pouvez modifier ou supprimer seulement vos propres publications.</div><?php endif; ?>
-    <?php if(isset($_GET['comment_deleted'])): ?><div class="success-message" style="max-width:1380px;margin:0 auto;width:100%;">Commentaire supprimé avec succès.</div><?php endif; ?>
-    <?php if(isset($_GET['comment_updated'])): ?><div class="success-message" style="max-width:1380px;margin:0 auto;width:100%;">Commentaire modifié avec succès.</div><?php endif; ?>
+    <?php if(($_GET['error'] ?? '') === 'unauthorized'): ?><div class="success-message" style="max-width:1380px;margin:0 auto;width:100%;background:#fff3f3;color:#a33;border-color:#ffd0d0;">Action refusÃ©e : vous pouvez modifier ou supprimer seulement vos propres publications.</div><?php endif; ?>
+    <?php if(isset($_GET['comment_deleted'])): ?><div class="success-message" style="max-width:1380px;margin:0 auto;width:100%;">Commentaire supprimÃ© avec succÃ¨s.</div><?php endif; ?>
+    <?php if(isset($_GET['comment_updated'])): ?><div class="success-message" style="max-width:1380px;margin:0 auto;width:100%;">Commentaire modifiÃ© avec succÃ¨s.</div><?php endif; ?>
     <?php if(isset($_GET['comment_reported'])): ?><div class="success-message" style="max-width:1380px;margin:0 auto;width:100%;">Commentaire signalé avec succès.</div><?php endif; ?>
 
     <section class="forum-main-layout">
@@ -1322,17 +1324,17 @@ body.dark .video-more-dropdown a:hover,body.dark .video-more-dropdown button:hov
                     <div class="mini-avatar"><?php echo e($currentUserAvatarLetter); ?></div>
                     <button type="button" class="composer-open-btn" id="openCreateModalBtn">Publier un post...</button>
                     <div class="composer-icons">
-                        <button type="button" class="composer-icon-btn" id="openPhotoBtn">🖼️</button>
-                        <button type="button" class="composer-icon-btn" id="openVideoBtn">🎥</button>
+                        <button type="button" class="composer-icon-btn" id="openPhotoBtn">Image</button>
+                        <button type="button" class="composer-icon-btn" id="openVideoBtn">Video</button>
                         <button type="button" class="composer-icon-btn gif-media-btn" id="openGifBtn" title="Choisir un GIF ou un sticker"><span class="gif-text">GIF</span></button>
-                        <button type="button" class="composer-icon-btn" id="openEmojiBtn">😊</button>
+                        <button type="button" class="composer-icon-btn" id="openEmojiBtn">Emoji</button>
                     </div>
                 </div>
             </article>
 
             <div class="forum-posts-list">
                 <?php if(empty($posts)): ?>
-                <article class="panel"><span class="section-badge">Aucun résultat</span><p style="margin-top:14px;">Aucun post trouvé.</p></article>
+                <article class="panel"><span class="section-badge">Aucun rÃ©sultat</span><p style="margin-top:14px;">Aucun post trouvÃ©.</p></article>
                 <?php else: ?>
                 <?php foreach($posts as $post):
                     $fullname=trim(($post['prenom']??'').' '.($post['nom']??'')); if($fullname==='') $fullname='Utilisateur';
@@ -1366,16 +1368,16 @@ body.dark .video-more-dropdown a:hover,body.dark .video-more-dropdown button:hov
                         </div>
                         <div class="post-menu-wrap">
                             <span class="post-time-top"><?php echo e(timeAgo($post['date_publication']??'')); ?></span>
-                            <button class="post-menu-btn" type="button" onclick="togglePostMenu(<?php echo (int)$post['id_post']; ?>)">⋯</button>
+                            <button class="post-menu-btn" type="button" onclick="togglePostMenu(<?php echo (int)$post['id_post']; ?>)">â‹¯</button>
                             <div class="post-dropdown" id="post-menu-<?php echo (int)$post['id_post']; ?>">
                                 <?php if($isOwner): ?>
-                                    <a href="<?php echo e(forumUrl(['edit'=>(int)$post['id_post']])); ?>" onclick="localStorage.setItem('openForumModal','1')">✏️ Modifier</a>
+                                    <a href="<?php echo e(forumUrl(['edit'=>(int)$post['id_post']])); ?>" onclick="localStorage.setItem('openForumModal','1')">âœï¸ Modifier</a>
                                     <form method="POST" action="" onsubmit="return confirm('Supprimer ce post ?');">
                                         <input type="hidden" name="post_id" value="<?php echo (int)$post['id_post']; ?>">
-                                        <button type="submit" name="delete_post" style="width:100%;text-align:left;display:block;padding:10px;">🗑 Supprimer</button>
+                                        <button type="submit" name="delete_post" style="width:100%;text-align:left;display:block;padding:10px;">ðŸ—‘ Supprimer</button>
                                     </form>
                                 <?php else: ?>
-                                    <button type="button" onclick="openReportModal(<?php echo (int)$post['id_post']; ?>)">🚩 Signaler</button>
+                                    <button type="button" onclick="openReportModal(<?php echo (int)$post['id_post']; ?>)">ðŸš© Signaler</button>
                                 <?php endif; ?>
                             </div>
                         </div>
@@ -1384,15 +1386,15 @@ body.dark .video-more-dropdown a:hover,body.dark .video-more-dropdown button:hov
                     <h3 class="post-title"><?php echo e($post['titre']??''); ?></h3>
                     <div class="sentiment-zone">
 <?php if (($post['sentiment_post'] ?? '') === 'positif'): ?>
-            <span class="sentiment-badge positive">🟢 Positif</span>
+            <span class="sentiment-badge positive">ðŸŸ¢ Positif</span>
 <?php elseif (($post['sentiment_post'] ?? '') === 'negatif'): ?>
-            <span class="sentiment-badge negative">🔴 Négatif</span>
+            <span class="sentiment-badge negative">ðŸ”´ NÃ©gatif</span>
     <?php else: ?>
-        <span class="sentiment-badge neutral">⚪ Neutre</span>
+        <span class="sentiment-badge neutral">âšª Neutre</span>
     <?php endif; ?>
 
     <?php if (($post['toxicite_post'] ?? 0) == 1): ?>
-        <span class="sentiment-badge toxic">⚠️ Toxique</span>
+        <span class="sentiment-badge toxic">âš ï¸ Toxique</span>
     <?php endif; ?>
 </div>
                     <?php if(trim($cleanPostContent)!==''): ?><p class="post-content"><?php echo nl2br(e($cleanPostContent)); ?></p><?php endif; ?>
@@ -1415,7 +1417,7 @@ body.dark .video-more-dropdown a:hover,body.dark .video-more-dropdown button:hov
                         <div class="post-media-frame"><video controls playsinline preload="metadata"><source src="<?php echo e($videoEmbedData['embed']); ?>"></video><div class="post-media-overlay">Vidéo</div></div>
                         <?php endif; ?>
                     <?php elseif(empty($sharedOriginal)&&($videoEmbedData['type']??'')==='link'&&!empty($videoEmbedData['url'])): ?>
-                    <a href="<?php echo e($videoEmbedData['url']); ?>" target="_blank" class="post-link-card">🔗 Ouvrir le lien</a>
+                    <a href="<?php echo e($videoEmbedData['url']); ?>" target="_blank" class="post-link-card">ðŸ”— Ouvrir le lien</a>
                     <?php endif; ?>
 
                     <?php if(empty($sharedOriginal)&&!empty($imageUrl)): ?>
@@ -1434,14 +1436,14 @@ body.dark .video-more-dropdown a:hover,body.dark .video-more-dropdown button:hov
                         <form method="POST" action="">
                             <input type="hidden" name="toggle_like" value="1">
                             <input type="hidden" name="post_id" value="<?php echo (int)$post['id_post']; ?>">
-                            <button type="submit" class="post-reaction-btn"><span class="reaction-label"><?php echo !empty($post['is_liked'])?'❤️ Aimer':'👍 Aimer'; ?></span><span class="reaction-count"><?php echo (int)($post['likes_count']??0); ?></span></button>
+                            <button type="submit" class="post-reaction-btn"><span class="reaction-label"><?php echo !empty($post['is_liked'])?'â¤ï¸ Aimer':'ðŸ‘ Aimer'; ?></span><span class="reaction-count"><?php echo (int)($post['likes_count']??0); ?></span></button>
                         </form>
-                        <button class="post-reaction-btn" type="button" onclick="toggleCommentBox(<?php echo (int)$post['id_post']; ?>)"><span class="reaction-label">💬 Commenter</span><span class="reaction-count"><?php echo (int)($post['comments_count']??count($post['comments']??[])); ?></span></button>
-                        <button class="post-reaction-btn advanced-share-open" type="button" data-post-id="<?php echo (int)$post['id_post']; ?>" data-post-title="<?php echo e($post['titre']??'Post GoService'); ?>" data-post-content="<?php echo e(strip_tags($cleanPostContent??($post['contenu']??''))); ?>" data-post-user="<?php echo e($fullname); ?>" data-post-image="<?php echo e($imageUrl); ?>" data-post-video="<?php echo e($videoUrl); ?>" onclick="openAdvancedShareModalFromButton(this)"><span class="reaction-label">🔁 Partager</span><span class="reaction-count" id="share-count-<?php echo (int)$post['id_post']; ?>"><?php echo (int)($post['shares_count']??0); ?></span></button>
+                        <button class="post-reaction-btn" type="button" onclick="toggleCommentBox(<?php echo (int)$post['id_post']; ?>)"><span class="reaction-label">ðŸ’¬ Commenter</span><span class="reaction-count"><?php echo (int)($post['comments_count']??count($post['comments']??[])); ?></span></button>
+                        <button class="post-reaction-btn advanced-share-open" type="button" data-post-id="<?php echo (int)$post['id_post']; ?>" data-post-title="<?php echo e($post['titre']??'Post GoService'); ?>" data-post-content="<?php echo e(strip_tags($cleanPostContent??($post['contenu']??''))); ?>" data-post-user="<?php echo e($fullname); ?>" data-post-image="<?php echo e($imageUrl); ?>" data-post-video="<?php echo e($videoUrl); ?>" onclick="openAdvancedShareModalFromButton(this)"><span class="reaction-label">ðŸ” Partager</span><span class="reaction-count" id="share-count-<?php echo (int)$post['id_post']; ?>"><?php echo (int)($post['shares_count']??0); ?></span></button>
                         <form method="POST" action="">
                             <input type="hidden" name="toggle_save" value="1">
                             <input type="hidden" name="post_id" value="<?php echo (int)$post['id_post']; ?>">
-                            <button type="submit" class="post-reaction-btn"><span class="reaction-label"><?php echo !empty($post['is_saved'])?'📌 Enregistré':'🔖 Enregistrer'; ?></span><span class="reaction-count"><?php echo (int)($post['saves_count']??0); ?></span></button>
+                            <button type="submit" class="post-reaction-btn"><span class="reaction-label"><?php echo !empty($post['is_saved'])?'📌 Enregistré':'📌 Enregistrer'; ?></span><span class="reaction-count"><?php echo (int)($post['saves_count']??0); ?></span></button>
                         </form>
                     </div>
 
@@ -1452,12 +1454,12 @@ body.dark .video-more-dropdown a:hover,body.dark .video-more-dropdown button:hov
                             <form method="POST" action="" enctype="multipart/form-data" novalidate class="comment-form">
                                 <input type="hidden" name="add_comment" value="1">
                                 <input type="hidden" name="post_id" value="<?php echo (int)$post['id_post']; ?>">
-                                <textarea name="comment_content" id="comment-content-<?php echo (int)$post['id_post']; ?>" class="comment-area comment-emoji-target" placeholder="Écrire un commentaire..." required></textarea>
-                                <input type="text" name="emoji_content" id="emoji-hidden-<?php echo (int)$post['id_post']; ?>" value="" class="comment-emoji-input comment-emoji-target" placeholder="😊">
+                                <textarea name="comment_content" id="comment-content-<?php echo (int)$post['id_post']; ?>" class="comment-area comment-emoji-target" placeholder="Ã‰crire un commentaire..." required></textarea>
+                                <input type="text" name="emoji_content" id="emoji-hidden-<?php echo (int)$post['id_post']; ?>" value="" class="comment-emoji-input comment-emoji-target" placeholder="ðŸ˜Š">
                                 <span class="field-error" id="err-comment-content-<?php echo (int)$post['id_post']; ?>"></span>
                                 <div class="comment-tools">
-                                    <label class="comment-tool-btn" title="Ajouter une image">🖼️<input type="file" name="comment_image" accept=".jpg,.jpeg,.png,.webp,.gif" class="comment-hidden-input" id="comment-img-<?php echo (int)$post['id_post']; ?>"></label>
-                                    <button type="button" class="comment-tool-btn comment-emoji-btn" data-target="emoji-hidden-<?php echo (int)$post['id_post']; ?>" title="Ajouter un emoji">😊</button>
+                                    <label class="comment-tool-btn" title="Ajouter une image">Image<input type="file" name="comment_image" accept=".jpg,.jpeg,.png,.webp,.gif" class="comment-hidden-input" id="comment-img-<?php echo (int)$post['id_post']; ?>"></label>
+                                    <button type="button" class="comment-tool-btn comment-emoji-btn" data-target="emoji-hidden-<?php echo (int)$post['id_post']; ?>" title="Ajouter un emoji">ðŸ˜Š</button>
                                     <button type="submit" name="add_comment" class="solid-btn">Publier</button>
                                 </div>
                             </form>
@@ -1483,13 +1485,13 @@ body.dark .video-more-dropdown a:hover,body.dark .video-more-dropdown button:hov
                                         <div class="comment-header-row">
                                             <strong class="comment-author"><?php echo e($commentAuthor); ?></strong>
                                             <div class="comment-menu-wrap">
-                                                <button type="button" class="comment-menu-btn" onclick="toggleCommentMenu('cmenu-<?php echo $commentId; ?>')">⋯</button>
+                                                <button type="button" class="comment-menu-btn" onclick="toggleCommentMenu('cmenu-<?php echo $commentId; ?>')">â‹¯</button>
                                                 <div class="comment-dropdown" id="cmenu-<?php echo $commentId; ?>">
                                                     <?php if($isCommentOwner): ?>
-                                                        <button type="button" onclick="startEditComment(<?php echo $commentId; ?>,<?php echo (int)$post['id_post']; ?>)">✏️ Modifier</button>
-                                                        <button type="button" class="danger" onclick="deleteComment(<?php echo $commentId; ?>,<?php echo (int)$post['id_post']; ?>,0)">🗑 Supprimer</button>
+                                                        <button type="button" onclick="startEditComment(<?php echo $commentId; ?>,<?php echo (int)$post['id_post']; ?>)">âœï¸ Modifier</button>
+                                                        <button type="button" class="danger" onclick="deleteComment(<?php echo $commentId; ?>,<?php echo (int)$post['id_post']; ?>,0)">ðŸ—‘ Supprimer</button>
                                                     <?php else: ?>
-                                                        <button type="button" onclick="openReportCommentModal(<?php echo $commentId; ?>,<?php echo (int)$post['id_post']; ?>)">🚩 Signaler</button>
+                                                        <button type="button" onclick="openReportCommentModal(<?php echo $commentId; ?>,<?php echo (int)$post['id_post']; ?>)">ðŸš© Signaler</button>
                                                     <?php endif; ?>
                                                 </div>
                                             </div>
@@ -1502,11 +1504,11 @@ body.dark .video-more-dropdown a:hover,body.dark .video-more-dropdown button:hov
                                         <form method="POST" action="" enctype="multipart/form-data" id="comment-edit-zone-<?php echo $commentId; ?>" style="display:none;" class="comment-edit-form">
                                             <input type="hidden" name="update_comment" value="1"><input type="hidden" name="comment_id" value="<?php echo $commentId; ?>"><input type="hidden" name="post_id" value="<?php echo (int)$post['id_post']; ?>">
                                             <textarea name="comment_content" class="comment-edit-area comment-emoji-target" id="comment-edit-input-<?php echo $commentId; ?>"><?php echo e($comment['contenu_commentaire']??''); ?></textarea>
-                                            <input type="text" name="emoji_content" id="edit-emoji-<?php echo $commentId; ?>" value="<?php echo e($comment['emoji_commentaire']??''); ?>" class="comment-emoji-input comment-emoji-target" placeholder="😊">
+                                            <input type="text" name="emoji_content" id="edit-emoji-<?php echo $commentId; ?>" value="<?php echo e($comment['emoji_commentaire']??''); ?>" class="comment-emoji-input comment-emoji-target" placeholder="ðŸ˜Š">
                                             <span class="field-error" id="err-edit-comment-<?php echo $commentId; ?>"></span>
                                             <div class="comment-tools">
-                                                <label class="comment-tool-btn" title="Modifier l'image">🖼️<input type="file" name="comment_image" accept=".jpg,.jpeg,.png,.webp,.gif" class="comment-hidden-input"></label>
-                                                <button type="button" class="comment-tool-btn comment-emoji-btn" data-target="edit-emoji-<?php echo $commentId; ?>">😊</button>
+                                                <label class="comment-tool-btn" title="Modifier l'image">Image<input type="file" name="comment_image" accept=".jpg,.jpeg,.png,.webp,.gif" class="comment-hidden-input"></label>
+                                                <button type="button" class="comment-tool-btn comment-emoji-btn" data-target="edit-emoji-<?php echo $commentId; ?>">ðŸ˜Š</button>
                                                 <button type="submit" class="comment-edit-save-btn">Enregistrer</button>
                                                 <button type="button" class="comment-edit-cancel-btn" onclick="cancelEditComment(<?php echo $commentId; ?>)">Annuler</button>
                                             </div>
@@ -1514,19 +1516,19 @@ body.dark .video-more-dropdown a:hover,body.dark .video-more-dropdown button:hov
                                     </div>
                                     <div class="comment-meta-row">
                                         <span class="comment-time"><?php echo e(timeAgo($comment['date_commentaire']??'')); ?></span>
-                                        <button type="button" class="reply-btn" data-root-id="<?php echo $commentId; ?>" data-author="<?php echo e($commentAuthor); ?>" data-holder-id="reply-holder-comment-<?php echo $commentId; ?>">Répondre</button>
+                                        <button type="button" class="reply-btn" data-root-id="<?php echo $commentId; ?>" data-author="<?php echo e($commentAuthor); ?>" data-holder-id="reply-holder-comment-<?php echo $commentId; ?>">RÃ©pondre</button>
                                     </div>
                                     <div class="inline-reply-holder" id="reply-holder-comment-<?php echo $commentId; ?>"></div>
                                     <div class="reply-box" id="reply-box-<?php echo $commentId; ?>" style="display:none;">
                                         <form method="POST" action="" enctype="multipart/form-data" novalidate class="reply-form">
                                             <input type="hidden" name="add_comment" value="1"><input type="hidden" name="post_id" value="<?php echo (int)$post['id_post']; ?>"><input type="hidden" name="parent_id" value="<?php echo $commentId; ?>">
-                                            <textarea name="comment_content" id="reply-content-<?php echo $commentId; ?>" class="comment-area reply-area comment-emoji-target" placeholder="Votre réponse..." required></textarea>
-                                            <input type="text" name="emoji_content" id="emoji-reply-<?php echo $commentId; ?>" value="" class="comment-emoji-input comment-emoji-target" placeholder="😊">
+                                            <textarea name="comment_content" id="reply-content-<?php echo $commentId; ?>" class="comment-area reply-area comment-emoji-target" placeholder="Votre rÃ©ponse..." required></textarea>
+                                            <input type="text" name="emoji_content" id="emoji-reply-<?php echo $commentId; ?>" value="" class="comment-emoji-input comment-emoji-target" placeholder="ðŸ˜Š">
                                             <span id="err-reply-content-<?php echo $commentId; ?>" class="field-error"></span>
                                             <div class="comment-tools">
-                                                <label class="comment-tool-btn reply-tool-btn">🖼️<input type="file" name="comment_image" accept=".jpg,.jpeg,.png,.webp,.gif" class="comment-hidden-input" id="reply-img-<?php echo $commentId; ?>"></label>
-                                                <button type="button" class="comment-tool-btn reply-tool-btn comment-emoji-btn" data-target="emoji-reply-<?php echo $commentId; ?>">😊</button>
-                                                <button type="submit" name="add_comment" class="solid-btn reply-submit-btn">Répondre</button>
+                                                <label class="comment-tool-btn reply-tool-btn">Image<input type="file" name="comment_image" accept=".jpg,.jpeg,.png,.webp,.gif" class="comment-hidden-input" id="reply-img-<?php echo $commentId; ?>"></label>
+                                                <button type="button" class="comment-tool-btn reply-tool-btn comment-emoji-btn" data-target="emoji-reply-<?php echo $commentId; ?>">ðŸ˜Š</button>
+                                                <button type="submit" name="add_comment" class="solid-btn reply-submit-btn">RÃ©pondre</button>
                                             </div>
                                         </form>
                                     </div>
@@ -1545,13 +1547,13 @@ body.dark .video-more-dropdown a:hover,body.dark .video-more-dropdown button:hov
                                                     <div class="reply-header-row">
                                                         <strong class="comment-author"><?php echo e($replyAuthor); ?></strong>
                                                         <div class="comment-menu-wrap">
-                                                            <button type="button" class="comment-menu-btn" onclick="toggleCommentMenu('cmenu-reply-<?php echo $replyId; ?>')">⋯</button>
+                                                            <button type="button" class="comment-menu-btn" onclick="toggleCommentMenu('cmenu-reply-<?php echo $replyId; ?>')">â‹¯</button>
                                                             <div class="comment-dropdown" id="cmenu-reply-<?php echo $replyId; ?>">
                                                                 <?php if($isReplyOwner): ?>
-                                                                    <button type="button" onclick="startEditComment(<?php echo $replyId; ?>,<?php echo (int)$post['id_post']; ?>)">✏️ Modifier</button>
-                                                                    <button type="button" class="danger" onclick="deleteComment(<?php echo $replyId; ?>,<?php echo (int)$post['id_post']; ?>,<?php echo $commentId; ?>)">🗑 Supprimer</button>
+                                                                    <button type="button" onclick="startEditComment(<?php echo $replyId; ?>,<?php echo (int)$post['id_post']; ?>)">âœï¸ Modifier</button>
+                                                                    <button type="button" class="danger" onclick="deleteComment(<?php echo $replyId; ?>,<?php echo (int)$post['id_post']; ?>,<?php echo $commentId; ?>)">ðŸ—‘ Supprimer</button>
                                                                 <?php else: ?>
-                                                                    <button type="button" onclick="openReportCommentModal(<?php echo $replyId; ?>,<?php echo (int)$post['id_post']; ?>)">🚩 Signaler</button>
+                                                                    <button type="button" onclick="openReportCommentModal(<?php echo $replyId; ?>,<?php echo (int)$post['id_post']; ?>)">ðŸš© Signaler</button>
                                                                 <?php endif; ?>
                                                             </div>
                                                         </div>
@@ -1559,16 +1561,16 @@ body.dark .video-more-dropdown a:hover,body.dark .video-more-dropdown button:hov
                                                     <div id="comment-text-<?php echo $replyId; ?>">
                                                         <?php if(!empty($reply['contenu_commentaire'])): ?><div class="comment-text"><?php echo nl2br(e($reply['contenu_commentaire'])); ?></div><?php endif; ?>
                                                         <?php if(!empty($reply['emoji_commentaire'])): ?><div class="comment-emoji-line"><?php echo e($reply['emoji_commentaire']); ?></div><?php endif; ?>
-                                                        <?php if(!empty($replyImageUrl)): ?><div class="comment-image-wrap"><img src="<?php echo e($replyImageUrl); ?>" alt="Image réponse" class="comment-image"></div><?php endif; ?>
+                                                        <?php if(!empty($replyImageUrl)): ?><div class="comment-image-wrap"><img src="<?php echo e($replyImageUrl); ?>" alt="Image rÃ©ponse" class="comment-image"></div><?php endif; ?>
                                                     </div>
                                                     <form method="POST" action="" enctype="multipart/form-data" id="comment-edit-zone-<?php echo $replyId; ?>" style="display:none;" class="comment-edit-form">
                                                         <input type="hidden" name="update_comment" value="1"><input type="hidden" name="comment_id" value="<?php echo $replyId; ?>"><input type="hidden" name="post_id" value="<?php echo (int)$post['id_post']; ?>">
                                                         <textarea name="comment_content" class="comment-edit-area comment-emoji-target" id="comment-edit-input-<?php echo $replyId; ?>"><?php echo e($reply['contenu_commentaire']??''); ?></textarea>
-                                                        <input type="text" name="emoji_content" id="edit-emoji-<?php echo $replyId; ?>" value="<?php echo e($reply['emoji_commentaire']??''); ?>" class="comment-emoji-input comment-emoji-target" placeholder="😊">
+                                                        <input type="text" name="emoji_content" id="edit-emoji-<?php echo $replyId; ?>" value="<?php echo e($reply['emoji_commentaire']??''); ?>" class="comment-emoji-input comment-emoji-target" placeholder="ðŸ˜Š">
                                                         <span class="field-error" id="err-edit-comment-<?php echo $replyId; ?>"></span>
                                                         <div class="comment-tools">
-                                                            <label class="comment-tool-btn reply-tool-btn">🖼️<input type="file" name="comment_image" accept=".jpg,.jpeg,.png,.webp,.gif" class="comment-hidden-input"></label>
-                                                            <button type="button" class="comment-tool-btn reply-tool-btn comment-emoji-btn" data-target="edit-emoji-<?php echo $replyId; ?>">😊</button>
+                                                            <label class="comment-tool-btn reply-tool-btn">Image<input type="file" name="comment_image" accept=".jpg,.jpeg,.png,.webp,.gif" class="comment-hidden-input"></label>
+                                                            <button type="button" class="comment-tool-btn reply-tool-btn comment-emoji-btn" data-target="edit-emoji-<?php echo $replyId; ?>">ðŸ˜Š</button>
                                                             <button type="submit" class="comment-edit-save-btn">Enregistrer</button>
                                                             <button type="button" class="comment-edit-cancel-btn" onclick="cancelEditComment(<?php echo $replyId; ?>)">Annuler</button>
                                                         </div>
@@ -1576,7 +1578,7 @@ body.dark .video-more-dropdown a:hover,body.dark .video-more-dropdown button:hov
                                                 </div>
                                                 <div class="comment-meta-row">
                                                     <span class="comment-time"><?php echo e(timeAgo($reply['date_commentaire']??'')); ?></span>
-                                                    <button type="button" class="reply-btn" data-root-id="<?php echo $commentId; ?>" data-author="<?php echo e($replyAuthor); ?>" data-holder-id="reply-holder-reply-<?php echo $replyId; ?>">Répondre</button>
+                                                    <button type="button" class="reply-btn" data-root-id="<?php echo $commentId; ?>" data-author="<?php echo e($replyAuthor); ?>" data-holder-id="reply-holder-reply-<?php echo $replyId; ?>">RÃ©pondre</button>
                                                 </div>
                                                 <div class="inline-reply-holder" id="reply-holder-reply-<?php echo $replyId; ?>"></div>
                                             </div>
@@ -1622,33 +1624,19 @@ body.dark .video-more-dropdown a:hover,body.dark .video-more-dropdown button:hov
     </section>
 </div>
 
-<div class="ig-lang-zone notranslate" translate="no">
-    <div class="ig-lang-wrap">
-        <button type="button" class="ig-lang-btn" onclick="toggleIgLangMenu()">Langue ▾</button>
-        <div class="ig-lang-menu" id="igLangMenu">
-            <button type="button" onclick="changeForumLang('fr')">Français</button>
-            <button type="button" onclick="changeForumLang('en')">English</button>
-            <button type="button" onclick="changeForumLang('ar')">العربية</button>
-            <button type="button" onclick="changeForumLang('es')">Español</button>
-            <button type="button" onclick="changeForumLang('it')">Italiano</button>
-            <button type="button" onclick="changeForumLang('de')">Deutsch</button>
-            <button type="button" onclick="changeForumLang('tr')">Türkçe</button>
-            <button type="button" onclick="changeForumLang('pt')">Português</button>
-            <button type="button" onclick="changeForumLang('ru')">Русский</button>
-            <button type="button" onclick="changeForumLang('zh-CN')">中文</button>
-            <button type="button" onclick="changeForumLang('ja')">日本語</button>
-            <button type="button" onclick="changeForumLang('ko')">한국어</button>
-        </div>
-    </div>
-    <div id="google_translate_element"></div>
-</div>
 
-<!-- MODAL CRÉER/MODIFIER POST -->
+<script>
+(function clearForumGoogleTranslateCookie(){
+    document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+    document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 GMT; domain=' + location.hostname + '; path=/';
+})();
+</script>
+<!-- MODAL CRÃ‰ER/MODIFIER POST -->
 <div class="modal-overlay" id="forumModal">
     <div class="forum-modal">
         <div class="forum-modal-head">
-            <div class="forum-modal-title"><?php echo $isEditShareMode?'Modifier le partage':($isEditMode?'Modifier la publication':'Créer une publication'); ?></div>
-            <button type="button" class="forum-modal-close" id="closeForumModal">×</button>
+            <div class="forum-modal-title"><?php echo $isEditShareMode?'Modifier le partage':($isEditMode?'Modifier la publication':'CrÃ©er une publication'); ?></div>
+            <button type="button" class="forum-modal-close" id="closeForumModal">x</button>
         </div>
         <div class="forum-modal-body">
             <div class="forum-modal-user"><div class="mini-avatar"><?php echo e($currentUserAvatarLetter); ?></div><div class="forum-modal-name"><?php echo e($currentUserName); ?></div></div>
@@ -1664,14 +1652,14 @@ body.dark .video-more-dropdown a:hover,body.dark .video-more-dropdown button:hov
                         <div class="forum-form-field full-width">
                             <div style="display:grid;grid-template-columns:minmax(0,1fr) 58px;gap:12px;align-items:center;">
                                 <input type="text" name="emoji_post" id="emoji_post" placeholder="Emoji du partage" value="<?php echo e($old['emoji_post']??''); ?>" class="forum-emoji-input <?php echo invalidClass($errors['emoji_post']??''); ?>" style="margin-top:0;">
-                                <button type="button" class="tool-trigger emoji-open-btn" data-target="emoji_post" id="emojiTrigger" style="height:54px;border-radius:16px;background:var(--forum-btn-bg);color:#fff;">😊</button>
+                                <button type="button" class="tool-trigger emoji-open-btn" data-target="emoji_post" id="emojiTrigger" style="height:54px;border-radius:16px;background:var(--forum-btn-bg);color:#fff;">Emoji</button>
                             </div>
                             <span class="field-error emoji-error" id="err-emoji_post"><?php echo e($errors['emoji_post']??''); ?></span>
                         </div>
                     </div>
                     <div class="forum-form-actions">
                         <button type="button" class="outline-btn" id="cancelForumModal">Annuler</button>
-                        <button class="solid-btn" type="submit" name="update_post">Mettre à jour le partage</button>
+                        <button class="solid-btn" type="submit" name="update_post">Update le partage</button>
                     </div>
                 <?php else: ?>
                     <div class="forum-form-grid">
@@ -1682,19 +1670,19 @@ body.dark .video-more-dropdown a:hover,body.dark .video-more-dropdown button:hov
                         <input type="hidden" name="gif_post" id="gif_post" value="<?php echo e($editPost['gif_post']??''); ?>">
                         <div class="forum-form-field full-width">
                             <div class="gif-selected-preview <?php echo (!empty($editPost['gif_post'])?'show':''); ?>" id="gifSelectedPreview">
-                                <button type="button" class="gif-clear-btn" id="clearGifBtn">×</button>
-                                <img id="gifSelectedImg" src="<?php echo !empty($editPost['gif_post'])?e(forumMediaUrl($editPost['gif_post'])):''; ?>" alt="GIF sélectionné">
+                                <button type="button" class="gif-clear-btn" id="clearGifBtn">x</button>
+                                <img id="gifSelectedImg" src="<?php echo !empty($editPost['gif_post'])?e(forumMediaUrl($editPost['gif_post'])):''; ?>" alt="GIF selected">
                             </div>
                             <span class="field-error" id="err-gif"><?php echo e($errors['gif']??''); ?></span>
                         </div>
                     </div>
                     <div class="forum-modal-tools">
-                        <div>Ajouter à votre publication</div>
+                        <div>Add to your post</div>
                         <div class="forum-tool-icons">
-                            <button type="button" class="tool-trigger" id="photoTrigger">🖼️</button>
-                            <button type="button" class="tool-trigger" id="videoTrigger">🎥</button>
+                            <button type="button" class="tool-trigger" id="photoTrigger">Image</button>
+                            <button type="button" class="tool-trigger" id="videoTrigger">Video</button>
                             <button type="button" class="tool-trigger gif-media-btn" id="gifTrigger" title="Choisir un GIF ou un sticker"><span class="gif-text">GIF</span></button>
-                            <button type="button" class="tool-trigger emoji-open-btn" data-target="emoji_post" id="emojiTrigger">😊</button>
+                            <button type="button" class="tool-trigger emoji-open-btn" data-target="emoji_post" id="emojiTrigger">Emoji</button>
                         </div>
                     </div>
                     <div class="forum-form-field full-width" style="margin-top:14px;">
@@ -1711,7 +1699,7 @@ body.dark .video-more-dropdown a:hover,body.dark .video-more-dropdown button:hov
                     </div>
                     <div class="forum-form-actions">
                         <button type="button" class="outline-btn" id="cancelForumModal">Annuler</button>
-                        <?php if($isEditMode): ?><button class="solid-btn" type="submit" name="update_post">Mettre à jour</button><?php else: ?><button class="solid-btn" type="submit" name="publish_post">Publier</button><?php endif; ?>
+                        <?php if($isEditMode): ?><button class="solid-btn" type="submit" name="update_post">Update</button><?php else: ?><button class="solid-btn" type="submit" name="publish_post">Publier</button><?php endif; ?>
                     </div>
                 <?php endif; ?>
             </form>
@@ -1721,32 +1709,32 @@ body.dark .video-more-dropdown a:hover,body.dark .video-more-dropdown button:hov
 
 <!-- MEDIA VIEWER -->
 <div class="media-viewer-overlay" id="mediaViewer">
-    <button type="button" class="media-viewer-close" id="closeMediaViewer">×</button>
+    <button type="button" class="media-viewer-close" id="closeMediaViewer">x</button>
     <div class="media-viewer-content" id="imageViewerContent">
         <div class="media-viewer-image-layout">
             <div class="media-viewer-image-main" id="imageViewerMain"></div>
             <div class="media-viewer-image-side">
-                <div class="viewer-post-head"><div class="viewer-user"><div class="mini-avatar" id="viewerUserAvatar">U</div><div class="viewer-user-meta"><strong id="viewerUserName">Utilisateur</strong><span id="viewerPostTime">à l'instant</span></div></div></div>
+                <div class="viewer-post-head"><div class="viewer-user"><div class="mini-avatar" id="viewerUserAvatar">U</div><div class="viewer-user-meta"><strong id="viewerUserName">Utilisateur</strong><span id="viewerPostTime">Ã  l'instant</span></div></div></div>
                 <div class="viewer-post-body"><div class="viewer-post-title" id="viewerPostTitle"></div><div id="viewerPostContent"></div></div>
-                <div class="viewer-stats" id="viewerStatsRow"><span id="viewerLikesWrap" style="display:none;">👍 <span id="viewerLikesCount">0</span></span><span id="viewerCommentsWrap" style="display:none;">💬 <span id="viewerCommentsCount">0</span></span><span id="viewerSharesWrap" style="display:none;">🔁 <span id="viewerSharesCount">0</span></span></div>
+                <div class="viewer-stats" id="viewerStatsRow"><span id="viewerLikesWrap" style="display:none;">ðŸ‘ <span id="viewerLikesCount">0</span></span><span id="viewerCommentsWrap" style="display:none;">ðŸ’¬ <span id="viewerCommentsCount">0</span></span><span id="viewerSharesWrap" style="display:none;">ðŸ” <span id="viewerSharesCount">0</span></span></div>
                 <div class="viewer-actions">
-                    <form method="POST" action="" style="margin:0;"><input type="hidden" name="toggle_like" value="1"><input type="hidden" name="post_id" id="viewerLikePostId" value=""><button class="viewer-action-btn" type="submit" id="viewerLikeBtn">👍</button></form>
-                    <button class="viewer-action-btn" type="button" id="viewerCommentBtn">💬</button>
-                    <button class="viewer-action-btn" type="button" id="viewerShareBtn">🔁</button>
-                    <form method="POST" action="" style="margin:0;"><input type="hidden" name="toggle_save" value="1"><input type="hidden" name="post_id" id="viewerSavePostId" value=""><button class="viewer-action-btn" type="submit" id="viewerSaveBtn">🔖</button></form>
+                    <form method="POST" action="" style="margin:0;"><input type="hidden" name="toggle_like" value="1"><input type="hidden" name="post_id" id="viewerLikePostId" value=""><button class="viewer-action-btn" type="submit" id="viewerLikeBtn">ðŸ‘</button></form>
+                    <button class="viewer-action-btn" type="button" id="viewerCommentBtn">ðŸ’¬</button>
+                    <button class="viewer-action-btn" type="button" id="viewerShareBtn">ðŸ”</button>
+                    <form method="POST" action="" style="margin:0;"><input type="hidden" name="toggle_save" value="1"><input type="hidden" name="post_id" id="viewerSavePostId" value=""><button class="viewer-action-btn" type="submit" id="viewerSaveBtn">ðŸ”–</button></form>
                 </div>
                 <div class="viewer-comments" id="viewerComments"></div>
                 <div class="viewer-comment-form-wrap viewer-compact-wrap">
                     <form method="POST" action="" enctype="multipart/form-data" id="viewerCommentForm" novalidate>
                         <input type="hidden" name="add_comment" value="1"><input type="hidden" name="post_id" id="viewerPostId" value=""><input type="hidden" name="parent_id" id="viewerParentId" value="">
-                        <div class="viewer-comment-mini" id="viewerCommentMini"><span>Écrire un commentaire...</span></div>
+                        <div class="viewer-comment-mini" id="viewerCommentMini"><span>Ã‰crire un commentaire...</span></div>
                         <div class="viewer-comment-expanded" id="viewerCommentExpanded">
-                            <textarea name="comment_content" id="viewerCommentContent" class="viewer-comment-input" placeholder="Écrire un commentaire..."></textarea>
+                            <textarea name="comment_content" id="viewerCommentContent" class="viewer-comment-input" placeholder="Ã‰crire un commentaire..."></textarea>
                             <input type="text" name="emoji_content" id="viewerEmojiHidden" value="" class="viewer-emoji-input comment-emoji-target" placeholder="Emoji">
                             <span class="field-error" id="err-viewerCommentContent"></span>
                             <div class="viewer-comment-actions">
-                                <label class="viewer-square-btn">🖼️<input type="file" name="comment_image" accept=".jpg,.jpeg,.png,.webp,.gif" class="comment-hidden-input" id="viewerCommentImage"></label>
-                                <button type="button" class="viewer-square-btn comment-emoji-btn" data-target="viewerEmojiHidden">😊</button>
+                                <label class="viewer-square-btn">Image<input type="file" name="comment_image" accept=".jpg,.jpeg,.png,.webp,.gif" class="comment-hidden-input" id="viewerCommentImage"></label>
+                                <button type="button" class="viewer-square-btn comment-emoji-btn" data-target="viewerEmojiHidden">Emoji</button>
                                 <button type="submit" class="viewer-publish-btn">Publier</button>
                                 <button type="button" class="viewer-cancel-comment-btn" id="viewerCancelCommentBtn">Annuler</button>
                             </div>
@@ -1761,28 +1749,28 @@ body.dark .video-more-dropdown a:hover,body.dark .video-more-dropdown button:hov
         <div class="media-viewer-video-layout">
             <div class="media-viewer-video-main" id="videoViewerMain"></div>
             <div class="media-viewer-video-side">
-                <div class="media-viewer-action" id="reelLikesWrap" style="display:none;"><div class="viewer-side-icon">👍</div><span id="reelLikesCount">0</span></div>
-                <button type="button" class="media-viewer-action reel-action-btn" id="reelCommentBtn"><div class="viewer-side-icon">💬</div><span id="reelCommentsCount">0</span></button>
-                <button type="button" class="media-viewer-action reel-action-btn" id="reelShareBtn"><div class="viewer-side-icon">🔁</div><span id="reelSharesCount">0</span></button>
+                <div class="media-viewer-action" id="reelLikesWrap" style="display:none;"><div class="viewer-side-icon">ðŸ‘</div><span id="reelLikesCount">0</span></div>
+                <button type="button" class="media-viewer-action reel-action-btn" id="reelCommentBtn"><div class="viewer-side-icon">ðŸ’¬</div><span id="reelCommentsCount">0</span></button>
+                <button type="button" class="media-viewer-action reel-action-btn" id="reelShareBtn"><div class="viewer-side-icon">ðŸ”</div><span id="reelSharesCount">0</span></button>
                 <div class="media-viewer-action video-more-wrap">
-                    <button type="button" class="viewer-side-icon reel-action-icon" id="reelMoreBtn">⋯</button>
+                    <button type="button" class="viewer-side-icon reel-action-icon" id="reelMoreBtn">â‹¯</button>
                     <div class="video-more-dropdown" id="reelMoreDropdown"></div>
                 </div>
             </div>
             <div class="media-viewer-video-panel" id="videoCommentsPanel">
                 <div class="video-panel-head">
                     <strong>Commentaires</strong>
-                    <button type="button" id="closeVideoCommentsPanel">×</button>
+                    <button type="button" id="closeVideoCommentsPanel">x</button>
                 </div>
                 <div class="video-panel-comments" id="videoViewerComments"></div>
                 <form method="POST" action="" enctype="multipart/form-data" id="videoCommentForm" class="video-comment-form" novalidate>
                     <input type="hidden" name="add_comment" value="1"><input type="hidden" name="post_id" id="videoCommentPostId" value=""><input type="hidden" name="parent_id" id="videoParentId" value="">
-                    <textarea name="comment_content" id="videoCommentContent" class="viewer-comment-input" placeholder="Écrire un commentaire..."></textarea>
+                    <textarea name="comment_content" id="videoCommentContent" class="viewer-comment-input" placeholder="Ã‰crire un commentaire..."></textarea>
                     <input type="text" name="emoji_content" id="videoEmojiHidden" value="" class="viewer-emoji-input comment-emoji-target" placeholder="Emoji">
                     <span class="field-error" id="err-videoCommentContent"></span>
                     <div class="viewer-comment-actions">
-                        <label class="viewer-square-btn">🖼️<input type="file" name="comment_image" accept=".jpg,.jpeg,.png,.webp,.gif" class="comment-hidden-input" id="videoCommentImage"></label>
-                        <button type="button" class="viewer-square-btn comment-emoji-btn" data-target="videoEmojiHidden">😊</button>
+                        <label class="viewer-square-btn">Image<input type="file" name="comment_image" accept=".jpg,.jpeg,.png,.webp,.gif" class="comment-hidden-input" id="videoCommentImage"></label>
+                        <button type="button" class="viewer-square-btn comment-emoji-btn" data-target="videoEmojiHidden">Emoji</button>
                         <button type="submit" class="viewer-publish-btn" id="videoCommentSubmitBtn">Publier</button>
                         <button type="button" class="viewer-cancel-comment-btn" id="videoCancelCommentBtn">Annuler</button>
                     </div>
@@ -1812,7 +1800,7 @@ body.dark .video-more-dropdown a:hover,body.dark .video-more-dropdown button:hov
     <div class="gif-box">
         <div class="gif-header">
             <input type="text" id="gifSearch" placeholder="Rechercher un GIF...">
-            <button type="button" id="closeGifModal">×</button>
+            <button type="button" id="closeGifModal">x</button>
         </div>
         <div class="gif-results" id="gifResults">
             <div class="gif-empty">Chargement des GIFs...</div>
@@ -1827,8 +1815,8 @@ body.dark .video-more-dropdown a:hover,body.dark .video-more-dropdown button:hov
         <div class="forum-post-modal-body">
             <form method="POST" action="">
                 <input type="hidden" name="post_id" id="report-post-id" value=""><input type="hidden" name="report_post" value="1">
-                <div style="margin-bottom:16px;"><label style="display:block;font-weight:600;margin-bottom:8px;">Raison du signalement</label><select name="report_reason" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px;" required><option value="">Choisir une raison</option><option value="spam">Spam</option><option value="inappropriate">Contenu inapproprié</option><option value="offensive">Contenu offensant</option><option value="misinformation">Désinformation</option><option value="other">Autre</option></select></div>
-                <div style="margin-bottom:16px;"><label style="display:block;font-weight:600;margin-bottom:8px;">Détails supplémentaires (optionnel)</label><textarea name="report_details" placeholder="Expliquez pourquoi vous signalez ce post..." style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px;min-height:100px;font-family:inherit;resize:vertical;"></textarea></div>
+                <div style="margin-bottom:16px;"><label style="display:block;font-weight:600;margin-bottom:8px;">Raison du signalement</label><select name="report_reason" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px;" required><option value="">Choisir une raison</option><option value="spam">Spam</option><option value="inappropriate">Contenu inappropriÃ©</option><option value="offensive">Contenu offensant</option><option value="misinformation">DÃ©sinformation</option><option value="other">Autre</option></select></div>
+                <div style="margin-bottom:16px;"><label style="display:block;font-weight:600;margin-bottom:8px;">DÃ©tails supplÃ©mentaires (optionnel)</label><textarea name="report_details" placeholder="Expliquez pourquoi vous signalez ce post..." style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px;min-height:100px;font-family:inherit;resize:vertical;"></textarea></div>
                 <div style="display:flex;gap:10px;justify-content:flex-end;"><button type="button" onclick="closeReportModal()" class="ghost-btn">Annuler</button><button type="submit" class="solid-btn">Signaler</button></div>
             </form>
         </div>
@@ -1838,26 +1826,26 @@ body.dark .video-more-dropdown a:hover,body.dark .video-more-dropdown button:hov
 <!-- MODAL SIGNALER COMMENTAIRE -->
 <div id="reportCommentModal">
     <div style="background:#fff;border-radius:24px;padding:28px;width:min(520px,100%);box-shadow:0 30px 80px rgba(15,23,42,.25);">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;"><h2 style="margin:0;font-size:22px;">Signaler ce commentaire</h2><button type="button" onclick="closeReportCommentModal()" style="width:38px;height:38px;border:none;border-radius:50%;background:#f2f4f8;font-size:20px;cursor:pointer;">×</button></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;"><h2 style="margin:0;font-size:22px;">Signaler ce commentaire</h2><button type="button" onclick="closeReportCommentModal()" style="width:38px;height:38px;border:none;border-radius:50%;background:#f2f4f8;font-size:20px;cursor:pointer;">x</button></div>
         <form method="POST" action="" id="reportCommentForm">
             <input type="hidden" name="report_comment" value="1"><input type="hidden" name="comment_id" id="report-comment-id" value=""><input type="hidden" name="post_id" id="report-comment-post-id" value="">
-            <div style="margin-bottom:16px;"><label style="display:block;font-weight:600;margin-bottom:8px;">Raison du signalement</label><select name="report_reason" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px;" required><option value="">Choisir une raison</option><option value="spam">Spam</option><option value="inappropriate">Contenu inapproprié</option><option value="offensive">Contenu offensant</option><option value="misinformation">Désinformation</option><option value="other">Autre</option></select></div>
-            <div style="margin-bottom:20px;"><label style="display:block;font-weight:600;margin-bottom:8px;">Détails (optionnel)</label><textarea name="report_details" placeholder="Expliquez pourquoi..." style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px;min-height:90px;font-family:inherit;resize:vertical;box-sizing:border-box;"></textarea></div>
+            <div style="margin-bottom:16px;"><label style="display:block;font-weight:600;margin-bottom:8px;">Raison du signalement</label><select name="report_reason" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px;" required><option value="">Choisir une raison</option><option value="spam">Spam</option><option value="inappropriate">Contenu inappropriÃ©</option><option value="offensive">Contenu offensant</option><option value="misinformation">DÃ©sinformation</option><option value="other">Autre</option></select></div>
+            <div style="margin-bottom:20px;"><label style="display:block;font-weight:600;margin-bottom:8px;">DÃ©tails (optionnel)</label><textarea name="report_details" placeholder="Expliquez pourquoi..." style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px;min-height:90px;font-family:inherit;resize:vertical;box-sizing:border-box;"></textarea></div>
             <div style="display:flex;gap:10px;justify-content:flex-end;"><button type="button" onclick="closeReportCommentModal()" style="padding:10px 20px;border:1px solid #ddd;border-radius:10px;background:#fff;cursor:pointer;font-weight:600;">Annuler</button><button type="submit" class="solid-btn">Signaler</button></div>
         </form>
     </div>
 </div>
 
-<!-- MODAL PARTAGE AVANCÉ -->
+<!-- MODAL PARTAGE AVANCÃ‰ -->
 <div class="advanced-share-modal" id="advancedShareModal">
     <div class="advanced-share-box">
-        <div class="advanced-share-head"><h2>Partager</h2><button type="button" class="advanced-share-close" onclick="closeAdvancedShareModal()">×</button></div>
+        <div class="advanced-share-head"><h2>Partager</h2><button type="button" class="advanced-share-close" onclick="closeAdvancedShareModal()">x</button></div>
         <div class="advanced-share-body">
             <div class="advanced-share-user-row"><div class="mini-avatar" id="advancedShareAvatar">U</div><div><strong id="advancedShareUser">Utilisateur</strong></div></div>
-            <textarea class="advanced-share-caption" id="advancedShareCaption" placeholder="Écrire une description pour votre partage..."></textarea>
+            <textarea class="advanced-share-caption" id="advancedShareCaption" placeholder="Ã‰crire une description pour votre partage..."></textarea>
             <div class="advanced-share-emoji-row">
                 <input type="text" class="advanced-share-caption forum-emoji-input" id="advancedShareEmoji" placeholder="Ajouter des emojis 😊" style="min-height:46px;height:46px;border:1px solid var(--forum-border);border-radius:14px;background:var(--forum-bg-input);padding:0 14px;box-sizing:border-box;margin:0;">
-                <button type="button" class="advanced-share-emoji-btn emoji-open-btn" data-target="advancedShareEmoji" title="Choisir un emoji">😊</button>
+                <button type="button" class="advanced-share-emoji-btn emoji-open-btn" data-target="advancedShareEmoji" title="Choisir un emoji">Emoji</button>
             </div>
             <div class="advanced-share-preview">
                 <div class="advanced-share-preview-media" id="advancedSharePreviewMedia">GoService Forum</div>
@@ -1865,18 +1853,18 @@ body.dark .video-more-dropdown a:hover,body.dark .video-more-dropdown button:hov
             </div>
             <div class="advanced-share-label">Partager sur</div>
             <div class="advanced-share-grid">
-                <button type="button" class="advanced-share-option" onclick="sharePostAdvanced('facebook')"><span class="advanced-share-icon">📘</span><span>Facebook</span></button>
-                <button type="button" class="advanced-share-option" onclick="sharePostAdvanced('whatsapp')"><span class="advanced-share-icon">🟢</span><span>WhatsApp</span></button>
-                <button type="button" class="advanced-share-option" onclick="sharePostAdvanced('internal')"><span class="advanced-share-icon">🚀</span><span>GoService</span></button>
-                <button type="button" class="advanced-share-option" onclick="sharePostAdvanced('copy')"><span class="advanced-share-icon">🔗</span><span>Copier le lien</span></button>
+                <button type="button" class="advanced-share-option" onclick="sharePostAdvanced('facebook')"><span class="advanced-share-icon">ðŸ“˜</span><span>Facebook</span></button>
+                <button type="button" class="advanced-share-option" onclick="sharePostAdvanced('whatsapp')"><span class="advanced-share-icon">ðŸŸ¢</span><span>WhatsApp</span></button>
+                <button type="button" class="advanced-share-option" onclick="sharePostAdvanced('internal')"><span class="advanced-share-icon">ðŸš€</span><span>GoService</span></button>
+                <button type="button" class="advanced-share-option" onclick="sharePostAdvanced('copy')"><span class="advanced-share-icon">ðŸ”—</span><span>Copier le lien</span></button>
             </div>
             <p class="advanced-share-note" id="advancedShareNote"></p>
         </div>
     </div>
 </div>
-<div class="advanced-share-toast" id="advancedShareToast">Lien copié ✅</div>
+<div class="advanced-share-toast" id="advancedShareToast">Lien copiÃ© âœ…</div>
 
-<!-- FORMULAIRES CACHÉS -->
+<!-- FORMULAIRES CACHÃ‰S -->
 <form method="POST" action="" id="deletePostViewerForm" style="display:none;"><input type="hidden" name="delete_post" value="1"><input type="hidden" name="post_id" id="deletePostViewerId" value=""></form>
 <form method="POST" action="" id="deleteCommentForm" style="display:none;"><input type="hidden" name="delete_comment" value="1"><input type="hidden" name="comment_id" id="deleteCommentId" value=""><input type="hidden" name="post_id" id="deleteCommentPostId" value=""><input type="hidden" name="parent_id" id="deleteCommentParentId" value=""></form>
 <form method="POST" action="" id="updateCommentForm" style="display:none;"><input type="hidden" name="update_comment" value="1"><input type="hidden" name="comment_id" id="updateCommentId" value=""><input type="hidden" name="post_id" id="updateCommentPostId" value=""><input type="hidden" name="comment_content" id="updateCommentContent" value=""></form>
@@ -1896,7 +1884,15 @@ const FORUM_INDEX_URL=<?php echo json_encode(forumAppUrl('view/front/index.php?p
 let currentViewerPostData=null;
 
 /* ============================================================ EMOJIS */
-const emojiGroups={smileys:['😀','😁','😂','🤣','😃','😄','😅','😆','😉','😊','🙂','🙃','😍','🥰','😘','😗','😙','😚','😋','😛','😜','🤪','😝','🫠','🤗','🤭','🫢','🤫','🤔','🫡','😐','😑','😶','🫥','😏','😒','🙄','😬','🤥','😌','😔','😪','🤤','😴','😷','🤒','🤕','🤢','🤮','🥵','🥶','🥴','😵','🤯','😎','🤩','🥳','😤','😭','😢','😡','🤬','😱','😨','😰','😥','😓','😳','🥹','😇'],people:['👋','🤚','🖐️','✋','🫱','🫲','👌','🤌','🤏','✌️','🤞','🫰','🤟','🤘','👏','🙌','🫶','🤝','🙏','💪','🫵','👀','🧠','👶','🧒','👦','👧','🧑','👨','👩','🧔','👱','👴','👵','🙍','🙎','🙅','🙆','💁','🙋','🧏','🙇','🤦','🤷','👮','🧑‍💻','👨‍💻','👩‍💻','🧑‍🎓','👨‍🎓','👩‍🎓'],animals:['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🐵','🙈','🙉','🙊','🐔','🐧','🐦','🐤','🦆','🦅','🦉','🦇','🐺','🐗','🐴','🦄','🐝','🪲','🐞','🦋','🐌','🐢','🐍','🦎','🦂','🦀','🐙','🦑','🐬','🐳','🦈'],food:['🍏','🍎','🍐','🍊','🍋','🍌','🍉','🍇','🍓','🫐','🍈','🍒','🍑','🥭','🍍','🥥','🥝','🍅','🍆','🥑','🥦','🥬','🥒','🌶️','🫑','🌽','🥕','🫒','🧄','🧅','🥔','🍠','🥐','🍞','🥖','🧀','🍗','🍖','🍔','🍟','🍕','🌭','🥪','🌮','🌯','🥗','🍝','🍜','🍣','🍩','🍪','🎂','🍫','🍿','☕','🧃'],travel:['🚗','🚕','🚙','🚌','🚎','🏎️','🚓','🚑','🚒','🚚','🚜','🏍️','🚲','✈️','🛫','🛬','🚀','🛸','🚁','⛵','🚤','🛳️','🚂','🚆','🚇','🚝','🗺️','🧭','🏖️','🏝️','🏜️','🏕️','🏔️','⛰️','🌋','🗽','🗼','🏰','🏟️','🎡','🎢'],objects:['⌚','📱','💻','⌨️','🖥️','🖨️','🖱️','📷','📹','🎥','☎️','📞','📺','📻','🎙️','🎧','📢','💡','🔦','🕯️','🪫','🔋','🔌','💰','💳','🧾','📦','📌','✂️','🖊️','🖋️','📝','📚','🧸','🎁','🏆','⚽','🏀','🎮','🛒','🛠️','🔧','🔨'],symbols:['❤️','🩷','🧡','💛','💚','🩵','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖','💘','💝','💯','✅','✔️','✖️','❌','⚠️','🚫','⭐','🌟','✨','🔥','💥','🎉','🎊','🔔','📣','🔴','🟠','🟡','🟢','🔵','🟣','⚫','⚪']};
+const emojiGroups = {
+    smileys: ['😀','😁','😂','😅','😊','😉','😍','😘','😎','🤩','🙂','😇','🤓','😴','😜','😬'],
+    people: ['👋','👍','🙏','🤝','🤗','🙌','👏','🧑','👩','👨','🧓','👶'],
+    animals: ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯'],
+    food: ['🍎','🍌','🍓','🍕','🍔','🍣','🍪','🍩'],
+    travel: ['✈️','🚗','🚆','🚲','🗺️'],
+    objects: ['📷','🎥','💡','🔔','📌'],
+    symbols: ['❤️','✅','⚠️','✨','🎉']
+};
 
 /* ============================================================ MODAL POST */
 function openModal(){forumModal.classList.add('show');document.body.style.overflow='hidden';}
@@ -1911,7 +1907,7 @@ function openMediaViewer(data){
     if(!mediaViewer) return;
     currentViewerPostData=data||{};
     hideAllViewerModes();
-    const safeTitle=data.title||'',safeContent=data.content||'',safeUser=data.user||'Utilisateur',safeTime=data.time||"à l'instant",likes=Number(data.likes||0),comments=Number(data.comments||0),shares=Number(data.shares||0);
+    const safeTitle=data.title||'',safeContent=data.content||'',safeUser=data.user||'Utilisateur',safeTime=data.time||"Ã  l'instant",likes=Number(data.likes||0),comments=Number(data.comments||0),shares=Number(data.shares||0);
     const vPostId=document.getElementById('viewerPostId'),vLikePostId=document.getElementById('viewerLikePostId'),vSavePostId=document.getElementById('viewerSavePostId'),vLikeBtn=document.getElementById('viewerLikeBtn'),vSaveBtn=document.getElementById('viewerSaveBtn'),vComments=document.getElementById('viewerComments'),vShareBtn=document.getElementById('viewerShareBtn');
     const videoPostId=document.getElementById('videoCommentPostId'),videoComments=document.getElementById('videoViewerComments');
     if(vPostId) vPostId.value=data.id||'';
@@ -1920,7 +1916,7 @@ function openMediaViewer(data){
     if(vSavePostId) vSavePostId.value=data.id||'';
     const vParentId=document.getElementById('viewerParentId'),vCommentContent=document.getElementById('viewerCommentContent');
     if(vParentId) vParentId.value='';
-    if(vCommentContent){vCommentContent.value='';vCommentContent.placeholder='Écrire un commentaire...';}
+    if(vCommentContent){vCommentContent.value='';vCommentContent.placeholder='Ã‰crire un commentaire...';}
     const vImgInput=document.getElementById('viewerCommentImage'),vImgPreview=document.getElementById('viewerCommentPreview'),vEmojiH=document.getElementById('viewerEmojiHidden'),vErr=document.getElementById('err-viewerCommentContent'),vExpanded=document.getElementById('viewerCommentExpanded'),vMini=document.getElementById('viewerCommentMini');
     if(vImgInput) vImgInput.value='';
     if(vImgPreview) vImgPreview.classList.remove('show');
@@ -1930,8 +1926,8 @@ function openMediaViewer(data){
     if(vMini) vMini.style.display='flex';
     closeVideoCommentBox(false);
     videoSetAddMode();
-    if(vLikeBtn) vLikeBtn.textContent=data.is_liked?'❤️':'👍';
-    if(vSaveBtn) vSaveBtn.textContent=data.is_saved?'📌':'🔖';
+    if(vLikeBtn) vLikeBtn.textContent=data.is_liked?'â¤ï¸':'ðŸ‘';
+    if(vSaveBtn) vSaveBtn.textContent=data.is_saved?'ðŸ“Œ':'ðŸ”–';
     if(vShareBtn) vShareBtn.onclick=function(){openAdvancedShareModal({id:data.id,title:safeTitle,content:safeContent,user:safeUser,image:data.image||'',video:data.video||''});};
     const commentsHtml=formatViewerComments(Array.isArray(data.comments_data)?data.comments_data:[]);
     const emptyComments='<div class="viewer-comment-item"><div class="mini-avatar">U</div><div class="viewer-comment-bubble">Aucun commentaire pour le moment.</div></div>';
@@ -1964,19 +1960,19 @@ function renderVideoMoreMenu(data){
     if(!menu) return;
     const postId=Number(data.id||0);
     if(data.is_owner){
-        menu.innerHTML=`<a href="${FORUM_INDEX_URL}&edit=${postId}" onclick="localStorage.setItem('openForumModal','1')">✏️ Modifier</a><button type="button" class="danger" onclick="viewerDeletePost(${postId})">🗑 Supprimer</button>`;
+        menu.innerHTML=`<a href="${FORUM_INDEX_URL}&edit=${postId}" onclick="localStorage.setItem('openForumModal','1')">âœï¸ Modifier</a><button type="button" class="danger" onclick="viewerDeletePost(${postId})">ðŸ—‘ Supprimer</button>`;
     }else{
-        menu.innerHTML=`<button type="button" onclick="openReportModal(${postId});toggleVideoMoreMenu(false);">🚩 Signaler</button>`;
+        menu.innerHTML=`<button type="button" onclick="openReportModal(${postId});toggleVideoMoreMenu(false);">ðŸš© Signaler</button>`;
     }
 }
 function toggleVideoMoreMenu(force){const m=document.getElementById('reelMoreDropdown');if(!m) return;if(force===false)m.classList.remove('show');else m.classList.toggle('show');}
 function viewerDeletePost(postId){toggleVideoMoreMenu(false);if(!confirm('Supprimer ce post ?')) return;const i=document.getElementById('deletePostViewerId'),f=document.getElementById('deletePostViewerForm');if(i&&f){i.value=postId;f.submit();}}
 function toggleVideoCommentsPanel(){const p=document.getElementById('videoCommentsPanel');if(p) p.classList.toggle('show');}
-function closeVideoCommentBox(hidePanel=true){const p=document.getElementById('videoCommentsPanel'),f=document.getElementById('videoCommentForm'),ta=document.getElementById('videoCommentContent'),em=document.getElementById('videoEmojiHidden'),par=document.getElementById('videoParentId'),err=document.getElementById('err-videoCommentContent');if(hidePanel&&p)p.classList.remove('show');if(ta){ta.value='';ta.placeholder='Écrire un commentaire...';}if(em)em.value='';if(par)par.value='';if(err)err.textContent='';videoSetAddMode();}
+function closeVideoCommentBox(hidePanel=true){const p=document.getElementById('videoCommentsPanel'),f=document.getElementById('videoCommentForm'),ta=document.getElementById('videoCommentContent'),em=document.getElementById('videoEmojiHidden'),par=document.getElementById('videoParentId'),err=document.getElementById('err-videoCommentContent');if(hidePanel&&p)p.classList.remove('show');if(ta){ta.value='';ta.placeholder='Ã‰crire un commentaire...';}if(em)em.value='';if(par)par.value='';if(err)err.textContent='';videoSetAddMode();}
 function videoSetAddMode(){const f=document.getElementById('videoCommentForm');if(!f)return;const upd=f.querySelector('input[name="update_comment"]');if(upd)upd.remove();const cid=f.querySelector('#videoEditCommentId');if(cid)cid.remove();let add=f.querySelector('input[name="add_comment"]');if(!add){add=document.createElement('input');add.type='hidden';add.name='add_comment';add.value='1';f.prepend(add);}const sb=document.getElementById('videoCommentSubmitBtn');if(sb)sb.textContent='Publier';}
-function videoSetEditMode(commentId){const f=document.getElementById('videoCommentForm');if(!f)return;const add=f.querySelector('input[name="add_comment"]');if(add)add.remove();let upd=f.querySelector('input[name="update_comment"]');if(!upd){upd=document.createElement('input');upd.type='hidden';upd.name='update_comment';upd.value='1';f.prepend(upd);}let cid=f.querySelector('#videoEditCommentId');if(!cid){cid=document.createElement('input');cid.type='hidden';cid.name='comment_id';cid.id='videoEditCommentId';f.appendChild(cid);}cid.value=commentId;const sb=document.getElementById('videoCommentSubmitBtn');if(sb)sb.textContent='Mettre à jour';}
+function videoSetEditMode(commentId){const f=document.getElementById('videoCommentForm');if(!f)return;const add=f.querySelector('input[name="add_comment"]');if(add)add.remove();let upd=f.querySelector('input[name="update_comment"]');if(!upd){upd=document.createElement('input');upd.type='hidden';upd.name='update_comment';upd.value='1';f.prepend(upd);}let cid=f.querySelector('#videoEditCommentId');if(!cid){cid=document.createElement('input');cid.type='hidden';cid.name='comment_id';cid.id='videoEditCommentId';f.appendChild(cid);}cid.value=commentId;const sb=document.getElementById('videoCommentSubmitBtn');if(sb)sb.textContent='Update';}
 function isVideoCommentsOpen(){const p=document.getElementById('videoCommentsPanel');return !!(p&&p.classList.contains('show'));}
-function setVideoReplyTarget(commentId,authorName){const p=document.getElementById('videoCommentsPanel'),pf=document.getElementById('videoParentId'),ta=document.getElementById('videoCommentContent');if(p)p.classList.add('show');videoSetAddMode();if(pf)pf.value=commentId;if(ta){ta.value='@'+authorName+' ';ta.placeholder='@'+authorName+', votre réponse...';ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length);}}
+function setVideoReplyTarget(commentId,authorName){const p=document.getElementById('videoCommentsPanel'),pf=document.getElementById('videoParentId'),ta=document.getElementById('videoCommentContent');if(p)p.classList.add('show');videoSetAddMode();if(pf)pf.value=commentId;if(ta){ta.value='@'+authorName+' ';ta.placeholder='@'+authorName+', votre rÃ©ponse...';ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length);}}
 function startVideoEditComment(commentId,postId,content,emoji){const p=document.getElementById('videoCommentsPanel'),pid=document.getElementById('videoCommentPostId'),pf=document.getElementById('videoParentId'),ta=document.getElementById('videoCommentContent'),em=document.getElementById('videoEmojiHidden');if(p)p.classList.add('show');videoSetEditMode(commentId);if(pid)pid.value=postId;if(pf)pf.value='';if(ta){ta.value=content||'';ta.placeholder='Modifier votre commentaire...';ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length);}if(em)em.value=emoji||'';document.querySelectorAll('.viewer-comment-dropdown').forEach(m=>m.classList.remove('show'));}
 document.addEventListener('click',function(e){if(!e.target.closest('#reelMoreBtn')&&!e.target.closest('#reelMoreDropdown')) toggleVideoMoreMenu(false);});
 document.addEventListener('DOMContentLoaded',function(){const c=document.getElementById('closeVideoCommentsPanel'),x=document.getElementById('videoCancelCommentBtn');if(c)c.addEventListener('click',()=>{const p=document.getElementById('videoCommentsPanel');if(p)p.classList.remove('show');});if(x)x.addEventListener('click',()=>closeVideoCommentBox(false));});
@@ -2019,7 +2015,7 @@ function setGifMessage(message){ if(gifResults) gifResults.innerHTML='<div class
 function giphyReady(){ return GIPHY_API_KEY && GIPHY_API_KEY!=='PASTE_YOUR_GIPHY_API_KEY_HERE'; }
 async function loadTrendingGifs(){
     if(!gifResults) return;
-    if(!giphyReady()){ setGifMessage('Ajoute ta clé GIPHY dans GIPHY_API_KEY.'); return; }
+    if(!giphyReady()){ setGifMessage('Ajoute ta clÃ© GIPHY dans GIPHY_API_KEY.'); return; }
     setGifMessage('Chargement des GIFs...');
     try{
         const response=await fetch('https://api.giphy.com/v1/gifs/trending?api_key='+encodeURIComponent(GIPHY_API_KEY)+'&limit=24&rating=g');
@@ -2029,7 +2025,7 @@ async function loadTrendingGifs(){
 }
 let gifSearchTimer=null;
 async function searchGifs(query){
-    if(!giphyReady()){ setGifMessage('Ajoute ta clé GIPHY dans GIPHY_API_KEY.'); return; }
+    if(!giphyReady()){ setGifMessage('Ajoute ta clÃ© GIPHY dans GIPHY_API_KEY.'); return; }
     if(query.trim().length<2){ loadTrendingGifs(); return; }
     setGifMessage('Recherche...');
     try{
@@ -2041,7 +2037,7 @@ async function searchGifs(query){
 function renderGifs(gifs){
     if(!gifResults) return;
     gifResults.innerHTML='';
-    if(!gifs.length){ setGifMessage('Aucun GIF trouvé.'); return; }
+    if(!gifs.length){ setGifMessage('Aucun GIF trouvÃ©.'); return; }
     gifs.forEach(gif=>{
         const fixed=(gif.images&&gif.images.fixed_height&&gif.images.fixed_height.url)||'';
         const original=(gif.images&&gif.images.original&&gif.images.original.url)||fixed;
@@ -2071,15 +2067,15 @@ if(gifSearch) gifSearch.addEventListener('input',()=>{clearTimeout(gifSearchTime
 if(clearGifBtn) clearGifBtn.addEventListener('click',clearSelectedGif);
 
 /* ============================================================ VALIDATION POST */
-function getLettersCountJS(text){return text.replace(/[^a-zA-ZÀ-ÿ]/gu,'').length;}
-const rules={titre:{validate:v=>v.trim()!==''&&getLettersCountJS(v)>=3,message:'Titre valide.',error:'Le titre doit contenir au moins 3 lettres.'},type_post:{validate:v=>v!=='',message:'Type valide.',error:'Veuillez choisir le type du post.'},contenu:{validate:v=>v.trim().length>=5,message:'Description valide.',error:'La description doit contenir au moins 5 caractères.'}};
+function getLettersCountJS(text){return text.replace(/[^a-zA-ZÃ€-Ã¿]/gu,'').length;}
+const rules={titre:{validate:v=>v.trim()!==''&&getLettersCountJS(v)>=3,message:'Titre valide.',error:'Le titre doit contenir au moins 3 lettres.'},type_post:{validate:v=>v!=='',message:'Type valide.',error:'Veuillez choisir le type du post.'},contenu:{validate:v=>v.trim().length>=5,message:'Description valide.',error:'La description doit contenir au moins 5 caractÃ¨res.'}};
 function setError(field,msg){field.classList.add('field-invalid');field.classList.remove('field-valid-input');const eb=document.getElementById('err-'+field.id);if(eb){eb.textContent=msg;eb.style.color='#dc2626';eb.className='field-error';}}
 function setValid(field,msg){field.classList.remove('field-invalid');field.classList.add('field-valid-input');const eb=document.getElementById('err-'+field.id);if(eb){eb.textContent=msg;eb.style.color='#22a559';eb.className='field-valid';}}
 function validateField(field){const rule=rules[field.id];if(!rule) return true;const v=field.value.trim();if(v===''){setError(field,rule.error);return false;}if(!rule.validate(field.value)){setError(field,rule.error);return false;}setValid(field,rule.message);return true;}
 Object.keys(rules).forEach(id=>{const f=document.getElementById(id);if(!f) return;f.addEventListener('input',()=>validateField(f));f.addEventListener('change',()=>validateField(f));f.addEventListener('blur',()=>validateField(f));});
 
-if(imageField){imageField.addEventListener('change',function(){const eb=document.getElementById('err-image');this.classList.remove('field-invalid');eb.textContent='';const file=this.files[0];if(!file){previewBox.classList.remove('show');previewImg.src='';return;}if(!['image/jpeg','image/png','image/webp','image/gif'].includes(file.type)){this.classList.add('field-invalid');eb.textContent='Formats image autorisés : JPG, JPEG, PNG, WEBP, GIF.';previewBox.classList.remove('show');previewImg.src='';return;}if(file.size>5*1024*1024){this.classList.add('field-invalid');eb.textContent="L'image ne doit pas dépasser 5 Mo.";previewBox.classList.remove('show');previewImg.src='';return;}const reader=new FileReader();reader.onload=function(e){previewImg.src=e.target.result;previewBox.classList.add('show');if(currentImageBox) currentImageBox.classList.remove('show');eb.textContent='Image valide.';eb.className='field-valid';};reader.readAsDataURL(file);});}
-if(videoField){videoField.addEventListener('change',function(){const eb=document.getElementById('err-video');this.classList.remove('field-invalid');eb.textContent='';const file=this.files[0];if(!file){videoPreviewBox.classList.remove('show');previewVideo.src='';return;}if(!['video/mp4','video/webm','video/ogg'].includes(file.type)){this.classList.add('field-invalid');eb.textContent='Formats vidéo autorisés : MP4, WEBM, OGG.';videoPreviewBox.classList.remove('show');previewVideo.src='';return;}if(file.size>25*1024*1024){this.classList.add('field-invalid');eb.textContent="La vidéo ne doit pas dépasser 25 Mo.";videoPreviewBox.classList.remove('show');previewVideo.src='';return;}const url=URL.createObjectURL(file);previewVideo.src=url;previewVideo.load();previewVideo.play().catch(()=>{});videoPreviewBox.classList.add('show');if(currentVideoBox) currentVideoBox.classList.remove('show');eb.textContent='Vidéo valide.';eb.className='field-valid';});}
+if(imageField){imageField.addEventListener('change',function(){const eb=document.getElementById('err-image');this.classList.remove('field-invalid');eb.textContent='';const file=this.files[0];if(!file){previewBox.classList.remove('show');previewImg.src='';return;}if(!['image/jpeg','image/png','image/webp','image/gif'].includes(file.type)){this.classList.add('field-invalid');eb.textContent='Formats image autorisÃ©s : JPG, JPEG, PNG, WEBP, GIF.';previewBox.classList.remove('show');previewImg.src='';return;}if(file.size>5*1024*1024){this.classList.add('field-invalid');eb.textContent="L'image ne doit pas dÃ©passer 5 Mo.";previewBox.classList.remove('show');previewImg.src='';return;}const reader=new FileReader();reader.onload=function(e){previewImg.src=e.target.result;previewBox.classList.add('show');if(currentImageBox) currentImageBox.classList.remove('show');eb.textContent='Image valide.';eb.className='field-valid';};reader.readAsDataURL(file);});}
+if(videoField){videoField.addEventListener('change',function(){const eb=document.getElementById('err-video');this.classList.remove('field-invalid');eb.textContent='';const file=this.files[0];if(!file){videoPreviewBox.classList.remove('show');previewVideo.src='';return;}if(!['video/mp4','video/webm','video/ogg'].includes(file.type)){this.classList.add('field-invalid');eb.textContent='Formats vidÃ©o autorisÃ©s : MP4, WEBM, OGG.';videoPreviewBox.classList.remove('show');previewVideo.src='';return;}if(file.size>25*1024*1024){this.classList.add('field-invalid');eb.textContent="La vidÃ©o ne doit pas dÃ©passer 25 Mo.";videoPreviewBox.classList.remove('show');previewVideo.src='';return;}const url=URL.createObjectURL(file);previewVideo.src=url;previewVideo.load();previewVideo.play().catch(()=>{});videoPreviewBox.classList.add('show');if(currentVideoBox) currentVideoBox.classList.remove('show');eb.textContent='Vidéo valide.';eb.className='field-valid';});}
 if(postForm){postForm.addEventListener('submit',function(e){let ok=true;Object.keys(rules).forEach(id=>{const f=document.getElementById(id);if(f&&!validateField(f)) ok=false;});if(!ok){e.preventDefault();openModal();}});}
 
 /* ============================================================ MENUS 3 POINTS POST */
@@ -2090,7 +2086,7 @@ document.addEventListener('click',function(e){if(!e.target.closest('.post-menu-w
 function toggleCommentMenu(menuId){document.querySelectorAll('.comment-dropdown').forEach(m=>{if(m.id!==menuId) m.classList.remove('show');});const m=document.getElementById(menuId);if(m) m.classList.toggle('show');}
 function startEditComment(commentId,postId){document.querySelectorAll('.comment-dropdown').forEach(m=>m.classList.remove('show'));const td=document.getElementById('comment-text-'+commentId),ez=document.getElementById('comment-edit-zone-'+commentId);if(td) td.style.display='none';if(ez) ez.style.display='block';const inp=document.getElementById('comment-edit-input-'+commentId);if(inp){inp.focus();inp.setSelectionRange(inp.value.length,inp.value.length);}}
 function cancelEditComment(commentId){const td=document.getElementById('comment-text-'+commentId),ez=document.getElementById('comment-edit-zone-'+commentId);if(td) td.style.display='';if(ez) ez.style.display='none';}
-function deleteComment(commentId,postId,parentId){document.querySelectorAll('.comment-dropdown').forEach(m=>m.classList.remove('show'));const msg=parentId===0?'Supprimer ce commentaire et toutes ses réponses ?':'Supprimer cette réponse ?';if(!confirm(msg)) return;document.getElementById('deleteCommentId').value=commentId;document.getElementById('deleteCommentPostId').value=postId;document.getElementById('deleteCommentParentId').value=parentId;document.getElementById('deleteCommentForm').submit();}
+function deleteComment(commentId,postId,parentId){document.querySelectorAll('.comment-dropdown').forEach(m=>m.classList.remove('show'));const msg=parentId===0?'Supprimer ce commentaire et toutes ses rÃ©ponses ?':'Supprimer cette rÃ©ponse ?';if(!confirm(msg)) return;document.getElementById('deleteCommentId').value=commentId;document.getElementById('deleteCommentPostId').value=postId;document.getElementById('deleteCommentParentId').value=parentId;document.getElementById('deleteCommentForm').submit();}
 
 /* ============================================================ MODAL SIGNALER COMMENTAIRE */
 function openReportCommentModal(commentId,postId){document.querySelectorAll('.comment-dropdown').forEach(m=>m.classList.remove('show'));document.getElementById('report-comment-id').value=commentId;document.getElementById('report-comment-post-id').value=postId;document.getElementById('reportCommentModal').classList.add('show');}
@@ -2106,20 +2102,20 @@ function closeReportModal(){document.getElementById('reportModal').style.display
 
 /* ============================================================ VIEWER COMMENT FORM */
 const viewerCommentForm=document.getElementById('viewerCommentForm');
-if(viewerCommentForm){viewerCommentForm.addEventListener('submit',function(e){const pf=document.getElementById('viewerPostId'),cf=document.getElementById('viewerCommentContent'),eb=document.getElementById('err-viewerCommentContent'),postId=pf?pf.value.trim():'',content=cf?cf.value.trim():'';if(!postId){e.preventDefault();if(eb) eb.textContent='Post introuvable.';return;}if(content===''){ e.preventDefault();if(eb) eb.textContent='Le commentaire est obligatoire.';return;}if(content!==''&&content.replace(/[^a-zA-ZÀ-ÿ]/gu,'').length<5){e.preventDefault();if(eb) eb.textContent='Le commentaire doit contenir au moins 5 lettres.';return;}if(eb) eb.textContent='';});}
+if(viewerCommentForm){viewerCommentForm.addEventListener('submit',function(e){const pf=document.getElementById('viewerPostId'),cf=document.getElementById('viewerCommentContent'),eb=document.getElementById('err-viewerCommentContent'),postId=pf?pf.value.trim():'',content=cf?cf.value.trim():'';if(!postId){e.preventDefault();if(eb) eb.textContent='Post introuvable.';return;}if(content===''){ e.preventDefault();if(eb) eb.textContent='Le commentaire est obligatoire.';return;}if(content!==''&&content.replace(/[^a-zA-ZÃ€-Ã¿]/gu,'').length<5){e.preventDefault();if(eb) eb.textContent='Le commentaire doit contenir au moins 5 lettres.';return;}if(eb) eb.textContent='';});}
 const vci=document.getElementById('viewerCommentImage');
-if(vci){vci.addEventListener('change',function(){const preview=document.getElementById('viewerCommentPreview'),img=preview?preview.querySelector('img'):null,eb=document.getElementById('err-viewerCommentContent'),file=this.files[0];if(!preview||!img) return;if(!file){preview.classList.remove('show');img.src='';return;}if(!['image/jpeg','image/png','image/webp','image/gif'].includes(file.type)){if(eb) eb.textContent='Formats image commentaire autorisés : JPG, JPEG, PNG, WEBP.';this.value='';preview.classList.remove('show');img.src='';return;}if(file.size>3*1024*1024){if(eb) eb.textContent="L'image du commentaire ne doit pas dépasser 3 Mo.";this.value='';preview.classList.remove('show');img.src='';return;}const reader=new FileReader();reader.onload=function(ev){img.src=ev.target.result;preview.classList.add('show');if(eb&&eb.textContent.includes('image')) eb.textContent='';};reader.readAsDataURL(file);});}
+if(vci){vci.addEventListener('change',function(){const preview=document.getElementById('viewerCommentPreview'),img=preview?preview.querySelector('img'):null,eb=document.getElementById('err-viewerCommentContent'),file=this.files[0];if(!preview||!img) return;if(!file){preview.classList.remove('show');img.src='';return;}if(!['image/jpeg','image/png','image/webp','image/gif'].includes(file.type)){if(eb) eb.textContent='Formats image commentaire autorisÃ©s : JPG, JPEG, PNG, WEBP.';this.value='';preview.classList.remove('show');img.src='';return;}if(file.size>3*1024*1024){if(eb) eb.textContent="L'image du commentaire ne doit pas dÃ©passer 3 Mo.";this.value='';preview.classList.remove('show');img.src='';return;}const reader=new FileReader();reader.onload=function(ev){img.src=ev.target.result;preview.classList.add('show');if(eb&&eb.textContent.includes('image')) eb.textContent='';};reader.readAsDataURL(file);});}
 const vCBtn=document.getElementById('viewerCommentBtn');if(vCBtn) vCBtn.addEventListener('click',function(){const f=document.getElementById('viewerCommentContent');if(f) f.focus();});
 
 /* ============================================================ VALIDATION COMMENTAIRES */
-function validateComment(textareaId,errorId){const ta=document.getElementById(textareaId),eb=document.getElementById(errorId);if(!ta) return true;const text=ta.value.trim(),letters=text.replace(/[^a-zA-ZÀ-ÿ]/gu,'');if(text===''){if(eb){eb.textContent='Le commentaire est obligatoire.';eb.style.display='block';} return false;}if(letters.length<5){if(eb){eb.textContent='Le commentaire doit contenir au moins 5 lettres.';eb.style.display='block';} return false;}if(eb){eb.textContent='';eb.style.display='none';} return true;}
-function validateEditCommentForm(form){const ta=form.querySelector('textarea[name="comment_content"]'),eb=form.querySelector('.field-error'),imgInp=form.querySelector('input[name="comment_image"]');if(!ta) return true;const text=ta.value.trim(),letters=text.replace(/[^a-zA-ZÀ-ÿ]/gu,'');if(text===''){if(eb){eb.textContent='Le commentaire est obligatoire.';eb.style.display='block';eb.style.color='#dc2626';}ta.classList.add('field-invalid');ta.classList.remove('field-valid-input');return false;}if(letters.length<5){if(eb){eb.textContent='Le commentaire doit contenir au moins 5 lettres.';eb.style.display='block';eb.style.color='#dc2626';}ta.classList.add('field-invalid');ta.classList.remove('field-valid-input');return false;}if(imgInp&&imgInp.files&&imgInp.files.length>0){const f=imgInp.files[0];if(!['image/jpeg','image/png','image/webp','image/gif'].includes(f.type)){if(eb){eb.textContent='Formats image autorisés : JPG, JPEG, PNG, WEBP, GIF.';eb.style.display='block';eb.style.color='#dc2626';} return false;}if(f.size>3*1024*1024){if(eb){eb.textContent="L'image ne doit pas dépasser 3 Mo.";eb.style.display='block';eb.style.color='#dc2626';} return false;}}if(eb){eb.textContent='Commentaire valide.';eb.style.display='block';eb.style.color='#22a559';}ta.classList.remove('field-invalid');ta.classList.add('field-valid-input');return true;}
+function validateComment(textareaId,errorId){const ta=document.getElementById(textareaId),eb=document.getElementById(errorId);if(!ta) return true;const text=ta.value.trim(),letters=text.replace(/[^a-zA-ZÃ€-Ã¿]/gu,'');if(text===''){if(eb){eb.textContent='Le commentaire est obligatoire.';eb.style.display='block';} return false;}if(letters.length<5){if(eb){eb.textContent='Le commentaire doit contenir au moins 5 lettres.';eb.style.display='block';} return false;}if(eb){eb.textContent='';eb.style.display='none';} return true;}
+function validateEditCommentForm(form){const ta=form.querySelector('textarea[name="comment_content"]'),eb=form.querySelector('.field-error'),imgInp=form.querySelector('input[name="comment_image"]');if(!ta) return true;const text=ta.value.trim(),letters=text.replace(/[^a-zA-ZÃ€-Ã¿]/gu,'');if(text===''){if(eb){eb.textContent='Le commentaire est obligatoire.';eb.style.display='block';eb.style.color='#dc2626';}ta.classList.add('field-invalid');ta.classList.remove('field-valid-input');return false;}if(letters.length<5){if(eb){eb.textContent='Le commentaire doit contenir au moins 5 lettres.';eb.style.display='block';eb.style.color='#dc2626';}ta.classList.add('field-invalid');ta.classList.remove('field-valid-input');return false;}if(imgInp&&imgInp.files&&imgInp.files.length>0){const f=imgInp.files[0];if(!['image/jpeg','image/png','image/webp','image/gif'].includes(f.type)){if(eb){eb.textContent='Formats image autorisÃ©s : JPG, JPEG, PNG, WEBP, GIF.';eb.style.display='block';eb.style.color='#dc2626';} return false;}if(f.size>3*1024*1024){if(eb){eb.textContent="L'image ne doit pas dÃ©passer 3 Mo.";eb.style.display='block';eb.style.color='#dc2626';} return false;}}if(eb){eb.textContent='Commentaire valide.';eb.style.display='block';eb.style.color='#22a559';}ta.classList.remove('field-invalid');ta.classList.add('field-valid-input');return true;}
 document.addEventListener('input',function(e){const ta=e.target.closest('.comment-edit-form textarea[name="comment_content"]');if(!ta) return;validateEditCommentForm(ta.closest('.comment-edit-form'));});
 document.addEventListener('change',function(e){const ii=e.target.closest('.comment-edit-form input[name="comment_image"]');if(!ii) return;validateEditCommentForm(ii.closest('.comment-edit-form'));});
 document.addEventListener('submit',function(e){const form=e.target.closest('.comment-edit-form');if(!form) return;if(!validateEditCommentForm(form)) e.preventDefault();});
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('form[method="POST"]').forEach(form=>{const ta=form.querySelector('textarea[name="comment_content"]');if(!ta) return;const eid=ta.id?'err-'+ta.id:null;if(ta.id&&eid){ta.addEventListener('blur',()=>validateComment(ta.id,eid));ta.addEventListener('keyup',()=>validateComment(ta.id,eid));}form.addEventListener('submit',event=>{if(!ta||!ta.id||!eid) return;if(!validateComment(ta.id,eid)) event.preventDefault();});});});
 
-/* Boutons Répondre */
+/* Boutons RÃ©pondre */
 document.addEventListener('click',function(e){const btn=e.target.closest('.reply-btn');if(!btn) return;const rootId=btn.dataset.rootId,holderId=btn.dataset.holderId,author=btn.dataset.author||'Utilisateur';if(!rootId||!holderId) return;const box=document.getElementById('reply-box-'+rootId),holder=document.getElementById(holderId);if(!box||!holder) return;const ta=document.getElementById('reply-content-'+rootId),emojiInp=document.getElementById('emoji-reply-'+rootId),imgInp=document.getElementById('reply-img-'+rootId),eb=document.getElementById('err-reply-content-'+rootId);const already=box.parentElement===holder&&box.style.display==='block';document.querySelectorAll('.reply-box').forEach(b=>b.style.display='none');if(already){box.style.display='none';return;}holder.appendChild(box);box.style.display='block';if(ta){ta.value='@'+author+' ';ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length);}if(emojiInp){emojiInp.value='';emojiInp.classList.remove('field-invalid','field-valid-input');}if(imgInp) imgInp.value='';if(eb){eb.textContent='';eb.style.display='none';}});
 
 /* ============================================================ AUTO-OPEN */
@@ -2131,13 +2127,13 @@ window.addEventListener('load',function(){const postId=<?php echo (int)$_GET['op
 
 /* ============================================================ POPUP COMPACT COMMENT */
 function openViewerCommentBox(){const expanded=document.getElementById('viewerCommentExpanded'),mini=document.getElementById('viewerCommentMini'),ta=document.getElementById('viewerCommentContent');if(expanded) expanded.classList.add('show');if(mini) mini.style.display='none';if(ta) setTimeout(()=>ta.focus(),80);}
-function closeViewerCommentBox(){const mini=document.getElementById('viewerCommentMini'),expanded=document.getElementById('viewerCommentExpanded'),ta=document.getElementById('viewerCommentContent'),emoji=document.getElementById('viewerEmojiHidden'),img=document.getElementById('viewerCommentImage'),preview=document.getElementById('viewerCommentPreview'),error=document.getElementById('err-viewerCommentContent'),pf=document.getElementById('viewerParentId');viewerSetAddMode();if(expanded) expanded.classList.remove('show');if(mini){mini.style.display='flex';const sp=mini.querySelector('span');if(sp) sp.textContent='Écrire un commentaire...';}if(ta){ta.value='';ta.placeholder='Écrire un commentaire...';}if(emoji) emoji.value='';if(img) img.value='';if(preview) preview.classList.remove('show');if(error) error.textContent='';if(pf) pf.value='';}
-function setViewerReplyTarget(commentId,authorName){if(isVideoCommentsOpen()) return setVideoReplyTarget(commentId,authorName);const pf=document.getElementById('viewerParentId'),ta=document.getElementById('viewerCommentContent'),mini=document.getElementById('viewerCommentMini');viewerSetAddMode();if(pf) pf.value=commentId;openViewerCommentBox();if(ta){ta.value='@'+authorName+' ';ta.placeholder='@'+authorName+', votre réponse...';ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length);}if(mini&&mini.querySelector('span')) mini.querySelector('span').textContent='Répondre à @'+authorName;}
+function closeViewerCommentBox(){const mini=document.getElementById('viewerCommentMini'),expanded=document.getElementById('viewerCommentExpanded'),ta=document.getElementById('viewerCommentContent'),emoji=document.getElementById('viewerEmojiHidden'),img=document.getElementById('viewerCommentImage'),preview=document.getElementById('viewerCommentPreview'),error=document.getElementById('err-viewerCommentContent'),pf=document.getElementById('viewerParentId');viewerSetAddMode();if(expanded) expanded.classList.remove('show');if(mini){mini.style.display='flex';const sp=mini.querySelector('span');if(sp) sp.textContent='Ã‰crire un commentaire...';}if(ta){ta.value='';ta.placeholder='Ã‰crire un commentaire...';}if(emoji) emoji.value='';if(img) img.value='';if(preview) preview.classList.remove('show');if(error) error.textContent='';if(pf) pf.value='';}
+function setViewerReplyTarget(commentId,authorName){if(isVideoCommentsOpen()) return setVideoReplyTarget(commentId,authorName);const pf=document.getElementById('viewerParentId'),ta=document.getElementById('viewerCommentContent'),mini=document.getElementById('viewerCommentMini');viewerSetAddMode();if(pf) pf.value=commentId;openViewerCommentBox();if(ta){ta.value='@'+authorName+' ';ta.placeholder='@'+authorName+', votre rÃ©ponse...';ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length);}if(mini&&mini.querySelector('span')) mini.querySelector('span').textContent='RÃ©pondre Ã  @'+authorName;}
 function viewerSetAddMode(){const form=document.getElementById('viewerCommentForm');if(!form) return;const ai=form.querySelector('input[name="update_comment"]');if(ai) ai.remove();const ci=form.querySelector('#viewerEditCommentId');if(ci) ci.remove();let ad=form.querySelector('input[name="add_comment"]');if(!ad){ad=document.createElement('input');ad.type='hidden';ad.name='add_comment';ad.value='1';form.prepend(ad);}const sb=form.querySelector('.viewer-publish-btn');if(sb) sb.textContent='Publier';}
-function viewerSetEditMode(commentId){const form=document.getElementById('viewerCommentForm');if(!form) return;const ad=form.querySelector('input[name="add_comment"]');if(ad) ad.remove();let ai=form.querySelector('input[name="update_comment"]');if(!ai){ai=document.createElement('input');ai.type='hidden';ai.name='update_comment';ai.value='1';form.prepend(ai);}let ci=form.querySelector('#viewerEditCommentId');if(!ci){ci=document.createElement('input');ci.type='hidden';ci.name='comment_id';ci.id='viewerEditCommentId';form.appendChild(ci);}ci.value=commentId;const sb=form.querySelector('.viewer-publish-btn');if(sb) sb.textContent='Mettre à jour';}
+function viewerSetEditMode(commentId){const form=document.getElementById('viewerCommentForm');if(!form) return;const ad=form.querySelector('input[name="add_comment"]');if(ad) ad.remove();let ai=form.querySelector('input[name="update_comment"]');if(!ai){ai=document.createElement('input');ai.type='hidden';ai.name='update_comment';ai.value='1';form.prepend(ai);}let ci=form.querySelector('#viewerEditCommentId');if(!ci){ci=document.createElement('input');ci.type='hidden';ci.name='comment_id';ci.id='viewerEditCommentId';form.appendChild(ci);}ci.value=commentId;const sb=form.querySelector('.viewer-publish-btn');if(sb) sb.textContent='Update';}
 function startViewerEditComment(commentId,postId,content,emoji){if(isVideoCommentsOpen()) return startVideoEditComment(commentId,postId,content,emoji);const pf=document.getElementById('viewerPostId'),ta=document.getElementById('viewerCommentContent'),ei=document.getElementById('viewerEmojiHidden'),mini=document.getElementById('viewerCommentMini');viewerSetEditMode(commentId);if(pf) pf.value=postId;document.getElementById('viewerParentId').value='';openViewerCommentBox();if(ta){ta.value=content||'';ta.placeholder='Modifier votre commentaire...';ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length);}if(ei) ei.value=emoji||'';if(mini&&mini.querySelector('span')) mini.querySelector('span').textContent='Modifier le commentaire';document.querySelectorAll('.viewer-comment-dropdown').forEach(m=>m.classList.remove('show'));}
 function toggleViewerCommentMenu(menuId){document.querySelectorAll('.viewer-comment-dropdown').forEach(m=>{if(m.id!==menuId) m.classList.remove('show');});const m=document.getElementById(menuId);if(m) m.classList.toggle('show');}
-function viewerDeleteComment(commentId,postId,parentId){document.querySelectorAll('.viewer-comment-dropdown').forEach(m=>m.classList.remove('show'));if(!confirm(parentId===0?'Supprimer ce commentaire et toutes ses réponses ?':'Supprimer cette réponse ?')) return;document.getElementById('deleteCommentId').value=commentId;document.getElementById('deleteCommentPostId').value=postId;document.getElementById('deleteCommentParentId').value=parentId;document.getElementById('deleteCommentForm').submit();}
+function viewerDeleteComment(commentId,postId,parentId){document.querySelectorAll('.viewer-comment-dropdown').forEach(m=>m.classList.remove('show'));if(!confirm(parentId===0?'Supprimer ce commentaire et toutes ses rÃ©ponses ?':'Supprimer cette rÃ©ponse ?')) return;document.getElementById('deleteCommentId').value=commentId;document.getElementById('deleteCommentPostId').value=postId;document.getElementById('deleteCommentParentId').value=parentId;document.getElementById('deleteCommentForm').submit();}
 function viewerReportComment(commentId,postId){document.querySelectorAll('.viewer-comment-dropdown').forEach(m=>m.classList.remove('show'));openReportCommentModal(commentId,postId);}
 document.addEventListener('click',function(e){if(!e.target.closest('.viewer-comment-menu-btn')&&!e.target.closest('.viewer-comment-dropdown')) document.querySelectorAll('.viewer-comment-dropdown').forEach(m=>m.classList.remove('show'));});
 document.addEventListener('DOMContentLoaded',function(){const mini=document.getElementById('viewerCommentMini'),cancelBtn=document.getElementById('viewerCancelCommentBtn');if(mini) mini.addEventListener('click',function(){viewerSetAddMode();openViewerCommentBox();});if(cancelBtn) cancelBtn.addEventListener('click',closeViewerCommentBox);});
@@ -2148,9 +2144,9 @@ function viewerEscapeJs(t){return String(t||'').replace(/\\/g,'\\\\').replace(/'
 function viewerCommentMenuHtml(id,postId,parentId,isOwner,content,emoji){
     const menuId=(parentId>0?'viewer-cmenu-reply-':'viewer-cmenu-')+id;
     if(isOwner){
-        return `<div class="viewer-comment-menu-wrap"><button type="button" class="viewer-comment-menu-btn" onclick="toggleViewerCommentMenu('${menuId}')">⋯</button><div class="viewer-comment-dropdown" id="${menuId}"><button type="button" onclick="startViewerEditComment(${id},${postId},'${content}','${emoji}')">✏️ Modifier</button><button type="button" class="danger" onclick="viewerDeleteComment(${id},${postId},${parentId})">🗑 Supprimer</button></div></div>`;
+        return `<div class="viewer-comment-menu-wrap"><button type="button" class="viewer-comment-menu-btn" onclick="toggleViewerCommentMenu('${menuId}')">â‹¯</button><div class="viewer-comment-dropdown" id="${menuId}"><button type="button" onclick="startViewerEditComment(${id},${postId},'${content}','${emoji}')">âœï¸ Modifier</button><button type="button" class="danger" onclick="viewerDeleteComment(${id},${postId},${parentId})">ðŸ—‘ Supprimer</button></div></div>`;
     }
-    return `<div class="viewer-comment-menu-wrap"><button type="button" class="viewer-comment-menu-btn" onclick="toggleViewerCommentMenu('${menuId}')">⋯</button><div class="viewer-comment-dropdown" id="${menuId}"><button type="button" onclick="viewerReportComment(${id},${postId})">🚩 Signaler</button></div></div>`;
+    return `<div class="viewer-comment-menu-wrap"><button type="button" class="viewer-comment-menu-btn" onclick="toggleViewerCommentMenu('${menuId}')">â‹¯</button><div class="viewer-comment-dropdown" id="${menuId}"><button type="button" onclick="viewerReportComment(${id},${postId})">ðŸš© Signaler</button></div></div>`;
 }
 function formatViewerComments(comments){
     const rootComments=[],repliesByParent={},currentPostId=document.getElementById('viewerPostId')?Number(document.getElementById('viewerPostId').value||0):Number((currentViewerPostData&&currentViewerPostData.id)||0);
@@ -2158,8 +2154,8 @@ function formatViewerComments(comments){
     return rootComments.map(comment=>{
         const cid=Number(comment.id_commentaire||0),author=`${comment.prenom||''} ${comment.nom||''}`.trim()||'Utilisateur',aL=author.charAt(0).toUpperCase(),content=viewerEscapeHtml(comment.contenu_commentaire||''),rawContent=viewerEscapeJs(comment.contenu_commentaire||''),emoji=viewerEscapeHtml(comment.emoji_commentaire||''),rawEmoji=viewerEscapeJs(comment.emoji_commentaire||''),time=viewerEscapeHtml(comment.date_commentaire||''),img=comment.image_commentaire?`${FORUM_APP_ROOT}/${String(comment.image_commentaire).replace(/^\/+/,'')}`:'',safeAJ=viewerEscapeJs(author),replies=repliesByParent[cid]||[],isOwner=Number(comment.id_user||0)===CURRENT_FORUM_USER_ID;
         const menuHtml=viewerCommentMenuHtml(cid,currentPostId,0,isOwner,rawContent,rawEmoji);
-        const repliesHtml=replies.map(reply=>{const rid=Number(reply.id_commentaire||0),ra=`${reply.prenom||''} ${reply.nom||''}`.trim()||'Utilisateur',rL=ra.charAt(0).toUpperCase(),rc=viewerEscapeHtml(reply.contenu_commentaire||''),rrc=viewerEscapeJs(reply.contenu_commentaire||''),re=viewerEscapeHtml(reply.emoji_commentaire||''),rre=viewerEscapeJs(reply.emoji_commentaire||''),ri=reply.image_commentaire?`${FORUM_APP_ROOT}/${String(reply.image_commentaire).replace(/^\/+/,'')}`:'',sraJ=viewerEscapeJs(ra),rOwner=Number(reply.id_user||0)===CURRENT_FORUM_USER_ID,rMenu=viewerCommentMenuHtml(rid,currentPostId,cid,rOwner,rrc,rre);return `<div class="viewer-reply-item"><div class="mini-avatar">${rL}</div><div class="viewer-comment-content"><div class="viewer-reply-bubble viewer-comment-bubble"><div class="viewer-comment-head-row"><span class="viewer-comment-author">${viewerEscapeHtml(ra)}</span>${rMenu}</div>${rc?`<div>${rc}</div>`:''}${re?`<div style="margin-top:6px;">${re}</div>`:''}${ri?`<div style="margin-top:8px;"><img src="${ri}" style="max-width:180px;border-radius:10px;"></div>`:''}</div><div class="viewer-comment-meta"><span>${viewerEscapeHtml(reply.date_commentaire||'')}</span><button type="button" class="viewer-reply-btn" onclick="setViewerReplyTarget(${cid},'${sraJ}')">Répondre</button></div></div></div>`;}).join('');
-        return `<div class="viewer-comment-item"><div class="mini-avatar">${aL}</div><div class="viewer-comment-content"><div class="viewer-comment-bubble"><div class="viewer-comment-head-row"><span class="viewer-comment-author">${viewerEscapeHtml(author)}</span>${menuHtml}</div>${content?`<div>${content}</div>`:''}${emoji?`<div style="margin-top:6px;">${emoji}</div>`:''}${img?`<div style="margin-top:8px;"><img src="${img}" style="max-width:220px;border-radius:10px;"></div>`:''}</div><div class="viewer-comment-meta"><span>${time}</span><button type="button" class="viewer-reply-btn" onclick="setViewerReplyTarget(${cid},'${safeAJ}')">Répondre</button></div>${replies.length?`<div class="viewer-replies">${repliesHtml}</div>`:''}</div></div>`;
+        const repliesHtml=replies.map(reply=>{const rid=Number(reply.id_commentaire||0),ra=`${reply.prenom||''} ${reply.nom||''}`.trim()||'Utilisateur',rL=ra.charAt(0).toUpperCase(),rc=viewerEscapeHtml(reply.contenu_commentaire||''),rrc=viewerEscapeJs(reply.contenu_commentaire||''),re=viewerEscapeHtml(reply.emoji_commentaire||''),rre=viewerEscapeJs(reply.emoji_commentaire||''),ri=reply.image_commentaire?`${FORUM_APP_ROOT}/${String(reply.image_commentaire).replace(/^\/+/,'')}`:'',sraJ=viewerEscapeJs(ra),rOwner=Number(reply.id_user||0)===CURRENT_FORUM_USER_ID,rMenu=viewerCommentMenuHtml(rid,currentPostId,cid,rOwner,rrc,rre);return `<div class="viewer-reply-item"><div class="mini-avatar">${rL}</div><div class="viewer-comment-content"><div class="viewer-reply-bubble viewer-comment-bubble"><div class="viewer-comment-head-row"><span class="viewer-comment-author">${viewerEscapeHtml(ra)}</span>${rMenu}</div>${rc?`<div>${rc}</div>`:''}${re?`<div style="margin-top:6px;">${re}</div>`:''}${ri?`<div style="margin-top:8px;"><img src="${ri}" style="max-width:180px;border-radius:10px;"></div>`:''}</div><div class="viewer-comment-meta"><span>${viewerEscapeHtml(reply.date_commentaire||'')}</span><button type="button" class="viewer-reply-btn" onclick="setViewerReplyTarget(${cid},'${sraJ}')">RÃ©pondre</button></div></div></div>`;}).join('');
+        return `<div class="viewer-comment-item"><div class="mini-avatar">${aL}</div><div class="viewer-comment-content"><div class="viewer-comment-bubble"><div class="viewer-comment-head-row"><span class="viewer-comment-author">${viewerEscapeHtml(author)}</span>${menuHtml}</div>${content?`<div>${content}</div>`:''}${emoji?`<div style="margin-top:6px;">${emoji}</div>`:''}${img?`<div style="margin-top:8px;"><img src="${img}" style="max-width:220px;border-radius:10px;"></div>`:''}</div><div class="viewer-comment-meta"><span>${time}</span><button type="button" class="viewer-reply-btn" onclick="setViewerReplyTarget(${cid},'${safeAJ}')">RÃ©pondre</button></div>${replies.length?`<div class="viewer-replies">${repliesHtml}</div>`:''}</div></div>`;
     }).join('');
 }
 
@@ -2174,20 +2170,9 @@ document.addEventListener('submit',function(e){const inputs=e.target.querySelect
 const autoFeedVideos=document.querySelectorAll('.auto-feed-video');
 if('IntersectionObserver' in window){const obs=new IntersectionObserver(function(entries){entries.forEach(function(entry){const v=entry.target;if(entry.isIntersecting){v.muted=true;v.play().catch(()=>{});}else v.pause();});},{threshold:0.35});autoFeedVideos.forEach(function(v){v.muted=true;v.playsInline=true;obs.observe(v);});}
 
-/* ============================================================ GOOGLE TRANSLATE */
-function googleTranslateElementInit(){new google.translate.TranslateElement({pageLanguage:'fr',includedLanguages:'fr,en,ar,es,it,de,tr,pt,ru,zh-CN,ja,ko',autoDisplay:false},'google_translate_element');hideGoogleTranslateBar();}
-function toggleIgLangMenu(){const m=document.getElementById('igLangMenu');if(m) m.classList.toggle('show');}
-function setGoogleTranslateCookie(lang){const v='/fr/'+lang;document.cookie='googtrans='+v+';path=/';document.cookie='googtrans='+v+';domain='+location.hostname+';path=/';}
-function hideGoogleTranslateBar(){document.documentElement.style.marginTop='0px';document.body.style.top='0px';document.body.style.position='static';document.querySelectorAll('iframe.goog-te-banner-frame,iframe.skiptranslate,.goog-te-banner-frame,body>.skiptranslate').forEach(function(el){el.style.display='none';el.style.visibility='hidden';el.style.height='0px';});}
-function changeForumLang(lang){setGoogleTranslateCookie(lang);const m=document.getElementById('igLangMenu');if(m) m.classList.remove('show');let tries=0;const t=setInterval(function(){hideGoogleTranslateBar();const sel=document.querySelector('.goog-te-combo');if(sel){sel.value=lang;sel.dispatchEvent(new Event('change'));clearInterval(t);setTimeout(hideGoogleTranslateBar,400);setTimeout(hideGoogleTranslateBar,1000);}tries++;if(tries>20){clearInterval(t);window.location.reload();}},200);}
-document.addEventListener('click',function(e){if(!e.target.closest('.ig-lang-wrap')){const m=document.getElementById('igLangMenu');if(m) m.classList.remove('show');}});
-window.addEventListener('load',hideGoogleTranslateBar);
-setInterval(hideGoogleTranslateBar,700);
-function placeLanguageButtonUnderFooter(){const zone=document.querySelector('.ig-lang-zone');if(!zone) return;const footer=document.querySelector('.site-footer');if(footer&&zone.previousElementSibling!==footer) footer.insertAdjacentElement('afterend',zone);else if(!footer&&document.body&&zone.parentElement!==document.body) document.body.appendChild(zone);zone.classList.add('ig-lang-ready');}
-document.addEventListener('DOMContentLoaded',placeLanguageButtonUnderFooter);
-window.addEventListener('load',placeLanguageButtonUnderFooter);
+/* Local Google Translate removed: global GoService language switcher owns translation. */
 
-/* ============================================================ ADVANCED SHARE - CORRIGÉ */
+/* ============================================================ ADVANCED SHARE - CORRIGÃ‰ */
 let currentSharePostId=0,currentSharePostTitle='Post GoService',currentSharePostContent='',currentSharePostUser='Utilisateur',currentSharePostUrl='',currentSharePostImage='',currentSharePostVideo='',currentShareThumbUrl='';
 
 function buildForumPostUrl(postId){
@@ -2221,11 +2206,11 @@ function openAdvancedShareModal(data){
         if(currentSharePostImage){
             const img=document.createElement('img');img.src=currentSharePostImage;img.alt=currentSharePostTitle;media.appendChild(img);currentShareThumbUrl=currentSharePostImage;
         }else if(currentSharePostVideo){
-            /* Capture miniature vidéo via canvas */
+            /* Capture miniature vidÃ©o via canvas */
             const tmpV=document.createElement('video');tmpV.src=currentSharePostVideo;tmpV.crossOrigin='anonymous';tmpV.muted=true;tmpV.playsInline=true;tmpV.style.display='none';document.body.appendChild(tmpV);
             tmpV.addEventListener('loadeddata',()=>{tmpV.currentTime=0.5;});
             tmpV.addEventListener('seeked',()=>{const canvas=document.createElement('canvas');canvas.width=tmpV.videoWidth||640;canvas.height=tmpV.videoHeight||360;canvas.getContext('2d').drawImage(tmpV,0,0,canvas.width,canvas.height);const thumbUrl=canvas.toDataURL('image/jpeg',0.85);document.body.removeChild(tmpV);currentShareThumbUrl=thumbUrl;
-                const wrapper=document.createElement('div');wrapper.className='thumb-wrapper';const ti=document.createElement('img');ti.src=thumbUrl;wrapper.appendChild(ti);const pi=document.createElement('div');pi.className='thumb-play';pi.textContent='▶';wrapper.appendChild(pi);media.appendChild(wrapper);});
+                const wrapper=document.createElement('div');wrapper.className='thumb-wrapper';const ti=document.createElement('img');ti.src=thumbUrl;wrapper.appendChild(ti);const pi=document.createElement('div');pi.className='thumb-play';pi.textContent='â–¶';wrapper.appendChild(pi);media.appendChild(wrapper);});
             tmpV.addEventListener('error',()=>{try{document.body.removeChild(tmpV);}catch(ex){}media.textContent='🎥 Vidéo';});
             tmpV.load();
         }else{media.textContent='GoService Forum';}
@@ -2282,7 +2267,7 @@ async function sharePostAdvanced(platform){
         const data=await registerAdvancedShare('internal');
         closeAdvancedShareModal();
         if(data&&data.success){
-            showAdvancedShareToast('Post partagé sur GoService ✅');
+            showAdvancedShareToast('Post partagÃ© sur GoService âœ…');
             const newId=data.new_post_id||currentSharePostId;
             setTimeout(()=>{window.location.href=FORUM_INDEX_URL+'&open_post='+encodeURIComponent(newId)+'#post-'+encodeURIComponent(newId);},650);
         }else{
@@ -2299,7 +2284,7 @@ async function sharePostAdvanced(platform){
         const txt=buildShareText(true);
         window.open('https://wa.me/?text='+encodeURIComponent(txt),'_blank');
         closeAdvancedShareModal();
-        showAdvancedShareToast('Partage WhatsApp ouvert ✅');
+        showAdvancedShareToast('Partage WhatsApp ouvert âœ…');
         return;
     }
 
@@ -2307,403 +2292,84 @@ async function sharePostAdvanced(platform){
         const fbUrl=buildForumPostUrl(currentSharePostId);
         window.open('https://www.facebook.com/sharer/sharer.php?u='+encodeURIComponent(fbUrl),'_blank','width=900,height=700,scrollbars=yes');
         closeAdvancedShareModal();
-        showAdvancedShareToast('Partage Facebook ouvert ✅');
+        showAdvancedShareToast('Partage Facebook ouvert âœ…');
         return;
     }
 
     if(platform==='copy'){
         const ok=await copyToClipboard(currentSharePostUrl);
         closeAdvancedShareModal();
-        showAdvancedShareToast(ok?'Lien copié ✅':'Copie impossible');
+        showAdvancedShareToast(ok?'Lien copiÃ© âœ…':'Copie impossible');
         return;
     }
 }
 
-document.addEventListener('click',function(e){const m=document.getElementById('advancedShareModal');if(m&&e.target===m) closeAdvancedShareModal();});
+    document.addEventListener('click',function(e){const m=document.getElementById('advancedShareModal');if(m&&e.target===m) closeAdvancedShareModal();});
+    document.addEventListener('click',function(e){const m=document.getElementById('advancedShareModal');if(m&&e.target===m) closeAdvancedShareModal();});
 
 </script>
-<button type="button" class="goservice-chatbot-btn" id="chatbotBtn">🤖</button>
-
-<div class="goservice-chatbot-box" id="chatbotBox">
-    <div class="chatbot-head">
-        <span>Assistant GoService</span>
-        <button type="button" id="chatbotClose">×</button>
-    </div>
-
-    <div class="chatbot-messages" id="chatbotMessages">
-        <div class="chat-msg bot">Bonjour 👋 Je peux vous aider sur GoService.</div>
-    </div>
-
-    <form class="chatbot-form" id="chatbotForm">
-        <input type="text" id="chatbotInput" placeholder="Écrire un message...">
-        <button type="submit">➤</button>
-    </form>
-</div>
+<script>
+(function forumRecordingTextCleanup(){
+  function cleanMojibakeText(text){
+    return String(text || '')
+      .replace(/\u00c3\u00a9/g, 'e')
+      .replace(/\u00c3\u00a8/g, 'e')
+      .replace(/\u00c3\u00aa/g, 'e')
+      .replace(/\u00c3\u00a0/g, 'a')
+      .replace(/\u00c3\u00a7/g, 'c')
+      .replace(/\u00c2/g, '')
+      .replace(/[\u00c2-\u00ff]{2,}/g, '')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+  }
+  function setText(selector, text){
+    document.querySelectorAll(selector).forEach(function(el){ el.textContent = text; });
+  }
+  function clean(){
+    setText('#openPhotoBtn', 'Image');
+    setText('#openVideoBtn', 'Video');
+    setText('#openEmojiBtn', 'Emoji');
+    document.querySelectorAll('.emoji-open-btn').forEach(function(el){
+      if(el.id === 'emojiTrigger' || el.classList.contains('advanced-share-emoji-btn')) el.textContent = 'Emoji';
+    });
+    document.querySelectorAll('.post-menu-btn,.viewer-comment-menu-btn').forEach(function(el){ el.textContent = '...'; });
+    document.querySelectorAll('.composer-icons .composer-icon-btn').forEach(function(el){
+      if(el.id === 'openGifBtn') return;
+      el.style.fontSize = '16px';
+      el.style.fontWeight = '800';
+    });
+    document.querySelectorAll('.reaction-label,.sentiment-badge,.success-message,.post-dropdown button,.viewer-comment-dropdown button').forEach(function(el){
+      el.textContent = cleanMojibakeText(el.textContent);
+      if(el.textContent.length === 0 && (el.classList.contains('post-menu-btn') || el.classList.contains('viewer-comment-menu-btn'))) el.textContent = '...';
+    });
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', clean); else clean();
+  setTimeout(clean, 250);
+  setTimeout(clean, 1000);
+})();
+</script>
 
 <style>
-.goservice-chatbot-btn{
-    position:fixed;
-    right:28px;
-    bottom:28px;
-    width:68px;
-    height:68px;
-    border-radius:50%;
-    border:none;
-    cursor:pointer;
-    z-index:999999;
-    background:linear-gradient(135deg,#EE5828,#142738,#4CAF50);
-    color:#fff;
-    font-size:30px;
-    box-shadow:0 18px 40px rgba(0,0,0,.25);
-
-    display:flex;
-    align-items:center;
-    justify-content:center;
-
-    animation:chatbotFloat 2.5s ease-in-out infinite;
-    transition:
-        transform .25s ease,
-        box-shadow .25s ease,
-        filter .25s ease;
-    overflow:visible;
-}
-
-.goservice-chatbot-btn::before{
-    content:"";
-    position:absolute;
-    inset:-6px;
-    border-radius:50%;
-    border:2px solid rgba(238,88,40,.45);
-    animation:chatbotPulse 1.8s infinite;
-}
-
-.goservice-chatbot-btn:hover{
-    transform:scale(1.1);
-    filter:brightness(1.12);
-    box-shadow:0 24px 60px rgba(238,88,40,.45);
-}
-
-.goservice-chatbot-btn:hover::before{
-    border-color:rgba(255,255,255,.7);
-}
-
-@keyframes chatbotFloat{
-    0%,100%{
-        transform:translateY(0px);
-    }
-    50%{
-        transform:translateY(-12px);
-    }
-}
-
-@keyframes chatbotPulse{
-    0%{
-        transform:scale(.9);
-        opacity:.8;
-    }
-    100%{
-        transform:scale(1.35);
-        opacity:0;
-    }
-}
-
-.goservice-chatbot-box{
-    position:fixed;
-    right:28px;
-    bottom:110px;
-    width:360px;
-    max-width:calc(100vw - 40px);
-    height:500px;
-
-    display:none;
-    flex-direction:column;
-
-    background:var(--forum-bg-card,#fff);
-    color:var(--forum-text,#17283f);
-
-    border:1px solid var(--forum-border,rgba(15,23,42,.08));
-    border-radius:26px;
-    overflow:hidden;
-
-    box-shadow:0 24px 70px rgba(0,0,0,.28);
-
-    z-index:999999;
-
-    backdrop-filter:blur(14px);
-
-    animation:chatbotOpen .25s ease;
-}
-
-.goservice-chatbot-box.show{
-    display:flex;
-}
-
-@keyframes chatbotOpen{
-    from{
-        opacity:0;
-        transform:translateY(20px) scale(.95);
-    }
-    to{
-        opacity:1;
-        transform:translateY(0) scale(1);
-    }
-}
-
-.chatbot-head{
-    padding:16px 18px;
-    background:linear-gradient(135deg,#EE5828,#142738);
-    color:white;
-
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-
-    font-weight:900;
-    font-size:18px;
-}
-
-#chatbotClose{
-    border:none;
-    background:rgba(255,255,255,.18);
-    color:white;
-
-    width:38px;
-    height:38px;
-
-    border-radius:50%;
-    cursor:pointer;
-
-    font-size:22px;
-
-    transition:.2s;
-}
-
-#chatbotClose:hover{
-    background:rgba(255,255,255,.3);
-    transform:rotate(90deg);
-}
-
-.chatbot-messages{
-    flex:1;
-    padding:16px;
-    overflow-y:auto;
-
-    display:flex;
-    flex-direction:column;
-    gap:12px;
-
-    background:
-        linear-gradient(
-            to bottom,
-            rgba(255,255,255,.02),
-            rgba(0,0,0,.02)
-        );
-}
-
-.chatbot-messages::-webkit-scrollbar{
-    width:6px;
-}
-
-.chatbot-messages::-webkit-scrollbar-thumb{
-    background:#EE5828;
-    border-radius:999px;
-}
-
-.chat-msg{
-    max-width:82%;
-    padding:12px 15px;
-    border-radius:18px;
-
-    line-height:1.5;
-    font-size:14px;
-
-    animation:messageAppear .25s ease;
-}
-
-@keyframes messageAppear{
-    from{
-        opacity:0;
-        transform:translateY(10px);
-    }
-    to{
-        opacity:1;
-        transform:translateY(0);
-    }
-}
-
-.chat-msg.user{
-    align-self:flex-end;
-
-    background:linear-gradient(135deg,#EE5828,#ff7b42);
-
-    color:white;
-
-    border-bottom-right-radius:6px;
-
-    box-shadow:0 8px 20px rgba(238,88,40,.25);
-}
-
-.chat-msg.bot{
-    align-self:flex-start;
-
-    background:var(--forum-bg-input,#f3f5f8);
-    color:var(--forum-text,#17283f);
-
-    border-bottom-left-radius:6px;
-
-    box-shadow:0 8px 20px rgba(0,0,0,.06);
-}
-
-.chatbot-form{
-    display:flex;
-    gap:10px;
-
-    padding:14px;
-
-    border-top:1px solid var(--forum-border,rgba(15,23,42,.08));
-
-    background:rgba(255,255,255,.6);
-    backdrop-filter:blur(10px);
-}
-
-.chatbot-form input{
-    flex:1;
-
-    height:48px;
-
-    border-radius:999px;
-
-    border:1px solid var(--forum-border,rgba(15,23,42,.08));
-
-    padding:0 16px;
-
-    outline:none;
-
-    background:var(--forum-bg-input,#fff);
-
-    color:var(--forum-text,#17283f);
-
-    transition:.2s;
-}
-
-.chatbot-form input:focus{
-    border-color:#EE5828;
-    box-shadow:0 0 0 4px rgba(238,88,40,.12);
-}
-
-.chatbot-form button{
-    width:50px;
-    height:48px;
-
-    border-radius:50%;
-
-    border:none;
-
-    background:linear-gradient(135deg,#EE5828,#ff7b42);
-
-    color:white;
-
-    cursor:pointer;
-
-    font-size:18px;
-
-    transition:.25s;
-}
-
-.chatbot-form button:hover{
-    transform:scale(1.08) rotate(-10deg);
-    box-shadow:0 10px 24px rgba(238,88,40,.35);
-}
-.goservice-chatbot-btn::before{
-    border:3px solid rgba(238,88,40,.75);
-    box-shadow:
-        0 0 0 8px rgba(238,88,40,.12),
-        0 0 28px rgba(238,88,40,.45);
-}
-
-.goservice-chatbot-btn::after{
-    content:"";
-    position:absolute;
-    inset:-14px;
-    border-radius:50%;
-    background:rgba(238,88,40,.12);
-    z-index:-1;
-    animation:chatbotGlow 2s ease-in-out infinite;
-}
-
-@keyframes chatbotGlow{
-    0%,100%{
-        transform:scale(.85);
-        opacity:.45;
-    }
-    50%{
-        transform:scale(1.15);
-        opacity:.9;
-    }
-}
+/* Recording cleanup: keep comment tools readable and hide the optional emoji text input. */
+.comment-emoji-input{display:none!important;}
+.comment-tool-btn,.reply-tool-btn,.viewer-square-btn{font-size:16px!important;font-weight:800!important;min-width:72px!important;width:auto!important;padding:0 14px!important;}
 </style>
 <script>
-const chatbotBtn = document.getElementById('chatbotBtn');
-const chatbotBox = document.getElementById('chatbotBox');
-const chatbotClose = document.getElementById('chatbotClose');
-const chatbotForm = document.getElementById('chatbotForm');
-const chatbotInput = document.getElementById('chatbotInput');
-const chatbotMessages = document.getElementById('chatbotMessages');
-
-chatbotBtn.onclick = () => chatbotBox.classList.toggle('show');
-chatbotClose.onclick = () => chatbotBox.classList.remove('show');
-
-function addMsg(text, type){
-    const div = document.createElement('div');
-    div.className = 'chat-msg ' + type;
-    div.textContent = text;
-    chatbotMessages.appendChild(div);
-    chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
-    return div;
-}
-
-let chatbotHistory = [];
-
-chatbotForm.addEventListener('submit', async function(e){
-    e.preventDefault();
-
-    const message = chatbotInput.value.trim();
-    if(message === '') return;
-
-    addMsg(message, 'user');
-    chatbotInput.value = '';
-
-    chatbotHistory.push({
-        role: 'user',
-        content: message
+(function forumCommentRecordingCleanup(){
+  function cleanComments(){
+    document.querySelectorAll('.comment-emoji-input').forEach(function(el){ el.value=''; el.style.display='none'; });
+    document.querySelectorAll('.comment-tool-btn,.reply-tool-btn').forEach(function(el){
+      if(el.classList.contains('comment-emoji-btn')) el.textContent='Emoji';
+      else el.textContent='Image';
     });
-
-    const loading = addMsg('Assistant écrit...', 'bot');
-
-    try{
-        const formData = new FormData();
-        formData.append('messages', JSON.stringify(chatbotHistory));
-
-        const res = await fetch(FORUM_APP_ROOT + '/view/front/pages/chatbot_ollama.php', {
-            method: 'POST',
-            body: formData
-        });
-
-        const data = await res.json();
-        const reply = data.reply || 'Erreur.';
-
-        loading.textContent = reply;
-
-        chatbotHistory.push({
-            role: 'assistant',
-            content: reply
-        });
-
-    }catch(err){
-        loading.textContent = "Erreur : Ollama ne répond pas.";
-    }
-});
+    document.querySelectorAll('label.comment-tool-btn,label.reply-tool-btn').forEach(function(el){
+      if(!el.classList.contains('comment-emoji-btn')){
+        Array.from(el.childNodes).forEach(function(n){ if(n.nodeType===3) n.nodeValue='Image'; });
+      }
+    });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', cleanComments); else cleanComments();
+  setTimeout(cleanComments,250);
+  setTimeout(cleanComments,1000);
+})();
 </script>
-<script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
-
-

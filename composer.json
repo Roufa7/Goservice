@@ -16,9 +16,8 @@
         "vlucas/phpdotenv": "^5.6"
     },
     "autoload": {
-        "psr-4": {
-            "GoService\\": "src/"
-        }
+        "classmap": ["model/", "controller/", "service/"],
+        "files": ["config.php"]
     },
     "config": {
         "optimize-autoloader": true,

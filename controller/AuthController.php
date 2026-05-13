@@ -1,31 +1,69 @@
 <?php
 session_start();
+
 require_once __DIR__ . '/../model/User.php';
 require_once __DIR__ . '/../lib/MailService.php';
+require_once __DIR__ . '/../view/i18n.php';
 
-function authAppRoot(): string {
+function authAppRoot(): string
+{
     $script = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '');
     $root = dirname(dirname($script));
+
     if ($root === '/' || $root === '\\' || $root === '.') {
         return '';
     }
+
     return rtrim($root, '/');
 }
 
-function authFrontUrl(string $query = ''): string {
+function authFrontUrl(string $query = ''): string
+{
     $url = authAppRoot() . '/view/front/index.php';
+
     if ($query !== '') {
         $url .= '?' . ltrim($query, '?');
     }
+
     return $url;
 }
 
-function authBackUrl(string $query = ''): string {
+function authBackUrl(string $query = ''): string
+{
     $url = authAppRoot() . '/view/back/index.php';
+
     if ($query !== '') {
         $url .= '?' . ltrim($query, '?');
     }
+
     return $url;
+}
+
+function authSetFlashSuccess(string $name): void
+{
+    $name = trim($name);
+    $lang = $_SESSION['app_lang'] ?? 'fr';
+
+    $_SESSION['flash_success'] = match ($lang) {
+        'en' => 'Welcome back' . ($name !== '' ? ', ' . $name : '') . '.',
+        'ar' => 'مرحباً بعودتك' . ($name !== '' ? '، ' . $name : '') . '.',
+        default => 'Bienvenue' . ($name !== '' ? ', ' . $name : '') . ' !',
+    };
+}
+
+function authHydrateSession(array $user): void
+{
+    $firstName = trim((string) ($user['prenom'] ?? ''));
+    $lastName = trim((string) ($user['nom'] ?? ''));
+
+    $_SESSION['user_id'] = (int) ($user['id_user'] ?? 0);
+    $_SESSION['id_user'] = (int) ($user['id_user'] ?? 0);
+    $_SESSION['user_role'] = (string) ($user['role'] ?? 'user');
+    $_SESSION['role'] = (string) ($user['role'] ?? 'user');
+    $_SESSION['user_name'] = trim($firstName . ' ' . $lastName);
+    $_SESSION['prenom'] = $firstName;
+    $_SESSION['nom'] = $lastName;
+    $_SESSION['user_photo'] = trim((string) ($user['photo'] ?? ''));
 }
 
 $action = $_GET['action'] ?? '';
@@ -34,22 +72,22 @@ $userModel = new User();
 switch ($action) {
     case 'register':
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $nom = $_POST['nom'] ?? '';
-            $prenom = $_POST['prenom'] ?? '';
-            $email = $_POST['email'] ?? '';
-            $password = $_POST['password'] ?? '';
-            $telephone = $_POST['telephone'] ?? '';
-            $adresse = $_POST['adresse'] ?? '';
-            $role = $_POST['role'] ?? 'user';
+            $nom = trim((string) ($_POST['nom'] ?? ''));
+            $prenom = trim((string) ($_POST['prenom'] ?? ''));
+            $email = trim((string) ($_POST['email'] ?? ''));
+            $password = (string) ($_POST['password'] ?? '');
+            $telephone = trim((string) ($_POST['telephone'] ?? ''));
+            $adresse = trim((string) ($_POST['adresse'] ?? ''));
+            $role = (string) ($_POST['role'] ?? 'user');
 
             $photoPath = '';
-            if (isset($_FILES['photo']) && $_FILES['photo']['error'] === UPLOAD_ERR_OK) {
+            if (isset($_FILES['photo']) && ($_FILES['photo']['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK) {
                 $uploadDir = __DIR__ . '/../assets/uploads/';
                 if (!is_dir($uploadDir)) {
                     mkdir($uploadDir, 0777, true);
                 }
 
-                $fileName = time() . '_' . basename($_FILES['photo']['name']);
+                $fileName = time() . '_' . basename((string) $_FILES['photo']['name']);
                 $targetFilePath = $uploadDir . $fileName;
                 $allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
                 $fileType = mime_content_type($_FILES['photo']['tmp_name']);
@@ -64,52 +102,51 @@ switch ($action) {
             if ($result['success']) {
                 $loginResult = $userModel->login($email, $password);
                 if ($loginResult['success']) {
-                    $_SESSION['user_id'] = $loginResult['user']['id_user'];
-                    $_SESSION['user_role'] = $loginResult['user']['role'];
-                    $_SESSION['user_name'] = $loginResult['user']['prenom'] . ' ' . $loginResult['user']['nom'];
+                    authHydrateSession($loginResult['user']);
+                    authSetFlashSuccess($prenom);
                 }
+
                 header('Location: ' . authFrontUrl('page=home&success=registered'));
                 exit;
             }
 
-            header('Location: ' . authFrontUrl('page=register&error=' . urlencode($result['message'])));
+            header('Location: ' . authFrontUrl('page=register&error=' . urlencode((string) $result['message'])));
             exit;
         }
         break;
 
     case 'login':
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $email = $_POST['email'] ?? '';
-            $password = $_POST['password'] ?? '';
+            $email = trim((string) ($_POST['email'] ?? ''));
+            $password = (string) ($_POST['password'] ?? '');
 
             $result = $userModel->login($email, $password);
 
             if ($result['success']) {
-                $_SESSION['user_id'] = $result['user']['id_user'];
-                $_SESSION['user_role'] = $result['user']['role'];
-                $_SESSION['user_name'] = $result['user']['prenom'] . ' ' . $result['user']['nom'];
+                authHydrateSession($result['user']);
+                authSetFlashSuccess((string) ($result['user']['prenom'] ?? ''));
 
-                if ($result['user']['role'] === 'admin') {
-                    header('Location: ' . authBackUrl());
+                if (($result['user']['role'] ?? 'user') === 'admin') {
+                    header('Location: ' . authBackUrl('page=dashboard'));
                 } else {
                     header('Location: ' . authFrontUrl('page=home'));
                 }
                 exit;
             }
 
-            header('Location: ' . authFrontUrl('page=login&error=' . urlencode($result['message'])));
+            header('Location: ' . authFrontUrl('page=login&error=' . urlencode((string) $result['message'])));
             exit;
         }
         break;
 
     case 'forgot_password':
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $email = $_POST['email'] ?? '';
+            $email = trim((string) ($_POST['email'] ?? ''));
             $rawToken = $userModel->createPasswordResetToken($email);
 
             if ($rawToken) {
-                $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http';
-                $host = $_SERVER['HTTP_HOST'];
+                $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+                $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
                 $resetLink = $protocol . '://' . $host . authFrontUrl('page=reset_password&token=' . urlencode($rawToken));
                 MailService::sendPasswordResetEmail($email, $resetLink);
             }
@@ -121,9 +158,9 @@ switch ($action) {
 
     case 'reset_password':
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $token = $_POST['token'] ?? '';
-            $password = $_POST['password'] ?? '';
-            $confirmPassword = $_POST['confirm_password'] ?? '';
+            $token = (string) ($_POST['token'] ?? '');
+            $password = (string) ($_POST['password'] ?? '');
+            $confirmPassword = (string) ($_POST['confirm_password'] ?? '');
 
             if ($password !== $confirmPassword) {
                 header('Location: ' . authFrontUrl('page=reset_password&token=' . urlencode($token) . '&error=' . urlencode('Les mots de passe ne correspondent pas.')));
@@ -131,16 +168,14 @@ switch ($action) {
             }
 
             $userId = $userModel->validateResetToken($token);
-            if ($userId) {
-                if ($userModel->resetPasswordWithToken($userId, $password)) {
-                    unset($_SESSION['mock_reset_link']);
-                    header('Location: ' . authFrontUrl('page=login&success=password_reset'));
-                    exit;
-                }
-            } else {
-                header('Location: ' . authFrontUrl('page=login&error=' . urlencode('Le lien de r�initialisation est invalide ou a expir�.')));
+            if ($userId && $userModel->resetPasswordWithToken($userId, $password)) {
+                unset($_SESSION['mock_reset_link']);
+                header('Location: ' . authFrontUrl('page=login&success=password_reset'));
                 exit;
             }
+
+            header('Location: ' . authFrontUrl('page=login&error=' . urlencode('Le lien de réinitialisation est invalide ou a expiré.')));
+            exit;
         }
         break;
 
@@ -154,4 +189,3 @@ switch ($action) {
         header('Location: ' . authFrontUrl('page=home'));
         exit;
 }
-?>

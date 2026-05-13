@@ -1,36 +1,99 @@
 <?php
-$pageTitles = [
-    'home' => 'Accueil',
-    'services' => 'Services & Categories',
-    'offre' => 'Offres',
-    'forum' => 'Forum',
-    'reclamation' => 'Reclamations',
-    'events' => 'Evenements',
-    'profile' => 'Profil',
-];
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
-$title = $pageTitles[$page] ?? 'Accueil';
+require_once __DIR__ . '/../../i18n.php';
+require_once __DIR__ . '/../../../model/User.php';
 
-$mainNav = [
-    'Accueil' => 'index.php?page=home',
-    'Services' => 'index.php?page=services',
-    'Offres' => 'index.php?page=offre',
-    'Forum' => 'index.php?page=forum',
-    'Evenements' => 'index.php?page=events',
-    'Reclam.' => 'index.php?page=reclamation',
-];
+app_set_language_from_request();
 
-$eventsBackOfficeLink = '../back/index.php?page=dashboard';
-if (($page ?? '') === 'events') {
-    $selectedEventId = (int) (($eventFrontData['selectedEventId'] ?? 0));
-    $eventsBackOfficeLink = '../back/index.php?page=events';
-    if ($selectedEventId > 0) {
-        $eventsBackOfficeLink .= '&manage_event=' . $selectedEventId;
+function frontUserSessionValue(string $key, string $default = ''): string
+{
+    return trim((string) ($_SESSION[$key] ?? $default));
+}
+
+function frontResolvePhotoPath(string $photoPath): string
+{
+    $photoPath = trim($photoPath);
+    if ($photoPath === '') {
+        return '';
+    }
+    if (preg_match('~^https?://~i', $photoPath) || str_starts_with($photoPath, 'data:')) {
+        return $photoPath;
+    }
+    if (str_starts_with($photoPath, '/')) {
+        return $photoPath;
+    }
+
+    return '../../' . ltrim($photoPath, './');
+}
+
+$userId = isset($_SESSION['user_id']) ? (int) $_SESSION['user_id'] : 0;
+$userPhotoPath = frontUserSessionValue('user_photo');
+
+if ($userId > 0 && $userPhotoPath === '') {
+    try {
+        $userModel = new User();
+        $userData = $userModel->getUserById($userId);
+        if (is_array($userData) && !empty($userData['photo'])) {
+            $userPhotoPath = (string) $userData['photo'];
+            $_SESSION['user_photo'] = $userPhotoPath;
+        }
+    } catch (Throwable $e) {
+        // Keep the shared shell resilient even if the photo cannot be loaded.
     }
 }
+
+$userPhotoUrl = frontResolvePhotoPath($userPhotoPath);
+$userDisplayName = trim(frontUserSessionValue('user_name', frontUserSessionValue('prenom')));
+$avatarFallbackText = $userDisplayName !== ''
+    ? mb_strtoupper(mb_substr($userDisplayName, 0, 1, 'UTF-8'), 'UTF-8')
+    : 'U';
+$currentLanguage = app_lang();
+$isRtl = app_is_rtl();
+$flashSuccess = $_SESSION['flash_success'] ?? '';
+unset($_SESSION['flash_success']);
+
+$pageTitles = [
+    'home' => app_text('Accueil', 'Home', 'الرئيسية'),
+    'services' => app_text('Services', 'Services', 'الخدمات'),
+    'offre' => app_text('Offres', 'Offers', 'العروض'),
+    'forum' => app_text('Forum', 'Forum', 'المنتدى'),
+    'reclamation' => app_text('Réclamations', 'Claims', 'الشكاوى'),
+    'events' => app_text('Événements', 'Events', 'الفعاليات'),
+    'profile' => app_text('Profil', 'Profile', 'الملف الشخصي'),
+    'savedPosts' => app_text('Posts sauvegardés', 'Saved posts', 'المنشورات المحفوظة'),
+];
+
+$title = $pageTitles[$page] ?? app_text('Accueil', 'Home', 'الرئيسية');
+
+$backOfficeTargets = [
+    'services' => 'services',
+    'serviceDetails' => 'services',
+    'addService' => 'services',
+    'myServices' => 'services',
+    'editMyService' => 'services',
+    'offre' => 'offers',
+    'forum' => 'forum',
+    'savedPosts' => 'forum',
+    'reclamation' => 'reclamation',
+    'avis' => 'reclamation',
+    'events' => 'events',
+    'profile' => 'users',
+];
+$backOfficePage = $backOfficeTargets[$page ?? 'home'] ?? 'dashboard';
+$mainNav = [
+    ['page' => 'home', 'label' => app_text('Accueil', 'Home', 'الرئيسية')],
+    ['page' => 'services', 'label' => app_text('Services', 'Services', 'الخدمات')],
+    ['page' => 'offre', 'label' => app_text('Offres', 'Offers', 'العروض')],
+    ['page' => 'forum', 'label' => app_text('Forum', 'Forum', 'المنتدى')],
+    ['page' => 'reclamation', 'label' => app_text('Réclamations', 'Claims', 'الشكاوى')],
+    ['page' => 'events', 'label' => app_text('Événements', 'Events', 'الفعاليات')],
+];
 ?>
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="<?php echo htmlspecialchars($currentLanguage, ENT_QUOTES, 'UTF-8'); ?>" dir="<?php echo $isRtl ? 'rtl' : 'ltr'; ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -40,159 +103,255 @@ if (($page ?? '') === 'events') {
     <?php if (($page ?? '') === 'events'): ?>
         <link rel="stylesheet" href="../../assets/css/events.css">
     <?php endif; ?>
-    <style>
-        .main-nav { gap: 12px; flex-wrap: nowrap; flex: 1 1 auto; justify-content: center; min-width: 0; }
-        .main-nav a { padding: 11px 16px; font-size: 0.95rem; white-space: nowrap; }
-        .nav-actions { gap: 10px; flex-shrink: 0; margin-left: 14px; }
-        .nav-actions > span { max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; vertical-align: middle; }
-        .theme-btn { min-width: 44px; width: 44px; height: 44px; padding: 0; font-size: 1rem; }
-        @media (max-width: 1400px) {
-            .main-nav a { padding: 10px 12px; font-size: 0.9rem; }
-            .nav-actions > span { display: none; }
-        }
-    </style>
 </head>
-<body>
+<body class="<?php echo $isRtl ? 'rtl-ui' : ''; ?>">
     <div class="bg-orb orb-1"></div>
     <div class="bg-orb orb-2"></div>
     <div class="bg-orb orb-3"></div>
 
     <header class="site-header">
-        <div class="container nav-wrap">
-            <a href="index.php?page=home" class="brand">
-                <img id="siteLogo" src="../../assets/images/logo.png" data-light="../../assets/images/logo.png" data-dark="../../assets/images/logo-white.png" alt="logo">
+        <div class="container nav-wrap nav-wrap-front">
+            <a href="index.php?page=home" class="brand" aria-label="GoService">
+                <img id="siteLogo" src="../../assets/images/logo.png" data-light="../../assets/images/logo.png" data-dark="../../assets/images/logo-white.png" alt="GoService">
             </a>
 
             <nav class="main-nav">
-                <?php foreach ($mainNav as $label => $link): ?>
-                    <a href="<?php echo $link; ?>" class="<?php echo $link === 'index.php?page=' . $page ? 'active' : ''; ?>">
-                        <?php echo htmlspecialchars($label, ENT_QUOTES, 'UTF-8'); ?>
+                <?php foreach ($mainNav as $item): ?>
+                    <a
+                        href="index.php?page=<?php echo htmlspecialchars($item['page'], ENT_QUOTES, 'UTF-8'); ?>"
+                        class="<?php echo ($item['page'] === ($page ?? 'home')) ? 'active' : ''; ?>"
+                    >
+                        <?php echo htmlspecialchars($item['label'], ENT_QUOTES, 'UTF-8'); ?>
                     </a>
                 <?php endforeach; ?>
             </nav>
 
-            <div class="nav-actions">
-                <button id="themeToggle" class="theme-btn" type="button">Theme</button>
-                <?php if (isset($_SESSION['user_id'])): ?>
-                    <span style="font-weight: bold; margin-right: 10px;">Bienvenue, <?php echo htmlspecialchars($_SESSION['user_name']); ?></span>
-                    <a href="index.php?page=profile" class="solid-btn" style="margin-right: 10px;">Mon Profil</a>
-                    <a href="../../controller/AuthController.php?action=logout" class="ghost-btn">Deconnexion</a>
+            <div class="nav-actions nav-actions-front">
+                <div class="app-lang-wrap" translate="no">
+                    <button type="button" id="appLangToggle" class="ghost-btn app-lang-btn" aria-haspopup="true" aria-expanded="false">
+                        <?php echo htmlspecialchars(app_lang_label($currentLanguage), ENT_QUOTES, 'UTF-8'); ?>
+                    </button>
+                    <div class="app-lang-menu" id="appLangMenu" hidden>
+                        <a href="<?php echo htmlspecialchars(app_lang_url('fr'), ENT_QUOTES, 'UTF-8'); ?>">Français</a>
+                        <a href="<?php echo htmlspecialchars(app_lang_url('en'), ENT_QUOTES, 'UTF-8'); ?>">English</a>
+                        <a href="<?php echo htmlspecialchars(app_lang_url('ar'), ENT_QUOTES, 'UTF-8'); ?>">العربية</a>
+                    </div>
+                </div>
+
+                <button
+                    id="themeToggle"
+                    class="theme-btn"
+                    type="button"
+                    aria-label="<?php echo htmlspecialchars(app_text('Changer le thème', 'Change theme', 'تغيير المظهر'), ENT_QUOTES, 'UTF-8'); ?>"
+                    title="<?php echo htmlspecialchars(app_text('Changer le thème', 'Change theme', 'تغيير المظهر'), ENT_QUOTES, 'UTF-8'); ?>"
+                ></button>
+
+                <?php if ($userId > 0): ?>
+                    <a href="index.php?page=profile" class="nav-avatar-link nav-avatar-link-camera" aria-label="<?php echo htmlspecialchars(app_text('Ouvrir le profil', 'Open profile', 'فتح الملف الشخصي'), ENT_QUOTES, 'UTF-8'); ?>">
+                        <?php if ($userPhotoUrl !== ''): ?>
+                            <img src="<?php echo htmlspecialchars($userPhotoUrl, ENT_QUOTES, 'UTF-8'); ?>" alt="<?php echo htmlspecialchars(app_text('Photo de profil', 'Profile picture', 'الصورة الشخصية'), ENT_QUOTES, 'UTF-8'); ?>" class="nav-avatar-img">
+                        <?php else: ?>
+                            <span class="nav-avatar-fallback"><?php echo htmlspecialchars($avatarFallbackText, ENT_QUOTES, 'UTF-8'); ?></span>
+                        <?php endif; ?>
+                        <span class="nav-avatar-camera" aria-hidden="true">📷</span>
+                    </a>
+                    <a href="../../controller/AuthController.php?action=logout" class="ghost-btn">
+                        <?php echo htmlspecialchars(app_text('Déconnexion', 'Logout', 'تسجيل الخروج'), ENT_QUOTES, 'UTF-8'); ?>
+                    </a>
                 <?php else: ?>
-                    <a href="#" class="ghost-btn" id="openLoginModal">Connexion</a>
-                    <a href="index.php?page=register" class="solid-btn">S'inscrire</a>
+                    <a href="#" class="ghost-btn" id="openLoginModal">
+                        <?php echo htmlspecialchars(app_text('Connexion', 'Login', 'تسجيل الدخول'), ENT_QUOTES, 'UTF-8'); ?>
+                    </a>
+                    <a href="index.php?page=register" class="solid-btn">
+                        <?php echo htmlspecialchars(app_text("S'inscrire", 'Register', 'إنشاء حساب'), ENT_QUOTES, 'UTF-8'); ?>
+                    </a>
                 <?php endif; ?>
             </div>
         </div>
     </header>
 
     <main class="main-content">
-        <?php require $view; ?>
+        <?php if ($flashSuccess !== ''): ?>
+            <div class="container">
+                <div class="app-flash app-flash-success"><?php echo htmlspecialchars($flashSuccess, ENT_QUOTES, 'UTF-8'); ?></div>
+            </div>
+        <?php endif; ?>
+
+        <?php ob_start(); require $view; $renderedView = ob_get_clean(); echo app_fix_mojibake($renderedView); ?>
     </main>
 
     <footer class="site-footer">
         <div class="container footer-grid">
             <div>
-                <h3>Plateforme digitale</h3>
-                <p>Services, offres, forum, reclamations, evenements et administration dans une experience coherente.</p>
+                <h3><?php echo htmlspecialchars(app_text('Plateforme digitale', 'Digital platform', 'منصة رقمية'), ENT_QUOTES, 'UTF-8'); ?></h3>
+                <p><?php echo htmlspecialchars(app_text('Services, offres, forum, réclamations, événements et administration dans une expérience cohérente.', 'Services, offers, forum, claims, events and administration in one coherent experience.', 'الخدمات والعروض والمنتدى والشكاوى والفعاليات والإدارة في تجربة واحدة متناسقة.'), ENT_QUOTES, 'UTF-8'); ?></p>
             </div>
+
             <div>
-                <h4>Navigation</h4>
-                <a href="index.php?page=home">Accueil</a>
-                <a href="index.php?page=services">Services & Categories</a>
-                <a href="index.php?page=offre">Offres</a>
-                <a href="index.php?page=forum">Forum</a>
-                <a href="index.php?page=events">Evenements</a>
+                <h4><?php echo htmlspecialchars(app_text('Navigation', 'Navigation', 'التنقل'), ENT_QUOTES, 'UTF-8'); ?></h4>
+                <?php foreach ($mainNav as $item): ?>
+                    <a href="index.php?page=<?php echo htmlspecialchars($item['page'], ENT_QUOTES, 'UTF-8'); ?>">
+                        <?php echo htmlspecialchars($item['label'], ENT_QUOTES, 'UTF-8'); ?>
+                    </a>
+                <?php endforeach; ?>
             </div>
+
             <div>
-                <h4>Espaces</h4>
-                <a href="index.php?page=profile">Profil</a>
+                <h4><?php echo htmlspecialchars(app_text('Espaces', 'Spaces', 'المساحات'), ENT_QUOTES, 'UTF-8'); ?></h4>
+                <a href="index.php?page=profile"><?php echo htmlspecialchars(app_text('Profil', 'Profile', 'الملف الشخصي'), ENT_QUOTES, 'UTF-8'); ?></a>
                 <?php if (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'admin'): ?>
-                    <a href="<?php echo htmlspecialchars($eventsBackOfficeLink, ENT_QUOTES, 'UTF-8'); ?>" style="color: var(--orange); font-weight: bold;">Back Office</a>
+                    <a href="../back/index.php?page=<?php echo htmlspecialchars($backOfficePage, ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars(app_text('Back Office', 'Back Office', 'لوحة الإدارة'), ENT_QUOTES, 'UTF-8'); ?></a>
                 <?php endif; ?>
             </div>
         </div>
     </footer>
 
-    <script src="../../assets/js/theme.js"></script>
-    <script src="../../assets/js/main.js"></script>
-    <script src="../../assets/js/offer-validation.js"></script>
-    <?php if (($page ?? '') === 'events'): ?>
-        <script src="../../assets/js/events.js" defer></script>
-    <?php endif; ?>
+            <button type="button" class="goservice-chatbot-btn" id="chatbotBtn" aria-label="<?php echo htmlspecialchars(app_text('Ouvrir l’assistant', 'Open assistant', 'فتح المساعد'), ENT_QUOTES, 'UTF-8'); ?>">🤖</button>
+        <div class="goservice-chatbot-box" id="chatbotBox">
+            <div class="chatbot-head">
+                <span><?php echo htmlspecialchars(app_text('Assistant GoService', 'GoService Assistant', 'مساعد GoService'), ENT_QUOTES, 'UTF-8'); ?></span>
+                <button type="button" id="chatbotClose">×</button>
+            </div>
+            <div class="chatbot-messages" id="chatbotMessages">
+                <div class="chat-msg bot"><?php echo htmlspecialchars(app_text('Bonjour. Je peux vous aider sur GoService.', 'Hello. I can help you on GoService.', 'مرحباً. يمكنني مساعدتك في GoService.'), ENT_QUOTES, 'UTF-8'); ?></div>
+            </div>
+            <form class="chatbot-form" id="chatbotForm">
+                <input type="text" id="chatbotInput" placeholder="<?php echo htmlspecialchars(app_text('Écrire un message...', 'Write a message...', 'اكتب رسالة...'), ENT_QUOTES, 'UTF-8'); ?>">
+                <button type="submit">➤</button>
+            </form>
+        </div>
+
     <div class="auth-modal" id="loginModal">
         <div class="auth-modal-box">
             <button class="auth-close" id="closeLoginModal">&times;</button>
-            <h2>Connexion</h2>
+            <h2><?php echo htmlspecialchars(app_text('Connexion', 'Login', 'تسجيل الدخول'), ENT_QUOTES, 'UTF-8'); ?></h2>
             <?php if (isset($_GET['error'])): ?>
-                <p style="color: #ff4757; font-weight: bold; background: rgba(255, 71, 87, 0.1); padding: 10px; border-radius: 6px; text-align: center;">
-                    <?php echo htmlspecialchars($_GET['error']); ?>
-                </p>
+                <p class="auth-error-inline"><?php echo htmlspecialchars((string) $_GET['error'], ENT_QUOTES, 'UTF-8'); ?></p>
             <?php endif; ?>
-            <p>Connectez-vous avec votre email et votre mot de passe.</p>
+            <p><?php echo htmlspecialchars(app_text('Connectez-vous avec votre email et votre mot de passe.', 'Sign in with your email and password.', 'سجّل الدخول باستخدام بريدك الإلكتروني وكلمة المرور.'), ENT_QUOTES, 'UTF-8'); ?></p>
+
             <form class="auth-form" action="../../controller/AuthController.php?action=login" method="POST">
                 <div class="field-block">
                     <label for="login_email">Email</label>
                     <input type="email" id="login_email" name="email" required>
                 </div>
+
                 <div class="field-block">
-                    <label for="login_password">Mot de passe</label>
+                    <label for="login_password"><?php echo htmlspecialchars(app_text('Mot de passe', 'Password', 'كلمة المرور'), ENT_QUOTES, 'UTF-8'); ?></label>
                     <input type="password" id="login_password" name="password" required>
                 </div>
-                <div class="captcha-wrap" style="text-align: center; margin-bottom: 15px; background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #eee;">
-                    <span style="display: block; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 15px; color: #555; font-weight: bold;">Security Verification</span>
-                    <div id="captchaBox" style="display: inline-block; background: #fff; padding: 10px 20px; border-radius: 4px; border: 1px dashed #ccc; font-family: 'Courier New', Courier, monospace; font-size: 24px; font-weight: bold; color: #2c3e50; letter-spacing: 8px; user-select: none; position: relative; overflow: hidden; margin-bottom: 15px;">
-                        <?php
-                        if (!isset($_SESSION['captcha_code'])) {
-                            $permitted_chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-                            $_SESSION['captcha_code'] = '';
-                            for ($i = 0; $i < 6; $i++) {
-                                $_SESSION['captcha_code'] .= $permitted_chars[rand(0, strlen($permitted_chars) - 1)];
-                            }
-                        }
-                        echo $_SESSION['captcha_code'];
-                        ?>
-                        <div style="position:absolute; top:40%; left:0; width:100%; height:1px; background:rgba(0,0,0,0.1); transform:rotate(5deg);"></div>
-                        <div style="position:absolute; top:60%; left:0; width:100%; height:1px; background:rgba(0,0,0,0.1); transform:rotate(-5deg);"></div>
-                    </div>
-                    <button type="button" onclick="window.location.reload();" style="border:none; background:none; cursor:pointer; color: var(--orange); font-size: 1.2rem; vertical-align: middle;" title="Rafraichir">Refresh</button>
-                    <input type="text" name="captcha_input" placeholder="ENTER THE CODE ABOVE" required style="width: 100%; text-align: center; font-weight: bold; letter-spacing: 2px;">
-                </div>
-                <button type="submit" class="solid-btn auth-submit">Se connecter</button>
-                <div style="text-align:center; margin:15px 0; color:#888;">- OU -</div>
-                <button type="button" id="btnFaceID" class="face-id-btn">
-                    <span style="font-size:1.2rem;">Face ID</span> Se connecter avec Face ID
-                </button>
+
+                <button type="submit" class="solid-btn auth-submit"><?php echo htmlspecialchars(app_text('Se connecter', 'Sign in', 'تسجيل الدخول'), ENT_QUOTES, 'UTF-8'); ?></button>
             </form>
         </div>
     </div>
-<script>
-const loginModal = document.getElementById('loginModal');
-const openLoginModal = document.getElementById('openLoginModal');
-const closeLoginModal = document.getElementById('closeLoginModal');
-const openLoginModal2 = document.getElementById('openLoginModal2');
-if (openLoginModal && loginModal && closeLoginModal) {
-    openLoginModal.addEventListener('click', function(e) {
-        e.preventDefault();
-        loginModal.classList.add('show');
-    });
-    closeLoginModal.addEventListener('click', function() {
-        loginModal.classList.remove('show');
-    });
-    loginModal.addEventListener('click', function(e) {
-        if (e.target === loginModal) {
-            loginModal.classList.remove('show');
-        }
-    });
-}
-if (openLoginModal2) {
-    openLoginModal2.addEventListener('click', function(e) {
-        e.preventDefault();
-        loginModal.classList.add('show');
-    });
-}
-</script>
-<script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
-<script src="../../assets/js/face-enroll.js"></script>
-<script src="../../assets/js/face-login.js"></script>
+
+    <script src="../../assets/js/text-cleanup.js"></script>
+    <script src="../../assets/js/theme.js"></script>
+    <?php if (($page ?? '') === 'profile'): ?>
+        <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+        <script defer src="../../assets/js/face-enroll.js"></script>
+    <?php endif; ?>
+    <script src="../../assets/js/main.js"></script>
+    <script src="../../assets/js/offer-validation.js"></script>
+    <?php if (($page ?? '') === 'events'): ?>
+        <script src="../../assets/js/events.js" defer></script>
+    <?php endif; ?>
+
+    <script>
+        (() => {
+            const loginModal = document.getElementById('loginModal');
+            const openLoginModal = document.getElementById('openLoginModal');
+            const closeLoginModal = document.getElementById('closeLoginModal');
+            const appLangToggle = document.getElementById('appLangToggle');
+            const appLangMenu = document.getElementById('appLangMenu');
+
+            if (openLoginModal && loginModal && closeLoginModal) {
+                openLoginModal.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    loginModal.classList.add('show');
+                });
+
+                closeLoginModal.addEventListener('click', () => loginModal.classList.remove('show'));
+                loginModal.addEventListener('click', (event) => {
+                    if (event.target === loginModal) {
+                        loginModal.classList.remove('show');
+                    }
+                });
+
+                if (window.location.search.includes('page=login') || window.location.search.includes('error=')) {
+                    loginModal.classList.add('show');
+                }
+            }
+
+            if (appLangToggle && appLangMenu) {
+                appLangToggle.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    const isHidden = appLangMenu.hasAttribute('hidden');
+                    if (isHidden) {
+                        appLangMenu.removeAttribute('hidden');
+                        appLangToggle.setAttribute('aria-expanded', 'true');
+                    } else {
+                        appLangMenu.setAttribute('hidden', 'hidden');
+                        appLangToggle.setAttribute('aria-expanded', 'false');
+                    }
+                });
+
+                document.addEventListener('click', (event) => {
+                    if (!appLangMenu.contains(event.target) && !appLangToggle.contains(event.target)) {
+                        appLangMenu.setAttribute('hidden', 'hidden');
+                        appLangToggle.setAttribute('aria-expanded', 'false');
+                    }
+                });
+            }
+
+            const chatbotBtn = document.getElementById('chatbotBtn');
+            const chatbotBox = document.getElementById('chatbotBox');
+            const chatbotClose = document.getElementById('chatbotClose');
+            const chatbotForm = document.getElementById('chatbotForm');
+            const chatbotInput = document.getElementById('chatbotInput');
+            const chatbotMessages = document.getElementById('chatbotMessages');
+
+            if (chatbotBtn && chatbotBox && chatbotClose && chatbotForm && chatbotInput && chatbotMessages) {
+                chatbotBtn.addEventListener('click', () => chatbotBox.classList.toggle('show'));
+                chatbotClose.addEventListener('click', () => chatbotBox.classList.remove('show'));
+
+                chatbotForm.addEventListener('submit', async (event) => {
+                    event.preventDefault();
+                    const message = chatbotInput.value.trim();
+                    if (!message) {
+                        return;
+                    }
+
+                    const userMsg = document.createElement('div');
+                    userMsg.className = 'chat-msg user';
+                    userMsg.textContent = message;
+                    chatbotMessages.appendChild(userMsg);
+                    chatbotInput.value = '';
+
+                    const pendingMsg = document.createElement('div');
+                    pendingMsg.className = 'chat-msg bot';
+                    pendingMsg.textContent = <?php echo json_encode(app_text('Je réfléchis...', 'Thinking...', 'أفكر...'), JSON_UNESCAPED_UNICODE); ?>;
+                    chatbotMessages.appendChild(pendingMsg);
+                    chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+
+                    try {
+                        const payload = new FormData();
+                        payload.append('message', message);
+                        const response = await fetch('../../service/OllamaChatbotService.php', {
+                            method: 'POST',
+                            body: payload,
+                        });
+                        const data = await response.json();
+                        pendingMsg.textContent = data.reply || <?php echo json_encode(app_text('Je n’ai pas pu répondre pour le moment.', 'I could not answer right now.', 'لم أتمكن من الرد حالياً.'), JSON_UNESCAPED_UNICODE); ?>;
+                    } catch (error) {
+                        pendingMsg.textContent = <?php echo json_encode(app_text('Assistant indisponible pour le moment.', 'Assistant unavailable right now.', 'المساعد غير متاح حالياً.'), JSON_UNESCAPED_UNICODE); ?>;
+                    }
+
+                    chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+                });
+            }
+        })();
+    </script>
 </body>
 </html>

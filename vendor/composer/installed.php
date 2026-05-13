@@ -1,37 +1,15 @@
 <?php return array(
     'root' => array(
-<<<<<<< HEAD
         'name' => 'goservice/v3',
-        'pretty_version' => '1.0.0+no-version-set',
-        'version' => '1.0.0.0',
-        'reference' => null,
-=======
-        'name' => 'goservice/evenements',
         'pretty_version' => 'dev-main',
         'version' => 'dev-main',
-        'reference' => '87d873b3206087f805247eb9f0d6baed390a4045',
->>>>>>> origin/evenements
+        'reference' => '4cba692127dbd07542e6610f1a26f3908d92e455',
         'type' => 'project',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
         'dev' => true,
     ),
     'versions' => array(
-<<<<<<< HEAD
-        'clue/stream-filter' => array(
-            'pretty_version' => 'v1.7.0',
-            'version' => '1.7.0.0',
-            'reference' => '049509fef80032cb3f051595029ab75b49a3c2f7',
-            'type' => 'library',
-            'install_path' => __DIR__ . '/../clue/stream-filter',
-            'aliases' => array(),
-            'dev_requirement' => false,
-        ),
-        'goservice/v3' => array(
-            'pretty_version' => '1.0.0+no-version-set',
-            'version' => '1.0.0.0',
-            'reference' => null,
-=======
         'chillerlan/php-qrcode' => array(
             'pretty_version' => '5.0.5',
             'version' => '5.0.5.0',
@@ -47,6 +25,15 @@
             'reference' => 'a0a487cbf5344f721eb504bf0f59bada40c381b7',
             'type' => 'library',
             'install_path' => __DIR__ . '/../chillerlan/php-settings-container',
+            'aliases' => array(),
+            'dev_requirement' => false,
+        ),
+        'clue/stream-filter' => array(
+            'pretty_version' => 'v1.7.0',
+            'version' => '1.7.0.0',
+            'reference' => '049509fef80032cb3f051595029ab75b49a3c2f7',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../clue/stream-filter',
             'aliases' => array(),
             'dev_requirement' => false,
         ),
@@ -86,24 +73,15 @@
             'aliases' => array(),
             'dev_requirement' => false,
         ),
-        'goservice/evenements' => array(
+        'goservice/v3' => array(
             'pretty_version' => 'dev-main',
             'version' => 'dev-main',
-            'reference' => '87d873b3206087f805247eb9f0d6baed390a4045',
->>>>>>> origin/evenements
+            'reference' => '4cba692127dbd07542e6610f1a26f3908d92e455',
             'type' => 'project',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
             'dev_requirement' => false,
         ),
-<<<<<<< HEAD
-        'nyholm/psr7' => array(
-            'pretty_version' => '1.8.2',
-            'version' => '1.8.2.0',
-            'reference' => 'a71f2b11690f4b24d099d6b16690a90ae14fc6f3',
-            'type' => 'library',
-            'install_path' => __DIR__ . '/../nyholm/psr7',
-=======
         'graham-campbell/result-type' => array(
             'pretty_version' => 'v1.1.4',
             'version' => '1.1.4.0',
@@ -149,13 +127,21 @@
             'aliases' => array(),
             'dev_requirement' => false,
         ),
+        'nyholm/psr7' => array(
+            'pretty_version' => '1.8.2',
+            'version' => '1.8.2.0',
+            'reference' => 'a71f2b11690f4b24d099d6b16690a90ae14fc6f3',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../nyholm/psr7',
+            'aliases' => array(),
+            'dev_requirement' => false,
+        ),
         'openai-php/client' => array(
             'pretty_version' => 'v0.19.2',
             'version' => '0.19.2.0',
             'reference' => '12e3513527e22d5657f4f9809796f8fe254fd0a9',
             'type' => 'library',
             'install_path' => __DIR__ . '/../openai-php/client',
->>>>>>> origin/evenements
             'aliases' => array(),
             'dev_requirement' => false,
         ),
@@ -163,17 +149,13 @@
             'dev_requirement' => false,
             'provided' => array(
                 0 => '*',
-<<<<<<< HEAD
                 1 => '1.0',
-=======
->>>>>>> origin/evenements
             ),
         ),
         'php-http/client-implementation' => array(
             'dev_requirement' => false,
             'provided' => array(
                 0 => '*',
-<<<<<<< HEAD
                 1 => '1.0',
             ),
         ),
@@ -186,10 +168,6 @@
             'aliases' => array(),
             'dev_requirement' => false,
         ),
-=======
-            ),
-        ),
->>>>>>> origin/evenements
         'php-http/discovery' => array(
             'pretty_version' => '1.20.0',
             'version' => '1.20.0.0',
@@ -199,7 +177,6 @@
             'aliases' => array(),
             'dev_requirement' => false,
         ),
-<<<<<<< HEAD
         'php-http/httplug' => array(
             'pretty_version' => '2.4.1',
             'version' => '2.4.1.0',
@@ -224,19 +201,21 @@
                 0 => '1.0',
             ),
         ),
-        'php-http/promise' => array(
-            'pretty_version' => '1.3.1',
-            'version' => '1.3.1.0',
-            'reference' => 'fc85b1fba37c169a69a07ef0d5a8075770cc1f83',
-            'type' => 'library',
-            'install_path' => __DIR__ . '/../php-http/promise',
-=======
         'php-http/multipart-stream-builder' => array(
             'pretty_version' => '1.4.2',
             'version' => '1.4.2.0',
             'reference' => '10086e6de6f53489cca5ecc45b6f468604d3460e',
             'type' => 'library',
             'install_path' => __DIR__ . '/../php-http/multipart-stream-builder',
+            'aliases' => array(),
+            'dev_requirement' => false,
+        ),
+        'php-http/promise' => array(
+            'pretty_version' => '1.3.1',
+            'version' => '1.3.1.0',
+            'reference' => 'fc85b1fba37c169a69a07ef0d5a8075770cc1f83',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../php-http/promise',
             'aliases' => array(),
             'dev_requirement' => false,
         ),
@@ -255,7 +234,6 @@
             'reference' => '75365b91986c2405cf5e1e012c5595cd487a98be',
             'type' => 'library',
             'install_path' => __DIR__ . '/../phpoption/phpoption',
->>>>>>> origin/evenements
             'aliases' => array(),
             'dev_requirement' => false,
         ),
@@ -307,8 +285,6 @@
                 1 => '1.0',
             ),
         ),
-<<<<<<< HEAD
-=======
         'ralouphie/getallheaders' => array(
             'pretty_version' => '3.0.3',
             'version' => '3.0.3.0',
@@ -327,33 +303,24 @@
             'aliases' => array(),
             'dev_requirement' => false,
         ),
->>>>>>> origin/evenements
         'symfony/deprecation-contracts' => array(
-            'pretty_version' => 'v3.6.0',
-            'version' => '3.6.0.0',
-            'reference' => '63afe740e99a13ba87ec199bb07bbdee937a5b62',
+            'pretty_version' => 'v3.7.0',
+            'version' => '3.7.0.0',
+            'reference' => '50f59d1f3ca46d41ac911f97a78626b6756af35b',
             'type' => 'library',
             'install_path' => __DIR__ . '/../symfony/deprecation-contracts',
             'aliases' => array(),
             'dev_requirement' => false,
         ),
-<<<<<<< HEAD
         'symfony/options-resolver' => array(
-            'pretty_version' => 'v6.4.30',
-            'version' => '6.4.30.0',
-            'reference' => 'eeaa8cabe54c7b3516938c72a4a161c0cc80a34f',
+            'pretty_version' => 'v7.4.8',
+            'version' => '7.4.8.0',
+            'reference' => '2888fcdc4dc2fd5f7c7397be78631e8af12e02b4',
             'type' => 'library',
             'install_path' => __DIR__ . '/../symfony/options-resolver',
             'aliases' => array(),
             'dev_requirement' => false,
         ),
-        'willdurand/geocoder' => array(
-            'pretty_version' => '4.6.0',
-            'version' => '4.6.0.0',
-            'reference' => 'be3d9ed0fddf8c698ee079d8a07ae9520b4a49a1',
-            'type' => 'library',
-            'install_path' => __DIR__ . '/../willdurand/geocoder',
-=======
         'symfony/polyfill-ctype' => array(
             'pretty_version' => 'v1.37.0',
             'version' => '1.37.0.0',
@@ -396,7 +363,15 @@
             'reference' => '955e7815d677a3eaa7075231212f2110983adecc',
             'type' => 'library',
             'install_path' => __DIR__ . '/../vlucas/phpdotenv',
->>>>>>> origin/evenements
+            'aliases' => array(),
+            'dev_requirement' => false,
+        ),
+        'willdurand/geocoder' => array(
+            'pretty_version' => '4.6.0',
+            'version' => '4.6.0.0',
+            'reference' => 'be3d9ed0fddf8c698ee079d8a07ae9520b4a49a1',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../willdurand/geocoder',
             'aliases' => array(),
             'dev_requirement' => false,
         ),

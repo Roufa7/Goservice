@@ -11,7 +11,7 @@ $allServices = $services;
 $validatedServices = array_filter($services, function ($service) {
     $status = trim((string) ($service['statut'] ?? ''));
     $normalized = strtolower(iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $status) ?: $status);
-    return in_array($normalized, ['valide', 'validã©'], true);
+    return in_array($normalized, ['valide'], true);
 });
 
 $services = !empty($validatedServices) ? array_values($validatedServices) : array_values($allServices);
@@ -103,7 +103,7 @@ $offset = ($currentPage - 1) * $perPage;
 $servicePage = array_slice($servicesFiltres, $offset, $perPage);
 
 $totalServices = count($services);
-$totalCategories = count($categories);
+$totalCatégories = count($categories);
 $totalDisponibles = count(array_filter($services, fn($s) => srvIsAvailable($s)));
 ?>
 
@@ -407,11 +407,9 @@ $totalDisponibles = count(array_filter($services, fn($s) => srvIsAvailable($s)))
 </style>
 
 <section class="page-hero reveal">
-    <span class="section-badge">Services</span>
-    <h1 class="page-title">Services & Categories</h1>
-    <p class="page-intro">
-        Consultez les services disponibles, explorez les categories et trouvez rapidement la prestation adaptee a votre besoin.
-    </p>
+    <span class="section-badge"><?php echo htmlspecialchars(app_text('Services', 'Services', 'الخدمات'), ENT_QUOTES, 'UTF-8'); ?></span>
+    <h1 class="page-title"><?php echo htmlspecialchars(app_text('Services et catégories', 'Services and categories', 'الخدمات والفئات'), ENT_QUOTES, 'UTF-8'); ?></h1>
+    <p class="page-intro"><?php echo htmlspecialchars(app_text('Consultez les services disponibles, explorez les catégories et trouvez rapidement la prestation adaptée à votre besoin.', 'Browse available services, explore categories and quickly find the right service for your needs.', 'استعرض الخدمات المتاحة واكتشف الفئات واعثر بسرعة على الخدمة المناسبة لاحتياجك.'), ENT_QUOTES, 'UTF-8'); ?></p>
 </section>
 
 <section class="action-bar reveal">
@@ -425,20 +423,20 @@ $totalDisponibles = count(array_filter($services, fn($s) => srvIsAvailable($s)))
             <input type="hidden" name="dispo" value="1">
         <?php endif; ?>
 
-        <input type="text" name="search" placeholder="Rechercher un service..." value="<?php echo htmlspecialchars($search); ?>">
+        <input type="text" name="search" placeholder="<?php echo htmlspecialchars(app_text('Rechercher un service...', 'Search for a service...', 'ابحث عن خدمة...'), ENT_QUOTES, 'UTF-8'); ?>" value="<?php echo htmlspecialchars($search); ?>">
 
         <select name="tri" onchange="document.getElementById('srvTopFilterForm').submit()">
-            <option value="pertinence" <?php echo $tri === 'pertinence' ? 'selected' : ''; ?>>Pertinence</option>
-            <option value="prix_asc" <?php echo $tri === 'prix_asc' ? 'selected' : ''; ?>>Prix croissant</option>
-            <option value="prix_desc" <?php echo $tri === 'prix_desc' ? 'selected' : ''; ?>>Prix decroissant</option>
-            <option value="az" <?php echo $tri === 'az' ? 'selected' : ''; ?>>Nom A-Z</option>
+            <option value="pertinence" <?php echo $tri === 'pertinence' ? 'selected' : ''; ?>><?php echo htmlspecialchars(app_text('Pertinence', 'Relevance', 'الأكثر صلة'), ENT_QUOTES, 'UTF-8'); ?></option>
+            <option value="prix_asc" <?php echo $tri === 'prix_asc' ? 'selected' : ''; ?>><?php echo htmlspecialchars(app_text('Prix croissant', 'Lowest price', 'السعر تصاعدياً'), ENT_QUOTES, 'UTF-8'); ?></option>
+            <option value="prix_desc" <?php echo $tri === 'prix_desc' ? 'selected' : ''; ?>><?php echo htmlspecialchars(app_text('Prix décroissant', 'Highest price', 'السعر تنازلياً'), ENT_QUOTES, 'UTF-8'); ?></option>
+            <option value="az" <?php echo $tri === 'az' ? 'selected' : ''; ?>><?php echo htmlspecialchars(app_text('Nom A-Z', 'Name A-Z', 'الاسم أ-ي'), ENT_QUOTES, 'UTF-8'); ?></option>
         </select>
 
         <div class="icon-actions">
-            <a class="solid-btn" href="index.php?page=services">Tous les services</a>
-            <a class="solid-btn alt-btn" href="index.php?page=myServices">Mes services</a>
+            <a class="solid-btn" href="index.php?page=services"><?php echo htmlspecialchars(app_text('Tous les services', 'All services', 'كل الخدمات'), ENT_QUOTES, 'UTF-8'); ?></a>
+            <a class="solid-btn alt-btn" href="index.php?page=myServices"><?php echo htmlspecialchars(app_text('Mes services', 'My services', 'خدماتي'), ENT_QUOTES, 'UTF-8'); ?></a>
             <a class="solid-btn" href="index.php?page=myReservations" style="background:var(--orange-dark,#c94c14);">
-                Mes reservations
+                <?php echo htmlspecialchars(app_text('Mes réservations', 'My reservations', 'حجوزاتي'), ENT_QUOTES, 'UTF-8'); ?>
             </a>
         </div>
     </form>
@@ -451,12 +449,12 @@ $totalDisponibles = count(array_filter($services, fn($s) => srvIsAvailable($s)))
             <input type="hidden" name="search" value="<?php echo htmlspecialchars($search); ?>">
 
             <div class="srv-filter-block">
-                <div class="srv-filter-title">CATEGORIES</div>
+                <div class="srv-filter-title"><?php echo htmlspecialchars(app_text('CATÉGORIES', 'CATEGORIES', 'الفئات'), ENT_QUOTES, 'UTF-8'); ?></div>
                 <div class="srv-category-list">
                     <a href="index.php?page=services&search=<?php echo urlencode($search); ?>&prix_max=<?php echo (int) $prixMax; ?><?php echo $dispoOnly ? '&dispo=1' : ''; ?>"
                        class="srv-category-pill <?php echo $categorieActive === 0 ? 'active' : ''; ?>">
-                        <span class="cat-icon">Dossier</span>
-                        <span>Toutes</span>
+                        <span class="cat-icon">📂</span>
+                        <span><?php echo htmlspecialchars(app_text('Toutes', 'All', 'الكل'), ENT_QUOTES, 'UTF-8'); ?></span>
                     </a>
 
                     <?php foreach ($categories as $cat): ?>
@@ -472,14 +470,14 @@ $totalDisponibles = count(array_filter($services, fn($s) => srvIsAvailable($s)))
             </div>
 
             <div class="srv-filter-block">
-                <div class="srv-filter-title">PRIX MAXIMUM</div>
+                <div class="srv-filter-title"><?php echo htmlspecialchars(app_text('PRIX MAXIMUM', 'MAX PRICE', 'الحد الأقصى للسعر'), ENT_QUOTES, 'UTF-8'); ?></div>
                 <?php if ($categorieActive > 0): ?>
                     <input type="hidden" name="categorie" value="<?php echo $categorieActive; ?>">
                 <?php endif; ?>
 
                 <div class="srv-price-values">
-                    <span>0 EUR</span>
-                    <span id="srvPrixTop"><?php echo (int) $prixMax; ?> EUR</span>
+                    <span>0 <?php echo htmlspecialchars(app_text('EUR', 'EUR', 'يورو'), ENT_QUOTES, 'UTF-8'); ?></span>
+                    <span id="srvPrixTop"><?php echo (int) $prixMax; ?> <?php echo htmlspecialchars(app_text('EUR', 'EUR', 'يورو'), ENT_QUOTES, 'UTF-8'); ?></span>
                 </div>
 
                 <input
@@ -494,14 +492,14 @@ $totalDisponibles = count(array_filter($services, fn($s) => srvIsAvailable($s)))
                 >
 
                 <div class="srv-price-current" id="srvPrixValue">
-                    <?php echo (int) $prixMax; ?> EUR
+                    <?php echo (int) $prixMax; ?> <?php echo htmlspecialchars(app_text('EUR', 'EUR', 'يورو'), ENT_QUOTES, 'UTF-8'); ?>
                 </div>
             </div>
 
             <div class="srv-filter-block">
-                <div class="srv-filter-title">DISPONIBILITE</div>
+                <div class="srv-filter-title"><?php echo htmlspecialchars(app_text('DISPONIBILITÉ', 'AVAILABILITY', 'التوفر'), ENT_QUOTES, 'UTF-8'); ?></div>
                 <div class="srv-toggle-row">
-                    <span>Disponible maintenant</span>
+                    <span><?php echo htmlspecialchars(app_text('Disponible maintenant', 'Available now', 'متاح الآن'), ENT_QUOTES, 'UTF-8'); ?></span>
                     <label class="srv-switch">
                         <input type="checkbox" name="dispo" value="1" id="srvDispoToggle" <?php echo $dispoOnly ? 'checked' : ''; ?>>
                         <span class="srv-slider"></span>
@@ -509,7 +507,7 @@ $totalDisponibles = count(array_filter($services, fn($s) => srvIsAvailable($s)))
                 </div>
 
                 <div class="icon-actions" style="margin-top:18px;">
-                    <a class="solid-btn" href="index.php?page=addService">+ Ajouter service</a>
+                    <a class="solid-btn" href="index.php?page=addService"><?php echo htmlspecialchars(app_text('+ Ajouter un service', '+ Add service', '+ إضافة خدمة'), ENT_QUOTES, 'UTF-8'); ?></a>
                 </div>
             </div>
         </form>
@@ -519,15 +517,15 @@ $totalDisponibles = count(array_filter($services, fn($s) => srvIsAvailable($s)))
         <div class="srv-stats-strip">
             <div class="srv-stat-item">
                 <strong><?php echo $totalServices; ?></strong>
-                <span>services</span>
+                <span><?php echo htmlspecialchars(app_text('services', 'services', 'خدمات'), ENT_QUOTES, 'UTF-8'); ?></span>
             </div>
             <div class="srv-stat-item">
-                <strong><?php echo $totalCategories; ?></strong>
-                <span>categories</span>
+                <strong><?php echo $totalCatégories; ?></strong>
+                <span><?php echo htmlspecialchars(app_text('catégories', 'categories', 'فئات'), ENT_QUOTES, 'UTF-8'); ?></span>
             </div>
             <div class="srv-stat-item">
                 <strong><?php echo $totalDisponibles; ?></strong>
-                <span>disponibles maintenant</span>
+                <span><?php echo htmlspecialchars(app_text('disponibles maintenant', 'available now', 'متاحة الآن'), ENT_QUOTES, 'UTF-8'); ?></span>
             </div>
         </div>
 
@@ -549,9 +547,9 @@ $totalDisponibles = count(array_filter($services, fn($s) => srvIsAvailable($s)))
                             <img src="<?php echo htmlspecialchars($img); ?>" alt="<?php echo htmlspecialchars((string) ($service['titre'] ?? 'Service')); ?>" class="srv-card-image">
 
                             <div class="srv-card-badges">
-                                <span class="srv-badge srv-badge-pop">Populaire</span>
+                                <span class="srv-badge srv-badge-pop"><?php echo htmlspecialchars(app_text('Populaire', 'Popular', 'شائع'), ENT_QUOTES, 'UTF-8'); ?></span>
                                 <span class="srv-badge srv-badge-status <?php echo $isAvailable ? 'available' : 'unavailable'; ?>">
-                                    <?php echo $isAvailable ? 'Disponible' : 'Indisponible'; ?>
+                                    <?php echo htmlspecialchars($isAvailable ? app_text('Disponible', 'Available', 'متاح') : app_text('Indisponible', 'Unavailable', 'غير متاح'), ENT_QUOTES, 'UTF-8'); ?>
                                 </span>
                             </div>
 
@@ -576,9 +574,9 @@ $totalDisponibles = count(array_filter($services, fn($s) => srvIsAvailable($s)))
                             <div class="srv-card-footer">
                                 <div class="srv-price-wrap">
                                     <span class="srv-price-main">
-                                        <?php echo number_format((float) ($service['prix'] ?? 0), 2, ',', ''); ?> EUR
+                                        <?php echo number_format((float) ($service['prix'] ?? 0), 2, ',', ''); ?> <?php echo htmlspecialchars(app_text('EUR', 'EUR', 'يورو'), ENT_QUOTES, 'UTF-8'); ?>
                                     </span>
-                                    <span class="srv-price-unit">/ seance</span>
+                                    <span class="srv-price-unit"><?php echo htmlspecialchars(app_text('/ séance', '/ session', '/ جلسة'), ENT_QUOTES, 'UTF-8'); ?></span>
                                 </div>
 
                                 <a href="index.php?page=serviceDetails&id=<?php echo (int) ($service['id_service'] ?? 0); ?>" class="srv-details-btn">
@@ -590,8 +588,8 @@ $totalDisponibles = count(array_filter($services, fn($s) => srvIsAvailable($s)))
                 <?php endforeach; ?>
             <?php else: ?>
                 <div class="srv-empty">
-                    <span class="section-badge">Aucun resultat</span>
-                    <h3>Aucun service trouve</h3>
+                    <span class="section-badge">Aucun r?sultat</span>
+                    <h3>Aucun service trouv?</h3>
                     <p>Essayez une autre categorie, un autre mot-cle ou modifiez les filtres.</p>
                 </div>
             <?php endif; ?>
@@ -685,10 +683,10 @@ if (!empty($servicesMap)):
     <div class="all-map-card">
         <div class="all-map-header">
             <div>
-                <div class="all-map-title">Carte des prestataires</div>
-                <div class="all-map-sub">Tous les services disponibles pres de chez vous</div>
+                <div class="all-map-title"><?php echo htmlspecialchars(app_text('Carte des prestataires', 'Providers map', 'خريطة مقدمي الخدمات'), ENT_QUOTES, 'UTF-8'); ?></div>
+                <div class="all-map-sub"><?php echo htmlspecialchars(app_text('Tous les services disponibles près de chez vous', 'All available services near you', 'كل الخدمات المتاحة بالقرب منك'), ENT_QUOTES, 'UTF-8'); ?></div>
             </div>
-            <span class="all-map-badge"><?= count($servicesMap) ?> prestataire<?= count($servicesMap) > 1 ? 's' : '' ?> localise<?= count($servicesMap) > 1 ? 's' : '' ?></span>
+            <span class="all-map-badge"><?= count($servicesMap) ?> <?php echo htmlspecialchars(app_text('prestataire', 'provider', 'مقدم خدمة'), ENT_QUOTES, 'UTF-8'); ?><?= count($servicesMap) > 1 ? 's' : '' ?> <?php echo htmlspecialchars(app_text('localisé', 'located', 'محدد الموقع'), ENT_QUOTES, 'UTF-8'); ?><?= count($servicesMap) > 1 ? 's' : '' ?></span>
         </div>
         <div id="allServicesMap"></div>
     </div>
@@ -792,5 +790,19 @@ document.addEventListener('DOMContentLoaded', function () {
             form.submit();
         });
     }
+});
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function imageFallbackHook() {
+    document.querySelectorAll('img.srv-img, .cat-linked img, .srv-card-image').forEach(function (img) {
+        img.addEventListener('error', function () {
+            this.onerror = null;
+            this.src = '../../assets/images/services/default.jpg';
+        });
+        if (!img.getAttribute('src')) {
+            img.src = '../../assets/images/services/default.jpg';
+        }
+    });
 });
 </script>

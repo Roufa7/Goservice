@@ -3,14 +3,12 @@ require_once __DIR__ . '/../../../controller/CategorieController.php';
 require_once __DIR__ . '/../../../model/Categorie.php';
 
 $categorieController = new CategorieController();
-$errors  = [];
-$success = '';
+$errors = [];
 
-// ── SUPPRESSION ──
 if (isset($_GET['delete']) && is_numeric($_GET['delete'])) {
-    $id = (int)$_GET['delete'];
+    $id = (int) $_GET['delete'];
     if ($categorieController->hasServices($id)) {
-        $errors[] = "Impossible de supprimer : cette catégorie contient des services. Supprimez d'abord les services associés.";
+        $errors[] = 'Impossible de supprimer cette catégorie tant que des services y sont rattachés.';
     } else {
         $categorieController->deleteCategorie($id);
         header('Location: index.php?page=categories&deleted=1');
@@ -18,877 +16,398 @@ if (isset($_GET['delete']) && is_numeric($_GET['delete'])) {
     }
 }
 
-// ── AJOUT ──
 if (isset($_POST['action']) && $_POST['action'] === 'add') {
-    $nom         = trim($_POST['nom'] ?? '');
-    $description = trim($_POST['description'] ?? '');
-    $icone       = trim($_POST['icone'] ?? '');
+    $nom = trim((string) ($_POST['nom'] ?? ''));
+    $description = trim((string) ($_POST['description'] ?? ''));
+    $icone = trim((string) ($_POST['icone'] ?? ''));
 
-    if ($nom === '') {
-        $errors[] = "Le nom est obligatoire.";
-    } elseif (strlen($nom) < 3) {
-        $errors[] = "Le nom doit contenir au moins 3 caractères.";
-    } elseif (!preg_match('/^[a-zA-ZÀ-ÿ\s]+$/u', $nom)) {
-        $errors[] = "Le nom doit contenir uniquement des lettres et des espaces.";
+    if ($nom === '' || mb_strlen($nom, 'UTF-8') < 3) {
+        $errors[] = 'Le nom doit contenir au moins 3 caractères.';
     }
-
-    if ($description === '' || strlen($description) < 5) {
-        $errors[] = "La description doit contenir au moins 5 caractères.";
+    if ($description === '' || mb_strlen($description, 'UTF-8') < 5) {
+        $errors[] = 'La description doit contenir au moins 5 caractères.';
     }
-
     if ($icone === '') {
-        $errors[] = "Veuillez choisir une icône.";
+        $errors[] = 'Veuillez choisir une icône.';
     }
 
     if (empty($errors)) {
-        $cat = new Categorie($nom, $description, $icone);
-        $categorieController->addCategorie($cat);
+        $categorieController->addCategorie(new Categorie($nom, $description, $icone));
         header('Location: index.php?page=categories&added=1');
         exit;
     }
 }
 
-// ── MODIFICATION ──
 if (isset($_POST['action']) && $_POST['action'] === 'edit') {
-    $id          = (int)($_POST['id'] ?? 0);
-    $nom         = trim($_POST['nom'] ?? '');
-    $description = trim($_POST['description'] ?? '');
-    $icone       = trim($_POST['icone'] ?? '');
+    $id = (int) ($_POST['id'] ?? 0);
+    $nom = trim((string) ($_POST['nom'] ?? ''));
+    $description = trim((string) ($_POST['description'] ?? ''));
+    $icone = trim((string) ($_POST['icone'] ?? ''));
 
-    if ($nom === '') {
-        $errors[] = "Le nom est obligatoire.";
-    } elseif (strlen($nom) < 3) {
-        $errors[] = "Le nom doit contenir au moins 3 caractères.";
-    } elseif (!preg_match('/^[a-zA-ZÀ-ÿ\s]+$/u', $nom)) {
-        $errors[] = "Le nom doit contenir uniquement des lettres et des espaces.";
+    if ($nom === '' || mb_strlen($nom, 'UTF-8') < 3) {
+        $errors[] = 'Le nom doit contenir au moins 3 caractères.';
     }
-
-    if ($description === '' || strlen($description) < 5) {
-        $errors[] = "La description doit contenir au moins 5 caractères.";
+    if ($description === '' || mb_strlen($description, 'UTF-8') < 5) {
+        $errors[] = 'La description doit contenir au moins 5 caractères.';
     }
-
     if ($icone === '') {
-        $errors[] = "Veuillez choisir une icône.";
+        $errors[] = 'Veuillez choisir une icône.';
     }
 
     if (empty($errors)) {
-        $cat = new Categorie($nom, $description, $icone);
-        $categorieController->updateCategorie($cat, $id);
+        $categorieController->updateCategorie(new Categorie($nom, $description, $icone), $id);
         header('Location: index.php?page=categories&updated=1');
         exit;
     }
 }
 
-// ── CHARGER LES DONNÉES ──
-$categories   = $categorieController->listCategoriesWithCount();
-$statsAvancees = $categorieController->getStatsCategoriesAvancees();
-$top5          = $categorieController->getTop5Categories();
+$categories = $categorieController->listCategoriesWithCount();
+$editData = isset($_GET['edit']) && is_numeric($_GET['edit']) ? $categorieController->getCategorie((int) $_GET['edit']) : null;
+$categorieSelectionnee = isset($_GET['show']) && is_numeric($_GET['show']) ? $categorieController->getCategorie((int) $_GET['show']) : null;
+$servicesLies = $categorieSelectionnee ? $categorieController->getServicesByCategorie((int) $categorieSelectionnee['id_categorie']) : [];
+$totalCategories = count($categories);
+$usedCategories = count(array_filter($categories, static fn(array $cat): bool => (int) ($cat['nb_services'] ?? 0) > 0));
+$emptyCategories = max(0, $totalCategories - $usedCategories);
+$totalServices = array_reduce($categories, static fn(int $carry, array $cat): int => $carry + (int) ($cat['nb_services'] ?? 0), 0);
 
-$total = count($categories);
-$editData = null;
-$servicesLies = [];
-$categorieSelectionnee = null;
-
-if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
-    $editData = $categorieController->getCategorie((int)$_GET['edit']);
-}
-
-if (isset($_GET['show']) && is_numeric($_GET['show'])) {
-    $idShow = (int)$_GET['show'];
-    $categorieSelectionnee = $categorieController->getCategorie($idShow);
-    $servicesLies = $categorieController->getServicesByCategorie($idShow);
-}
-
-// Icônes disponibles
 $icones = [
     '🔧' => 'Plomberie / Réparation',
     '⚡' => 'Électricité / Énergie',
-    '🎨' => 'Peinture / Art / Design',
-    '🌿' => 'Jardinage / Nature',
-    '🧹' => 'Ménage / Nettoyage',
-    '💻' => 'Informatique / Tech',
-    '🏗️' => 'Construction / BTP',
-    '🚗' => 'Automobile / Transport',
-    '📚' => 'Éducation / Formation',
-    '💊' => 'Santé / Bien-être',
-    '🍽️' => 'Restauration / Traiteur',
-    '📸' => 'Photo / Vidéo / Médias',
-    '⚖️' => 'Juridique / Conseil',
-    '💰' => 'Finance / Comptabilité',
-    '🔒' => 'Sécurité / Surveillance',
-    '🏠' => 'Immobilier / Déménagement',
-    '✂️' => 'Beauté / Coiffure / Mode',
-    '🎵' => 'Musique / Événements',
-    '🐾' => 'Animaux / Vétérinaire',
-    '🌍' => 'Traduction / International',
+    '🎨' => 'Peinture / Design',
+    '🌿' => 'Jardinage',
+    '🧹' => 'Ménage',
+    '💻' => 'Informatique',
+    '🏗️' => 'Construction',
+    '🚗' => 'Transport',
+    '📚' => 'Éducation',
+    '💊' => 'Santé',
+    '🍽️' => 'Restauration',
+    '📸' => 'Photo / Vidéo',
+    '⚖️' => 'Juridique',
+    '💰' => 'Finance',
+    '🔒' => 'Sécurité',
+    '🏠' => 'Immobilier',
+    '✂️' => 'Beauté / Coiffure',
+    '🎵' => 'Événementiel',
+    '🐾' => 'Animaux',
+    '🌍' => 'Langues / International',
 ];
 
-function catDispoBadgeStyle(string $dispo): string {
-    $dispo = trim($dispo);
-    if ($dispo === 'Disponible') {
-        return 'background:rgba(41,180,99,0.14); color:#4cd774;';
-    }
-    return 'background:rgba(255,95,95,0.14); color:#ff8b8b;';
+function adminCategoryAppRoot(): string
+{
+    $script = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '');
+    $root = dirname($script, 3);
+    return ($root === '/' || $root === '\\') ? '' : rtrim($root, '/');
 }
 
-function catStatutBadgeStyle(string $statut): string {
-    $statut = trim($statut);
-    if ($statut === 'Validé') {
-        return 'background:rgba(76,138,255,0.14); color:#6ea8ff;';
+function adminCategoryAssetUrl(string $path = '', string $fallback = 'assets/images/services/default.jpg'): string
+{
+    $path = trim($path);
+    if ($path === '') {
+        $path = $fallback;
     }
-    if ($statut === 'En attente') {
-        return 'background:rgba(255,193,7,0.14); color:#ffd04d;';
+    if (preg_match('~^https?://~i', $path)) {
+        return $path;
     }
-    return 'background:rgba(160,160,160,0.15); color:#d7d7d7;';
+    return adminCategoryAppRoot() . '/' . ltrim($path, '/');
+}
+
+function categoryBadgeStyles(string $value, string $type): string
+{
+    $normalized = mb_strtolower(trim($value), 'UTF-8');
+    if ($type === 'availability') {
+        return $normalized === 'disponible'
+            ? 'background:rgba(41,180,99,.14);color:#4cd774;'
+            : 'background:rgba(255,95,95,.14);color:#ff8b8b;';
+    }
+    return match ($normalized) {
+        'validé', 'valide' => 'background:rgba(76,138,255,.14);color:#6ea8ff;',
+        'en attente' => 'background:rgba(255,193,7,.14);color:#ffd04d;',
+        default => 'background:rgba(160,160,160,.15);color:#d7d7d7;',
+    };
 }
 ?>
 
-<?php if (isset($_GET['added'])): ?>
-<div class="gs-alert gs-alert-ok">✓ Catégorie ajoutée avec succès.</div>
-<?php elseif (isset($_GET['updated'])): ?>
-<div class="gs-alert gs-alert-ok">✓ Catégorie mise à jour avec succès.</div>
-<?php elseif (isset($_GET['deleted'])): ?>
-<div class="gs-alert gs-alert-ok">✓ Catégorie supprimée.</div>
-<?php endif; ?>
-
-<?php if (!empty($errors)): ?>
-<div class="gs-alert gs-alert-err">
-    <?php foreach ($errors as $e): ?>
-        <div>✕ <?php echo htmlspecialchars($e); ?></div>
-    <?php endforeach; ?>
-</div>
-<?php endif; ?>
-
 <style>
-.gs-alert{padding:13px 18px;border-radius:12px;font-size:14px;font-weight:500;margin-bottom:18px;border-left:4px solid transparent;}
-.gs-alert-ok{background:rgba(76,175,80,0.1);color:#2e7d32;border-left-color:#4CAF50;}
-.gs-alert-err{background:rgba(239,68,68,0.1);color:#c62828;border-left-color:#e53935;}
-
-.form-panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-lg);padding:24px;margin-bottom:24px;}
-.form-panel-title{font-family:'Poppins',sans-serif;font-size:16px;font-weight:700;color:var(--text);margin-bottom:20px;padding-bottom:12px;border-bottom:1px solid var(--line);}
-.form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
-.form-row.single{grid-template-columns:1fr;}
-.field{display:flex;flex-direction:column;gap:6px;}
-.field label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;}
-.field input,.field textarea,.field select{padding:11px 14px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--text);font-size:14px;font-family:inherit;outline:none;transition:border-color .2s,box-shadow .2s;}
-.field input:focus,.field textarea:focus,.field select:focus{border-color:var(--orange);box-shadow:0 0 0 3px rgba(238,88,40,0.12);}
-.field input.invalid,.field textarea.invalid,.field select.invalid{border-color:#e53935;box-shadow:0 0 0 2px rgba(229,57,53,0.12);}
-.field input.valid,.field textarea.valid,.field select.valid{border-color:#4CAF50;}
-.field-err{display:none;font-size:12px;color:#e53935;margin-top:3px;}
-.field-err::before{content:"✕ ";}
-.field-err.show{display:block;}
-.field-ok{display:none;font-size:12px;color:#2e7d32;margin-top:3px;}
-.field-ok::before{content:"✓ ";}
-.field-ok.show{display:block;}
-.field textarea{resize:vertical;min-height:90px;}
-.field select option{background:var(--card);}
-
-.icone-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;}
-.icone-option{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 6px;border-radius:10px;border:1px solid var(--line);cursor:pointer;transition:all .15s;background:var(--bg);}
-.icone-option:hover{border-color:var(--orange);background:rgba(238,88,40,0.05);}
-.icone-option.selected{border-color:var(--orange);background:rgba(238,88,40,0.1);}
-.icone-option .em{font-size:22px;}
-.icone-option .lb{font-size:10px;color:var(--muted);text-align:center;line-height:1.3;}
-
-.stats-row{
-    display:grid;
-    grid-template-columns:repeat(2, minmax(240px, 1fr));
-    gap:22px;
-    margin:26px 0 24px;
-}
-
-.stat-sm{
-    background:var(--card);
-    border:1px solid var(--line);
-    border-radius:6px;
-    padding:30px 34px;
-    min-height:116px;
-    display:flex;
-    align-items:center;
-    gap:22px;
-    box-shadow:0 12px 28px rgba(7,20,34,0.08);
-}
-
-.stat-sm-icon{
-    width:62px;
-    height:62px;
-    border-radius:50%;
-    background:rgba(238,88,40,0.10);
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-size:26px;
-}
-
-.stat-sm-num{
-    font-family:'Poppins',sans-serif;
-    font-size:34px;
-    line-height:1;
-    font-weight:900;
-    color:var(--text);
-}
-
-.stat-sm-lbl{
-    margin-top:8px;
-    font-size:15px;
-    color:var(--muted);
-}
-
-@media(max-width:800px){
-    .stats-row{
-        grid-template-columns:1fr;
-    }
-}
-
-.toggle-add-btn{margin-bottom:16px;}
-
-body.admin-body.dark .btn-edit-sm{
-    background: rgba(76,138,255,0.18) !important;
-    color: #8ab7ff !important;
-    border: 1px solid rgba(138,183,255,0.38) !important;
-}
-body.admin-body.dark .btn-edit-sm:hover{
-    background: rgba(76,138,255,0.30) !important;
-    color: #d7e8ff !important;
-}
-
-/* ── Stats catégories (même pattern que services) ── */
-.cat-stats-toggle-wrap{display:flex;justify-content:flex-end;margin-bottom:16px;}
-.cat-stats-toggle-btn{border:none;background:linear-gradient(135deg,#ee5828,#c94718);color:#fff;padding:10px 20px;border-radius:12px;font-weight:800;font-size:13px;cursor:pointer;box-shadow:0 8px 20px rgba(238,88,40,.25);font-family:inherit;}
-
-/* KPI cards */
-.ck2-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:26px;}
-.ck2-card{background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:20px 16px;display:flex;align-items:center;gap:13px;box-shadow:0 8px 24px rgba(7,20,34,.07);transition:transform .2s;min-width:0;}
-.ck2-card:hover{transform:translateY(-3px);}
-.ck2-icon{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:21px;flex-shrink:0;}
-.ck2-num{font-size:26px;font-weight:900;color:var(--text);line-height:1;font-family:'Poppins',sans-serif;}
-.ck2-lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:4px;}
-.ck2-sub{font-size:10px;color:var(--muted);margin-top:2px;}
-.ic2-or{background:rgba(238,88,40,.12);}
-.ic2-gr{background:rgba(41,180,99,.12);}
-.ic2-rd{background:rgba(255,95,95,.12);}
-.ic2-bl{background:rgba(76,138,255,.14);}
-.ic2-yw{background:rgba(255,193,7,.15);}
-
-/* Charts row — même pattern exact que .ck-row dans services */
-.ck2-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-bottom:26px;}
-@media(max-width:1000px){.ck2-row{grid-template-columns:1fr;}}
-.ck2-panel{background:var(--panel);border:1px solid var(--border);border-radius:20px;padding:22px;box-shadow:0 8px 24px rgba(7,20,34,.07);min-width:0;overflow:hidden;}
-.ck2-title{font-size:13px;font-weight:900;color:var(--text);text-transform:uppercase;letter-spacing:.05em;}
-.ck2-sub-txt{font-size:11px;color:var(--muted);margin:5px 0 14px;}
-/* LA CLÉ : même que .ck-canvas dans services.php */
-.ck2-canvas{height:210px;position:relative;}
-
-/* Légende donut inline */
-.ck2-legend{display:flex;flex-direction:column;gap:10px;margin-top:14px;}
-.ck2-legend-item{display:flex;align-items:center;gap:10px;}
-.ck2-legend-dot{width:11px;height:11px;border-radius:50%;flex-shrink:0;}
-.ck2-legend-lbl{font-size:12px;color:var(--text);font-weight:600;flex:1;}
-.ck2-legend-val{font-size:13px;font-weight:900;color:var(--text);}
-.ck2-legend-pct{font-size:11px;color:var(--muted);margin-left:4px;}
-
-/* Score de santé — barres de progression */
-.ck2-health-list{display:flex;flex-direction:column;gap:12px;margin-top:4px;}
-.ck2-health-item{display:flex;flex-direction:column;gap:5px;}
-.ck2-health-top{display:flex;justify-content:space-between;align-items:center;}
-.ck2-health-name{font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:75%;}
-.ck2-health-val{font-size:11px;font-weight:900;white-space:nowrap;}
-.ck2-health-bar-bg{width:100%;height:7px;border-radius:99px;background:var(--border);}
-.ck2-health-bar-fill{height:7px;border-radius:99px;transition:width .6s ease;}
+.cat-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:24px;}
+.cat-kpi{background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:20px 18px;box-shadow:0 10px 24px rgba(7,20,34,.08);} 
+.cat-kpi strong{display:block;font-size:30px;line-height:1;font-weight:900;color:var(--text);} 
+.cat-kpi span{display:block;margin-top:8px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);} 
+.cat-toolbar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:18px;} 
+.cat-toolbar input,.cat-toolbar select{padding:10px 14px;border:1px solid var(--border);border-radius:12px;background:var(--panel);color:var(--text);font-size:13px;font-family:inherit;outline:none;} 
+.cat-toolbar input{flex:1;min-width:220px;} 
+.cat-form{background:var(--panel);border:1px solid var(--border);border-radius:22px;padding:22px;box-shadow:0 12px 32px rgba(7,20,34,.08);margin-bottom:22px;} 
+.cat-form h3{margin:0 0 16px;font-size:18px;color:var(--text);} 
+.cat-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;} 
+.cat-field{display:flex;flex-direction:column;gap:6px;} 
+.cat-field label{font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;} 
+.cat-field input,.cat-field textarea{padding:11px 14px;border:1px solid var(--border);border-radius:12px;background:var(--bg);color:var(--text);font-family:inherit;} 
+.cat-field textarea{min-height:96px;resize:vertical;} 
+.cat-icons{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;margin-top:8px;} 
+.cat-icon-option{border:1px solid var(--border);border-radius:12px;padding:10px 8px;background:var(--bg);cursor:pointer;text-align:center;transition:.2s ease;} 
+.cat-icon-option.selected,.cat-icon-option:hover{border-color:#ee5828;background:rgba(238,88,40,.08);} 
+.cat-icon-option .em{display:block;font-size:22px;} 
+.cat-icon-option .txt{display:block;margin-top:4px;font-size:11px;color:var(--muted);} 
+.cat-table-wrap{background:var(--panel);border:1px solid var(--border);border-radius:22px;overflow:hidden;box-shadow:0 12px 36px rgba(7,20,34,.12);} 
+.cat-table{width:100%;border-collapse:collapse;} 
+.cat-table th{padding:14px 16px;font-size:11px;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;text-align:left;background:rgba(238,88,40,.04);border-bottom:1px solid var(--border);} 
+.cat-table td{padding:14px 16px;font-size:13px;color:var(--text);border-bottom:1px solid var(--border);vertical-align:middle;} 
+.cat-table tbody tr:hover{background:rgba(238,88,40,.03);} 
+.cat-actions{display:flex;gap:8px;flex-wrap:wrap;} 
+.cat-pill{display:inline-block;padding:6px 12px;border-radius:999px;background:rgba(238,88,40,.12);color:#ff8b5a;font-weight:800;font-size:11px;} 
+.cat-btn-blue,.cat-btn-orange,.cat-btn-red{padding:8px 14px;border-radius:10px;font-weight:800;text-decoration:none;font-size:12px;} 
+.cat-btn-blue{background:rgba(76,138,255,.14);color:#8ab7ff;} 
+.cat-btn-orange{background:rgba(238,88,40,.14);color:#ff8b5a;} 
+.cat-btn-red{background:rgba(255,95,95,.14);color:#ff8b8b;} 
+.cat-linked{margin-top:24px;} 
+.cat-linked img{width:64px;height:48px;object-fit:cover;border-radius:10px;display:block;background:#10202f;} 
+.table-pager{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;padding-top:14px;} 
+.table-pager button{border:1px solid var(--border);background:var(--panel);color:var(--text);padding:8px 12px;border-radius:10px;font:inherit;font-size:12px;font-weight:800;cursor:pointer;} 
+.table-pager button.active{background:linear-gradient(135deg,#ee5828,#35b86b);color:#fff;border-color:transparent;} 
+.table-pager .pager-meta{align-self:center;color:var(--muted);font-size:12px;margin-right:auto;} 
+@media(max-width:900px){.cat-form-grid{grid-template-columns:1fr;}} 
 </style>
 
-<!-- Toggle stats catégories -->
-<div class="cat-stats-toggle-wrap">
-    <button type="button" id="toggleCatStatsBtn" class="cat-stats-toggle-btn">Masquer les statistiques</button>
-</div>
+<?php if (isset($_GET['added'])): ?><div class="app-flash app-flash-success">Catégorie ajoutée avec succès.</div><?php endif; ?>
+<?php if (isset($_GET['updated'])): ?><div class="app-flash app-flash-success">Catégorie mise à jour avec succès.</div><?php endif; ?>
+<?php if (isset($_GET['deleted'])): ?><div class="app-flash app-flash-success">Catégorie supprimée.</div><?php endif; ?>
+<?php foreach ($errors as $error): ?><div class="error-box" style="margin-bottom:12px;"><?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?></div><?php endforeach; ?>
 
-<!-- STATS ZONE CATÉGORIES -->
-<div id="catStatsZone">
-
-    <?php
-    $totalCat     = (int)($statsAvancees['total_categories'] ?? $total);
-    $catUtilisees = (int)($statsAvancees['categories_utilisees'] ?? 0);
-    $catVides     = (int)($statsAvancees['categories_vides'] ?? 0);
-    $totalSrv     = (int)($statsAvancees['total_services'] ?? 0);
-    $topCatNom    = $statsAvancees['top_categorie'] ?? '—';
-    $topCatNb     = (int)($statsAvancees['top_nb'] ?? 0);
-    $pctUtil      = $totalCat > 0 ? round($catUtilisees / $totalCat * 100, 1) : 0;
-    $pctVides     = $totalCat > 0 ? round($catVides / $totalCat * 100, 1) : 0;
-    ?>
-
-    <!-- KPI -->
-    <div class="ck2-grid reveal">
-        <div class="ck2-card"><div class="ck2-icon ic2-or">🗂️</div><div><div class="ck2-num"><?= $totalCat ?></div><div class="ck2-lbl">Total catégories</div></div></div>
-        <div class="ck2-card"><div class="ck2-icon ic2-gr">✅</div><div><div class="ck2-num"><?= $catUtilisees ?></div><div class="ck2-lbl">Utilisées</div><div class="ck2-sub">Avec au moins un service</div></div></div>
-        <div class="ck2-card"><div class="ck2-icon ic2-rd">📭</div><div><div class="ck2-num"><?= $catVides ?></div><div class="ck2-lbl">Vides</div><div class="ck2-sub">Sans service lié</div></div></div>
-        <div class="ck2-card"><div class="ck2-icon ic2-bl">⚙️</div><div><div class="ck2-num"><?= $totalSrv ?></div><div class="ck2-lbl">Services liés</div><div class="ck2-sub">Tous confondus</div></div></div>
-        <div class="ck2-card"><div class="ck2-icon ic2-yw">🏆</div><div><div class="ck2-num" style="font-size:15px;word-break:break-word;"><?= htmlspecialchars($topCatNom) ?></div><div class="ck2-lbl">Top catégorie</div><div class="ck2-sub"><?= $topCatNb ?> service(s)</div></div></div>
-    </div>
-
-    <!-- Graphiques — 3 colonnes comme services -->
-    <div class="ck2-row reveal">
-
-        <!-- Donut utilisées vs vides -->
-        <div class="ck2-panel">
-            <div class="ck2-title">Utilisées vs vides</div>
-            <div class="ck2-sub-txt">Répartition selon leur utilisation</div>
-            <div class="ck2-canvas"><canvas id="chartCatDonut"></canvas></div>
-            <div class="ck2-legend">
-                <div class="ck2-legend-item">
-                    <div class="ck2-legend-dot" style="background:#4cd774;"></div>
-                    <span class="ck2-legend-lbl">Utilisées</span>
-                    <span class="ck2-legend-val"><?= $catUtilisees ?></span>
-                    <span class="ck2-legend-pct"><?= $pctUtil ?>%</span>
-                </div>
-                <div class="ck2-legend-item">
-                    <div class="ck2-legend-dot" style="background:#ff8b8b;"></div>
-                    <span class="ck2-legend-lbl">Vides</span>
-                    <span class="ck2-legend-val"><?= $catVides ?></span>
-                    <span class="ck2-legend-pct"><?= $pctVides ?>%</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Top 5 barres horizontales -->
-        <div class="ck2-panel">
-            <div class="ck2-title">Top 5 catégories</div>
-            <div class="ck2-sub-txt">Par nombre de services liés</div>
-            <div class="ck2-canvas"><canvas id="chartCatTop5"></canvas></div>
-        </div>
-
-        <!-- Distribution du nombre de services par catégorie -->
-        <div class="ck2-panel">
-            <div class="ck2-title">Distribution des services</div>
-            <div class="ck2-sub-txt">Nombre de catégories par tranche de services</div>
-            <div class="ck2-canvas"><canvas id="chartCatDist"></canvas></div>
-        </div>
-
-    </div>
-
-</div><!-- /catStatsZone -->
-
-<section class="action-bar reveal" style="margin-bottom:24px;">
-    <div class="search-box">
-        <input
-            type="text"
-            id="categorySearch"
-            placeholder="Rechercher une catégorie..."
-            autocomplete="off"
-        >
-
-        <select id="categorySort">
-            <option value="">Trier par</option>
-            <option value="az">Nom A-Z</option>
-            <option value="za">Nom Z-A</option>
-            <option value="services_desc">Plus de services</option>
-            <option value="services_asc">Moins de services</option>
-        </select>
-    </div>
-
-    <div class="export-bar" style="display:flex; gap:12px; align-items:center;">
-        <a href="index.php?page=exportCategoriesPdf" target="_blank" class="outline-btn" style="text-decoration:none;display:inline-flex;align-items:center;gap:6px;">🖨️ Exporter PDF</a>
-        <button class="solid-btn" type="button" onclick="toggleAddForm()">
-            + Ajouter une catégorie
-        </button>
-    </div>
+<section class="cat-summary reveal">
+    <article class="cat-kpi"><strong><?php echo $totalCategories; ?></strong><span>Total catégories</span></article>
+    <article class="cat-kpi"><strong><?php echo $usedCategories; ?></strong><span>Utilisées</span></article>
+    <article class="cat-kpi"><strong><?php echo $emptyCategories; ?></strong><span>Sans service</span></article>
+    <article class="cat-kpi"><strong><?php echo $totalServices; ?></strong><span>Services liés</span></article>
 </section>
 
-
-
-<div id="addFormSection" style="display:none;">
-    <div class="form-panel">
-        <div class="form-panel-title">Nouvelle catégorie</div>
-        <form method="POST" id="addCatForm" novalidate>
-            <input type="hidden" name="action" value="add">
-
-            <div class="form-row">
-                <div class="field">
-                    <label for="add_nom">Nom de la catégorie</label>
-                    <input type="text" id="add_nom" name="nom" placeholder="Ex : Intelligence Artificielle" autocomplete="off">
-                    <div class="field-err" id="ae-nom"></div>
-                    <div class="field-ok" id="ao-nom">Nom valide</div>
-                </div>
-
-                <div class="field">
-                    <label for="add_desc">Description</label>
-                    <textarea id="add_desc" name="description" placeholder="Décrivez cette catégorie..."></textarea>
-                    <div class="field-err" id="ae-desc"></div>
-                    <div class="field-ok" id="ao-desc">Description valide</div>
-                </div>
-            </div>
-
-            <div class="field" style="margin-bottom:16px;">
-                <label>Icône <span id="add_icone_preview" style="font-size:20px;margin-left:8px;"></span></label>
-                <input type="hidden" id="add_icone" name="icone">
-                <div class="icone-grid" id="add_icone_grid">
-                    <?php foreach ($icones as $em => $lb): ?>
-                    <div class="icone-option" onclick="selectIcone('add', '<?php echo htmlspecialchars($em); ?>', this)">
-                        <span class="em"><?php echo $em; ?></span>
-                        <span class="lb"><?php echo htmlspecialchars($lb); ?></span>
-                    </div>
-                    <?php endforeach; ?>
-                </div>
-                <div class="field-err" id="ae-icone"></div>
-            </div>
-
-            <div style="display:flex;gap:10px;">
-                <button type="submit" class="solid-btn">✓ Enregistrer</button>
-                <button type="button" class="ghost-btn" onclick="toggleAddForm()">Annuler</button>
-            </div>
-        </form>
+<div class="cat-toolbar reveal">
+    <input type="text" id="categorySearch" placeholder="Rechercher une catégorie..." autocomplete="off">
+    <select id="categorySort">
+        <option value="">Trier par</option>
+        <option value="az">Nom A → Z</option>
+        <option value="za">Nom Z → A</option>
+        <option value="services_desc">Plus de services</option>
+        <option value="services_asc">Moins de services</option>
+    </select>
+    <div style="margin-left:auto;display:flex;gap:8px;">
+        <a href="index.php?page=exportCategoriesPdf" target="_blank" class="outline-btn" style="text-decoration:none;padding:9px 16px;border-radius:10px;font-size:13px;font-weight:700;">PDF</a>
+        <button class="solid-btn" type="button" onclick="toggleCategoryForm()">+ Ajouter une catégorie</button>
     </div>
 </div>
 
-<?php if ($editData): ?>
-<div class="form-panel">
-    <div class="form-panel-title" style="display:flex;justify-content:space-between;align-items:center;">
-        <span>Modifier la catégorie — <?php echo htmlspecialchars($editData['nom']); ?></span>
-        <a href="index.php?page=categories" class="ghost-btn" style="font-size:13px;">✕ Annuler</a>
-    </div>
-
-    <form method="POST" id="editCatForm" novalidate>
-        <input type="hidden" name="action" value="edit">
-        <input type="hidden" name="id" value="<?php echo $editData['id_categorie']; ?>">
-
-        <div class="form-row">
-            <div class="field">
-                <label for="edit_nom">Nom de la catégorie</label>
-                <input type="text" id="edit_nom" name="nom" value="<?php echo htmlspecialchars($editData['nom']); ?>" autocomplete="off">
-                <div class="field-err" id="ee-nom"></div>
-                <div class="field-ok" id="eo-nom">Nom valide</div>
+<div id="categoryFormPanel" class="cat-form" style="display:<?php echo $editData || (!empty($errors) && (($_POST['action'] ?? '') === 'add' || ($_POST['action'] ?? '') === 'edit')) ? 'block' : 'none'; ?>;">
+    <h3><?php echo $editData ? 'Modifier la catégorie' : 'Nouvelle catégorie'; ?></h3>
+    <form method="POST">
+        <input type="hidden" name="action" value="<?php echo $editData ? 'edit' : 'add'; ?>">
+        <?php if ($editData): ?><input type="hidden" name="id" value="<?php echo (int) $editData['id_categorie']; ?>"><?php endif; ?>
+        <div class="cat-form-grid">
+            <div class="cat-field">
+                <label>Nom</label>
+                <input type="text" name="nom" value="<?php echo htmlspecialchars((string) ($editData['nom'] ?? ($_POST['nom'] ?? '')), ENT_QUOTES, 'UTF-8'); ?>" required>
             </div>
-
-            <div class="field">
-                <label for="edit_desc">Description</label>
-                <textarea id="edit_desc" name="description"><?php echo htmlspecialchars($editData['description'] ?? ''); ?></textarea>
-                <div class="field-err" id="ee-desc"></div>
-                <div class="field-ok" id="eo-desc">Description valide</div>
+            <div class="cat-field">
+                <label>Description</label>
+                <textarea name="description" required><?php echo htmlspecialchars((string) ($editData['description'] ?? ($_POST['description'] ?? '')), ENT_QUOTES, 'UTF-8'); ?></textarea>
             </div>
         </div>
-
-        <div class="field" style="margin-bottom:16px;">
-            <label>Icône <span id="edit_icone_preview" style="font-size:20px;margin-left:8px;"><?php echo htmlspecialchars($editData['icone'] ?? ''); ?></span></label>
-            <input type="hidden" id="edit_icone" name="icone" value="<?php echo htmlspecialchars($editData['icone'] ?? ''); ?>">
-            <div class="icone-grid" id="edit_icone_grid">
-                <?php foreach ($icones as $em => $lb): ?>
-                <div class="icone-option <?php echo ($editData['icone'] ?? '') === $em ? 'selected' : ''; ?>"
-                     onclick="selectIcone('edit', '<?php echo htmlspecialchars($em); ?>', this)">
-                    <span class="em"><?php echo $em; ?></span>
-                    <span class="lb"><?php echo htmlspecialchars($lb); ?></span>
-                </div>
+        <?php $selectedIcon = (string) ($editData['icone'] ?? ($_POST['icone'] ?? '')); ?>
+        <div class="cat-field" style="margin-top:16px;">
+            <label>Icône</label>
+            <input type="hidden" id="categoryIconInput" name="icone" value="<?php echo htmlspecialchars($selectedIcon, ENT_QUOTES, 'UTF-8'); ?>">
+            <div class="cat-icons" id="categoryIconGrid">
+                <?php foreach ($icones as $emoji => $label): ?>
+                    <button type="button" class="cat-icon-option <?php echo $selectedIcon === $emoji ? 'selected' : ''; ?>" data-icon="<?php echo htmlspecialchars($emoji, ENT_QUOTES, 'UTF-8'); ?>">
+                        <span class="em"><?php echo htmlspecialchars($emoji, ENT_QUOTES, 'UTF-8'); ?></span>
+                        <span class="txt"><?php echo htmlspecialchars($label, ENT_QUOTES, 'UTF-8'); ?></span>
+                    </button>
                 <?php endforeach; ?>
             </div>
-            <div class="field-err" id="ee-icone"></div>
         </div>
-
-        <div style="display:flex;gap:10px;">
-            <button type="submit" class="solid-btn">✓ Mettre à jour</button>
-            <a href="index.php?page=categories" class="ghost-btn">Annuler</a>
+        <div style="display:flex;gap:10px;margin-top:18px;">
+            <button type="submit" class="solid-btn"><?php echo $editData ? 'Mettre à jour' : 'Enregistrer'; ?></button>
+            <?php if ($editData): ?><a href="index.php?page=categories" class="ghost-btn">Annuler</a><?php else: ?><button type="button" class="ghost-btn" onclick="toggleCategoryForm()">Annuler</button><?php endif; ?>
         </div>
     </form>
 </div>
-<?php endif; ?>
 
-<section class="admin-panel reveal" style="margin-top:22px;">
-    <div class="table-container" style="border-radius:22px; overflow:hidden; box-shadow:0 18px 40px rgba(7, 20, 34, 0.18);">
-        <table class="module-table" style="width:100%; border-collapse:collapse;">
+<section class="cat-table-wrap reveal">
+    <table class="cat-table">
+        <thead>
+            <tr>
+                <th>Icône</th>
+                <th>Nom</th>
+                <th>Description</th>
+                <th>Services liés</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="categoryTableBody">
+            <?php foreach ($categories as $cat): ?>
+                <tr class="category-row" data-name="<?php echo htmlspecialchars(mb_strtolower((string) ($cat['nom'] ?? ''), 'UTF-8'), ENT_QUOTES, 'UTF-8'); ?>" data-services="<?php echo (int) ($cat['nb_services'] ?? 0); ?>">
+                    <td style="font-size:22px;"><?php echo htmlspecialchars((string) ($cat['icone'] ?? '🗂️'), ENT_QUOTES, 'UTF-8'); ?></td>
+                    <td style="font-weight:700;"><?php echo htmlspecialchars((string) ($cat['nom'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
+                    <td><?php echo htmlspecialchars((string) ($cat['description'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
+                    <td><span class="cat-pill"><?php echo (int) ($cat['nb_services'] ?? 0); ?></span></td>
+                    <td>
+                        <div class="cat-actions">
+                            <a href="index.php?page=categories&show=<?php echo (int) ($cat['id_categorie'] ?? 0); ?>" class="cat-btn-orange">Voir services liés</a>
+                            <a href="index.php?page=categories&edit=<?php echo (int) ($cat['id_categorie'] ?? 0); ?>" class="cat-btn-blue">Modifier</a>
+                            <a href="index.php?page=categories&delete=<?php echo (int) ($cat['id_categorie'] ?? 0); ?>" class="cat-btn-red" onclick="return confirm('Supprimer cette catégorie ?');">Supprimer</a>
+                        </div>
+                    </td>
+                </tr>
+            <?php endforeach; ?>
+            <?php if (empty($categories)): ?>
+                <tr><td colspan="5" style="text-align:center;padding:30px;">Aucune catégorie trouvée.</td></tr>
+            <?php endif; ?>
+        </tbody>
+    </table>
+</section>
+<div id="categoryPager" class="table-pager"></div>
+
+<?php if ($categorieSelectionnee): ?>
+<section class="cat-linked reveal">
+    <div class="cat-form" style="margin-bottom:0;">
+        <h3>Services liés à la catégorie : <span style="color:var(--orange);"><?php echo htmlspecialchars((string) $categorieSelectionnee['nom'], ENT_QUOTES, 'UTF-8'); ?></span></h3>
+        <p style="margin:0;color:var(--muted);"><?php echo htmlspecialchars((string) ($categorieSelectionnee['description'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></p>
+    </div>
+    <div class="cat-table-wrap">
+        <table class="cat-table">
             <thead>
-                <tr style="background: rgba(255,255,255,0.02);">
-                    <th style="padding:18px;">Icône</th>
-                    <th style="padding:18px;">Nom</th>
-                    <th style="padding:18px;">Description</th>
-                    <th style="padding:18px;">Services liés</th>
-                    <th style="padding:18px;">Actions</th>
+                <tr>
+                    <th>Image</th>
+                    <th>Titre</th>
+                    <th>Prix</th>
+                    <th>Disponibilité</th>
+                    <th>Statut</th>
                 </tr>
             </thead>
-
-            <tbody>
-                <?php if (!empty($categories)): ?>
-                    <?php foreach ($categories as $cat): ?>
-                    <tr class="category-row"
-    data-name="<?php echo mb_strtolower(htmlspecialchars($cat['nom'])); ?>"
-    data-services="<?php echo (int)$cat['nb_services']; ?>"
-    style="border-top:1px solid rgba(255,255,255,0.06);">
-                        <td style="padding:18px; font-size:22px;">
-                            <?php echo htmlspecialchars($cat['icone'] ?? '🗂️'); ?>
-                        </td>
-
-                        <td style="padding:18px; font-weight:700;">
-                            <?php echo htmlspecialchars($cat['nom']); ?>
-                        </td>
-
-                        <td style="padding:18px;">
-                            <?php echo htmlspecialchars($cat['description']); ?>
-                        </td>
-
-                        <td style="padding:18px;">
-                            <span style="padding:6px 12px; border-radius:999px; background:rgba(238,88,40,0.12); color:#ff8b5a; font-weight:700;">
-                                <?php echo $cat['nb_services']; ?>
-                            </span>
-                        </td>
-
-                        <td style="padding:18px;">
-                            <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                                <a href="index.php?page=categories&show=<?php echo $cat['id_categorie']; ?>"
-                                   style="padding:8px 14px; border-radius:10px; background:rgba(238,88,40,0.14); color:#ff8b5a; font-weight:700; text-decoration:none;">
-                                    Voir services liés
-                                </a>
-
-                                <a href="index.php?page=categories&edit=<?php echo $cat['id_categorie']; ?>"
-                                   style="padding:8px 14px; border-radius:10px; background:rgba(76,138,255,0.14); color:#8ab7ff; font-weight:700; text-decoration:none;">
-                                    Modifier
-                                </a>
-
-                                <a href="index.php?page=categories&delete=<?php echo $cat['id_categorie']; ?>"
-                                   onclick="return confirm('Supprimer cette catégorie ?');"
-                                   style="padding:8px 14px; border-radius:10px; background:rgba(255,95,95,0.14); color:#ff8b8b; font-weight:700; text-decoration:none;">
-                                    Supprimer
-                                </a>
-                            </div>
-                        </td>
-                    </tr>
-                    <?php endforeach; ?>
-                <?php else: ?>
+            <tbody id="linkedServicesBody">
+                <?php foreach ($servicesLies as $service): ?>
+                    <?php
+                    $img = adminCategoryAssetUrl((string) ($service['image'] ?? ''), 'assets/images/services/default.jpg');
+                    $dispo = trim((string) ($service['disponibilite'] ?? '—'));
+                    $statut = trim((string) ($service['statut'] ?? '—'));
+                    ?>
                     <tr>
-                        <td colspan="5" style="text-align:center;padding:30px;">
-                            Aucune catégorie trouvée.
-                        </td>
+                        <td><img src="<?php echo htmlspecialchars($img, ENT_QUOTES, 'UTF-8'); ?>" alt="<?php echo htmlspecialchars((string) ($service['titre'] ?? 'Service'), ENT_QUOTES, 'UTF-8'); ?>" onerror="this.onerror=null;this.src='<?php echo htmlspecialchars(adminCategoryAssetUrl('', 'assets/images/services/default.jpg'), ENT_QUOTES, 'UTF-8'); ?>';"></td>
+                        <td style="font-weight:700;"><?php echo htmlspecialchars((string) ($service['titre'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
+                        <td><?php echo htmlspecialchars(number_format((float) ($service['prix'] ?? 0), 2, ',', ' ') . ' €', ENT_QUOTES, 'UTF-8'); ?></td>
+                        <td><span style="display:inline-block;padding:6px 12px;border-radius:999px;font-size:11px;font-weight:800;<?php echo categoryBadgeStyles($dispo, 'availability'); ?>"><?php echo htmlspecialchars($dispo, ENT_QUOTES, 'UTF-8'); ?></span></td>
+                        <td><span style="display:inline-block;padding:6px 12px;border-radius:999px;font-size:11px;font-weight:800;<?php echo categoryBadgeStyles($statut, 'status'); ?>"><?php echo htmlspecialchars($statut, ENT_QUOTES, 'UTF-8'); ?></span></td>
                     </tr>
+                <?php endforeach; ?>
+                <?php if (empty($servicesLies)): ?>
+                    <tr><td colspan="5" style="text-align:center;padding:30px;">Aucun service lié à cette catégorie.</td></tr>
                 <?php endif; ?>
             </tbody>
         </table>
     </div>
 </section>
-
-<?php if ($categorieSelectionnee): ?>
-<section class="admin-panel reveal" style="margin-top:24px;">
-    <div style="background:var(--card); border:1px solid var(--line); border-radius:22px; overflow:hidden; box-shadow:0 18px 40px rgba(7,20,34,0.18);">
-        <div style="padding:22px 24px; border-bottom:1px solid var(--line);">
-            <h2 style="margin:0; font-size:24px; font-weight:800; color:var(--text);">
-                Services liés à la catégorie :
-                <span style="color:var(--orange);">
-                    <?php echo htmlspecialchars($categorieSelectionnee['nom']); ?>
-                </span>
-            </h2>
-            <p style="margin:8px 0 0; color:var(--muted); font-size:14px;">
-                <?php echo htmlspecialchars($categorieSelectionnee['description'] ?? ''); ?>
-            </p>
-        </div>
-
-        <div class="table-container">
-            <table class="module-table" style="width:100%; border-collapse:collapse;">
-                <thead>
-                    <tr style="background: rgba(255,255,255,0.02);">
-                        <th style="padding:18px;">Image</th>
-                        <th style="padding:18px;">Titre</th>
-                        <th style="padding:18px;">Prix</th>
-                        <th style="padding:18px;">Disponibilité</th>
-                        <th style="padding:18px;">Statut</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-                    <?php if (!empty($servicesLies)): ?>
-                        <?php foreach ($servicesLies as $service): ?>
-                            <?php
-                            $img = !empty($service['image'])
-                                ? '/GoService_v3/' . ltrim($service['image'], '/')
-                                : '/GoService/assets/images/service/default.jpg';
-
-                            $dispo = trim((string)($service['disponibilite'] ?? ''));
-                            $statut = trim((string)($service['statut'] ?? ''));
-                            ?>
-                            <tr style="border-top:1px solid rgba(255,255,255,0.06);">
-                                <td style="padding:14px 18px;">
-                                    <img
-                                        src="<?php echo htmlspecialchars($img); ?>"
-                                        alt="<?php echo htmlspecialchars($service['titre'] ?? 'Service'); ?>"
-                                        style="width:64px; height:48px; object-fit:cover; border-radius:10px; display:block;"
-                                    >
-                                </td>
-
-                                <td style="padding:18px; font-weight:700;">
-                                    <?php echo htmlspecialchars($service['titre'] ?? ''); ?>
-                                </td>
-
-                                <td style="padding:18px;">
-                                    <?php echo number_format((float)($service['prix'] ?? 0), 2, '.', ''); ?> €
-                                </td>
-
-                                <td style="padding:18px;">
-                                    <span style="display:inline-block; padding:7px 14px; border-radius:999px; font-size:13px; font-weight:700; <?php echo catDispoBadgeStyle($dispo); ?>">
-                                        <?php echo htmlspecialchars($dispo); ?>
-                                    </span>
-                                </td>
-
-                                <td style="padding:18px;">
-                                    <span style="display:inline-block; padding:7px 14px; border-radius:999px; font-size:13px; font-weight:700; <?php echo catStatutBadgeStyle($statut); ?>">
-                                        <?php echo htmlspecialchars($statut); ?>
-                                    </span>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    <?php else: ?>
-                        <tr>
-                            <td colspan="5" style="text-align:center; padding:30px;">
-                                Aucun service lié à cette catégorie.
-                            </td>
-                        </tr>
-                    <?php endif; ?>
-                </tbody>
-            </table>
-        </div>
-    </div>
-</section>
+<div id="linkedServicesPager" class="table-pager"></div>
 <?php endif; ?>
 
 <script>
-function toggleAddForm() {
-    var s = document.getElementById('addFormSection');
-    s.style.display = s.style.display === 'none' ? 'block' : 'none';
+function toggleCategoryForm(){
+    const panel = document.getElementById('categoryFormPanel');
+    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
 }
 
-function selectIcone(prefix, em, el) {
-    document.querySelectorAll('#' + prefix + '_icone_grid .icone-option')
-        .forEach(o => o.classList.remove('selected'));
-
-    el.classList.add('selected');
-
-    document.getElementById(prefix + '_icone').value = em;
-    document.getElementById(prefix + '_icone_preview').textContent = em;
-
-    var errEl = document.getElementById(prefix === 'add' ? 'ae-icone' : 'ee-icone');
-    if (errEl) errEl.classList.remove('show');
-}
-
-function makeValidator(idNom, idDesc, idIcone, errNomId, okNomId, errDescId, okDescId, errIconeId) {
-    var nomEl = document.getElementById(idNom);
-    var descEl = document.getElementById(idDesc);
-    var iconeEl = document.getElementById(idIcone);
-
-    function vNom() {
-        var v = nomEl.value.trim();
-        var regex = /^[a-zA-ZÀ-ÿ\s]+$/;
-
-        if (v === "") {
-            showError(nomEl, errNomId, okNomId, "Nom obligatoire");
-            return false;
-        }
-
-        if (v.length < 3) {
-            showError(nomEl, errNomId, okNomId, "Min 3 caractères");
-            return false;
-        }
-
-        if (!regex.test(v)) {
-            showError(nomEl, errNomId, okNomId, "Lettres seulement");
-            return false;
-        }
-
-        showSuccess(nomEl, errNomId, okNomId);
-        return true;
-    }
-
-    function vDesc() {
-        var v = descEl.value.trim();
-        if (v.length < 5) {
-            showError(descEl, errDescId, okDescId, "Min 5 caractères");
-            return false;
-        }
-        showSuccess(descEl, errDescId, okDescId);
-        return true;
-    }
-
-    function vIcone() {
-        if (!iconeEl.value) {
-            document.getElementById(errIconeId).textContent = "Choisir icône";
-            document.getElementById(errIconeId).classList.add("show");
-            return false;
-        }
-        document.getElementById(errIconeId).classList.remove("show");
-        return true;
-    }
-
-    function showError(el, errId, okId, msg) {
-        el.classList.add("invalid");
-        el.classList.remove("valid");
-        document.getElementById(errId).textContent = msg;
-        document.getElementById(errId).classList.add("show");
-        document.getElementById(okId).classList.remove("show");
-    }
-
-    function showSuccess(el, errId, okId) {
-        el.classList.remove("invalid");
-        el.classList.add("valid");
-        document.getElementById(errId).classList.remove("show");
-        document.getElementById(okId).classList.add("show");
-    }
-
-    nomEl.addEventListener("input", vNom);
-    descEl.addEventListener("input", vDesc);
-
-    return { vNom, vDesc, vIcone };
-}
-
-var addForm = document.getElementById("addCatForm");
-if (addForm) {
-    var vAdd = makeValidator("add_nom", "add_desc", "add_icone", "ae-nom", "ao-nom", "ae-desc", "ao-desc", "ae-icone");
-    addForm.addEventListener("submit", function(e) {
-        if (!(vAdd.vNom() && vAdd.vDesc() && vAdd.vIcone())) {
-            e.preventDefault();
-        }
+document.querySelectorAll('#categoryIconGrid .cat-icon-option').forEach(button => {
+    button.addEventListener('click', function(){
+        document.querySelectorAll('#categoryIconGrid .cat-icon-option').forEach(item => item.classList.remove('selected'));
+        this.classList.add('selected');
+        document.getElementById('categoryIconInput').value = this.dataset.icon || '';
     });
-}
-
-var editForm = document.getElementById("editCatForm");
-if (editForm) {
-    var vEdit = makeValidator("edit_nom", "edit_desc", "edit_icone", "ee-nom", "eo-nom", "ee-desc", "eo-desc", "ee-icone");
-    editForm.addEventListener("submit", function(e) {
-        if (!(vEdit.vNom() && vEdit.vDesc() && vEdit.vIcone())) {
-            e.preventDefault();
-        }
-    });
-}
-
-<?php if (!empty($errors) && ($_POST['action'] ?? '') === 'add'): ?>
-document.getElementById('addFormSection').style.display = 'block';
-<?php endif; ?>
-
-const categorySearch = document.getElementById("categorySearch");
-const categorySort = document.getElementById("categorySort");
-
-function filterCategories() {
-    const value = categorySearch.value.trim().toLowerCase();
-    const rows = document.querySelectorAll(".category-row");
-
-    rows.forEach(row => {
-        const name = row.dataset.name || "";
-
-        if (name.includes(value)) {
-            row.style.display = "";
-        } else {
-            row.style.display = "none";
-        }
-    });
-}
-
-function sortCategories() {
-    const tbody = document.querySelector(".module-table tbody");
-    const rows = Array.from(document.querySelectorAll(".category-row"));
-    const sortValue = categorySort.value;
-
-    rows.sort((a, b) => {
-        const nameA = a.dataset.name || "";
-        const nameB = b.dataset.name || "";
-        const servicesA = parseInt(a.dataset.services || "0");
-        const servicesB = parseInt(b.dataset.services || "0");
-
-        if (sortValue === "az") return nameA.localeCompare(nameB);
-        if (sortValue === "za") return nameB.localeCompare(nameA);
-        if (sortValue === "services_desc") return servicesB - servicesA;
-        if (sortValue === "services_asc") return servicesA - servicesB;
-
-        return 0;
-    });
-
-    rows.forEach(row => tbody.appendChild(row));
-    filterCategories();
-}
-
-if (categorySearch) {
-    categorySearch.addEventListener("input", filterCategories);
-}
-
-if (categorySort) {
-    categorySort.addEventListener("change", sortCategories);
-}
-
-// ── Toggle stats catégories — même pattern que services ──
-document.getElementById('toggleCatStatsBtn').addEventListener('click', function(){
-    const z = document.getElementById('catStatsZone');
-    const hidden = z.style.display === 'none';
-    z.style.display = hidden ? 'block' : 'none';
-    this.textContent = hidden ? 'Masquer les statistiques' : 'Afficher les statistiques';
 });
+
+(function(){
+    function createPager(tbodyId, rowSelector, pagerId, pageSize){
+        const tbody = document.getElementById(tbodyId);
+        const pager = document.getElementById(pagerId);
+        if(!tbody || !pager) return null;
+        let currentPage = 1;
+        function rows(){ return Array.from(tbody.querySelectorAll(rowSelector)).filter(row => row.children.length > 1); }
+        function build(totalPages, totalRows){
+            pager.innerHTML = '';
+            if(totalRows <= pageSize) return;
+            const meta = document.createElement('span');
+            meta.className = 'pager-meta';
+            meta.textContent = `Page ${currentPage} / ${totalPages}`;
+            pager.appendChild(meta);
+            for(let i = 1; i <= totalPages; i++){
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.textContent = i;
+                if(i === currentPage) btn.classList.add('active');
+                btn.addEventListener('click', () => { currentPage = i; render(); });
+                pager.appendChild(btn);
+            }
+        }
+        function render(){
+            const list = rows().filter(row => (row.dataset.filtered || '1') === '1');
+            const totalPages = Math.max(1, Math.ceil(list.length / pageSize));
+            if(currentPage > totalPages) currentPage = totalPages;
+            const start = (currentPage - 1) * pageSize;
+            const end = start + pageSize;
+            rows().forEach(row => row.style.display = 'none');
+            list.forEach((row, index) => { row.style.display = (index >= start && index < end) ? '' : 'none'; });
+            build(totalPages, list.length);
+        }
+        rows().forEach(row => row.dataset.filtered = '1');
+        render();
+        return { render, reset(){ currentPage = 1; render(); } };
+    }
+
+    const categoryPager = createPager('categoryTableBody', '.category-row', 'categoryPager', 8);
+    createPager('linkedServicesBody', 'tr', 'linkedServicesPager', 6);
+
+    const search = document.getElementById('categorySearch');
+    const sort = document.getElementById('categorySort');
+    const tbody = document.getElementById('categoryTableBody');
+    const rows = () => tbody ? Array.from(tbody.querySelectorAll('.category-row')) : [];
+
+    function filterRows(){
+        const value = (search?.value || '').trim().toLowerCase();
+        rows().forEach(row => {
+            row.dataset.filtered = (row.dataset.name || '').includes(value) ? '1' : '0';
+        });
+        categoryPager && categoryPager.reset();
+    }
+
+    function sortRows(){
+        const mode = sort?.value || '';
+        const list = rows();
+        list.sort((a, b) => {
+            const nameA = a.dataset.name || '';
+            const nameB = b.dataset.name || '';
+            const servicesA = parseInt(a.dataset.services || '0', 10);
+            const servicesB = parseInt(b.dataset.services || '0', 10);
+            if (mode === 'az') return nameA.localeCompare(nameB);
+            if (mode === 'za') return nameB.localeCompare(nameA);
+            if (mode === 'services_desc') return servicesB - servicesA;
+            if (mode === 'services_asc') return servicesA - servicesB;
+            return 0;
+        });
+        list.forEach(row => tbody.appendChild(row));
+        categoryPager && categoryPager.render();
+    }
+
+    if (search) search.addEventListener('input', filterRows);
+    if (sort) sort.addEventListener('change', sortRows);
+})();
 </script>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>
-(function(){
-    const isDark    = document.body.classList.contains('dark');
-    const tickColor = isDark ? '#c8d0da' : '#617084';
-    const gridColor = isDark ? 'rgba(255,255,255,.06)' : 'rgba(0,0,0,.06)';
-    const legColor  = isDark ? '#c8d0da' : '#617084';
-
-    const top5Labels = <?= json_encode(array_column($top5,'nom')) ?>;
-    const top5Data   = <?= json_encode(array_map(fn($c)=>(int)$c['nb'], $top5)) ?>;
-    const catUtil    = <?= (int)($statsAvancees['categories_utilisees']??0) ?>;
-    const catVides   = <?= (int)($statsAvancees['categories_vides']??0) ?>;
-    const pal = ['#ee5828','#4cd774','#6ea8ff','#ffd04d','#b97aff','#ff8b8b','#5ce5d0','#ffb347','#f06292'];
-
-    // Donut utilisées vs vides — même options que chartStatut dans services.php
-    new Chart(document.getElementById('chartCatDonut'), {
-        type: 'doughnut',
-        data: {
-            labels: ['Utilisées', 'Vides'],
-            datasets: [{ data: [catUtil, catVides], backgroundColor: ['#4cd774','#ff8b8b'], borderWidth: 0, hoverOffset: 8 }]
-        },
-        options: {
-            responsive: true, maintainAspectRatio: false, cutout: '68%',
-            plugins: { legend: { display: false } }
+document.addEventListener('DOMContentLoaded', function imageFallbackHook() {
+    document.querySelectorAll('img.srv-img, .cat-linked img, .srv-card-image').forEach(function (img) {
+        img.addEventListener('error', function () {
+            this.onerror = null;
+            this.src = '../../assets/images/services/default.jpg';
+        });
+        if (!img.getAttribute('src')) {
+            img.src = '../../assets/images/services/default.jpg';
         }
     });
-
-    // Barres horizontales Top 5 — maintainAspectRatio:false dans un wrapper height:210px
-    new Chart(document.getElementById('chartCatTop5'), {
-        type: 'bar',
-        data: {
-            labels: top5Labels,
-            datasets: [{ label: 'Services', data: top5Data, backgroundColor: '#b97aff', borderRadius: 7, borderSkipped: false }]
-        },
-        options: {
-            indexAxis: 'y',
-            responsive: true, maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: {
-                x: { ticks: { color: tickColor, stepSize: 1 }, grid: { color: gridColor } },
-                y: { ticks: { color: tickColor, font: { size: 11 } }, grid: { display: false } }
-            }
-        }
-    });
-
-    // Distribution : combien de catégories ont 0, 1, 2, 3+ services
-    const allNbs = <?= json_encode(array_map(fn($c) => (int)$c['nb_services'], $categories)) ?>;
-    const distBuckets = [0, 0, 0, 0];
-    allNbs.forEach(n => {
-        if      (n === 0) distBuckets[0]++;
-        else if (n === 1) distBuckets[1]++;
-        else if (n === 2) distBuckets[2]++;
-        else              distBuckets[3]++;
-    });
-    new Chart(document.getElementById('chartCatDist'), {
-        type: 'bar',
-        data: {
-            labels: ['Vides (0)', '1 service', '2 services', '3+ services'],
-            datasets: [{
-                label: 'Catégories',
-                data: distBuckets,
-                backgroundColor: ['#ff8b8b', '#ffd04d', '#6ea8ff', '#4cd774'],
-                borderRadius: 10,
-                borderSkipped: false
-            }]
-        },
-        options: {
-            responsive: true, maintainAspectRatio: false,
-            plugins: { legend: { display: false },
-                tooltip: { callbacks: { label: ctx => ` ${ctx.raw} catégorie(s)` } }
-            },
-            scales: {
-                x: { ticks: { color: tickColor, font: { size: 11 } }, grid: { display: false } },
-                y: { ticks: { color: tickColor, stepSize: 1 }, grid: { color: gridColor },
-                     title: { display: true, text: 'Nb de catégories', color: tickColor, font: { size: 10 } } }
-            }
-        }
-    });
-})();
+});
 </script>

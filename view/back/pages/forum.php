@@ -1,8 +1,50 @@
-<?php
+﻿<?php
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 date_default_timezone_set('Africa/Tunis');
-if (ob_get_level() === 0) { ob_start(); }
+if (ob_get_level() === 0) {
+    ob_start(function (string $html): string {
+        $map = [
+            'Formats image autorisés' => 'Formats image autorisés',
+            "L'image ne doit pas dÃƒÂ©passer 5 Mo." => "L'image ne doit pas dépasser 5 Mo.",
+            'Formats vidÃƒÂ©o autorisÃƒÂ©s' => 'Formats vidéo autorisés',
+            "La vidÃƒÂ©o ne doit pas dÃƒÂ©passer 25 Mo." => "La vidéo ne doit pas dépasser 25 Mo.",
+            "Erreur lors de l'upload de la vidÃƒÂ©o." => "Erreur lors de l'upload de la vidéo.",
+            'publication partagÃƒÂ©e' => 'publication partagée',
+            'Rejeté' => 'Rejeté',
+            'Dompdf retirÃƒÂ©' => 'Dompdf retiré',
+            'fenÃƒÂªtre' => 'fenêtre',
+            'Post ajoute avec succes.' => 'Post ajouté avec succès.',
+            'Post mis a jour avec succes.' => 'Post mis à jour avec succès.',
+            'Post supprime avec succes.' => 'Post supprimé avec succès.',
+            'Post approuvé avec succès.' => 'Post approuvé avec succès.',
+            'Post rejeté avec succès.' => 'Post rejeté avec succès.',
+            'Statut du commentaire modifie avec succes.' => 'Statut du commentaire modifié avec succès.',
+            'Commentaire supprime avec succes.' => 'Commentaire supprimé avec succès.',
+            'Commentaire modifie avec succes.' => 'Commentaire modifié avec succès.',
+            'Popularité' => 'Popularité',
+            'Schémas dynamiques du forum' => 'Schémas dynamiques du forum',
+            'Aucune donnée' => 'Aucune donnée',
+            'Activité' => 'Activité',
+            'Mise Ã  jour automatique aprÃ¨s chaque action.' => 'Mise à jour automatique après chaque action.',
+            'Modération des publications' => 'Modération des publications',
+            'Signalé' => 'Signalé',
+            'Aucun post trouvé.' => 'Aucun post trouvé.',
+            'Réponse' => 'Réponse',
+            'Contenu signalé' => 'Contenu signalé',
+            'Commentaire signalé' => 'Commentaire signalé',
+            '&times;' => '×',
+            'Ã°Å¸â€œÅ ' => 'ðŸ“Š',
+            'Ã°Å¸â€œÂ¤' => 'ðŸ“¤',
+            'Ã°Å¸â€œÂ' => 'ðŸ“',
+            'Ã°Å¸â€™Â¬' => 'ðŸ’¬',
+            'Ã°Å¸Å¡Â©' => 'ðŸš©',
+            'Ã¢Å“â€¦' => '…',
+            'Ã°Å¸â„¢Ë†' => 'ðŸ™ˆ',
+        ];
+        return str_replace(array_keys($map), array_values($map), $html);
+    });
+}
 
 require_once __DIR__ . '/../../../controller/PostController.php';
 require_once __DIR__ . '/../../../controller/CommentController.php';
@@ -23,15 +65,29 @@ function invalidClass($error)
 
 function getLettersCount($text): int
 {
-    $cleaned = preg_replace('/[^a-zA-ZÀ-ÿ]/u', '', $text);
+    $cleaned = preg_replace('/[^a-zA-ZÃƒâ‚¬-ÃƒÂ¿]/u', '', $text);
     return mb_strlen($cleaned);
+}
+
+function forumBackAppRoot(): string
+{
+    $script = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '');
+    $root = dirname($script, 3);
+    return ($root === '/' || $root === '\\') ? '' : rtrim($root, '/');
 }
 
 function forumBackUrl(array $extra = []): string
 {
-    $base = ['page' => 'forum'];
-    $params = array_merge($base, $_GET, $extra);
-    return '/GoService/view/back/index.php?' . http_build_query($params);
+    $params = array_merge(['page' => 'forum'], array_filter($extra, static fn($value) => $value !== null && $value !== ''));
+    return forumBackAppRoot() . '/view/back/index.php?' . http_build_query($params);
+}
+
+function forumMediaUrl($path): string
+{
+    $path = trim((string) $path);
+    if ($path === '') return '';
+    if (preg_match('~^https?://~i', $path)) return $path;
+    return forumBackAppRoot() . '/' . ltrim($path, '/');
 }
 
 function uploadImageFile(array $file, array &$errors, ?string $oldPath = null): ?string
@@ -192,15 +248,6 @@ function forumEnsurePostGifColumn(): bool
         return forumColumnExists($db, 'post', 'gif_post');
     } catch (Throwable $e) { return false; }
 }
-
-function forumMediaUrl($path): string
-{
-    $path = trim((string)$path);
-    if ($path === '') return '';
-    if (preg_match('~^https?://~i', $path)) return $path;
-    return '/GoService/' . ltrim($path, '/');
-}
-
 
 function forumTableExistsBack(PDO $db, string $table): bool
 {
@@ -911,7 +958,7 @@ unset($post);
 $totalPosts = count($posts);
 $totalComments = array_sum(array_column($posts, 'comments_count'));
 $totalReports = array_sum(array_column($posts, 'reports_count'));
-$totalRejected = count(array_filter($posts, fn($p) => (($p['statut_post'] ?? '') === 'Rejeté')));
+ $totalRejected = count(array_filter($posts, fn($p) => (($p['statut_post'] ?? '') === 'Rejeté')));
 
 
 $forumStatusStats = [
@@ -1050,12 +1097,12 @@ $paginatedPosts = array_slice($filteredPosts, $forumOffset, $forumRowsPerPage);
     .forum-admin-stat-card:nth-child(4){animation-delay:.21s}
     .forum-admin-stat-card:hover{transform:translateY(-8px) scale(1.015);box-shadow:0 24px 55px rgba(15,23,42,.14);filter:brightness(1.01)}
     @keyframes officialStatRise{from{opacity:0;transform:translateY(18px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}}
-    .forum-admin-stat-card::before{position:absolute;top:14px;right:14px;font-size:3.8rem;opacity:1;filter:saturate(1.25);text-shadow:0 2px 8px rgba(0,0,0,.15)}
-    .forum-admin-stat-card:nth-child(1)::before{content:"📝"}
-    .forum-admin-stat-card:nth-child(2)::before{content:"💬"}
-    .forum-admin-stat-card:nth-child(3)::before{content:"🚩"}
-    .forum-admin-stat-card:nth-child(4)::before{content:"🙈"}
-    .forum-admin-stat-card::before{animation:officialIconFloat 2.4s ease-in-out infinite;transition:transform .25s ease}
+    .forum-admin-stat-card::before{display:none!important;content:""!important;}
+    .forum-admin-stat-card::before{content:""}
+    .forum-admin-stat-card::before{content:""}
+    .forum-admin-stat-card::before{content:""}
+    .forum-admin-stat-card::before{content:""}
+    .forum-admin-stat-card::before{display:none!important;content:""!important;}
     .forum-admin-stat-card:nth-child(2)::before{animation-delay:.18s}
     .forum-admin-stat-card:nth-child(3)::before{animation-delay:.36s}
     .forum-admin-stat-card:nth-child(4)::before{animation-delay:.54s}
@@ -1101,6 +1148,9 @@ $paginatedPosts = array_slice($filteredPosts, $forumOffset, $forumRowsPerPage);
     .forum-view-meta{color:#6a7484;margin-bottom:12px}
     .forum-view-title{font-size:1.8rem;font-weight:900;color:#1b2d45;margin-bottom:10px}
     .forum-view-content{color:#1b2d45;line-height:1.75;white-space:pre-wrap}
+    .forum-view-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px;padding-top:16px;border-top:1px solid #eef2f7}
+    .forum-view-action-btn{width:auto;min-width:120px;border:1px solid rgba(15,23,42,.10);background:#fff;justify-content:center}
+    .forum-view-action-btn:hover{background:#f1f4f8}
     .forum-view-media{margin-top:18px;border-radius:20px;overflow:hidden;background:#000}
     .forum-view-media img,.forum-view-media video{width:100%;max-height:420px;object-fit:contain;display:block;background:#000}
     .forum-view-external-list{display:flex;flex-direction:column;gap:16px;margin-top:18px}
@@ -1252,10 +1302,10 @@ $paginatedPosts = array_slice($filteredPosts, $forumOffset, $forumRowsPerPage);
     .forum-report-detail-box{padding:14px 16px;border:1px solid #e7ebf0;border-radius:16px;background:#f8fafc;white-space:pre-wrap;word-break:break-word}
 
 /* ============================
-   MENU 3 POINTS — FIXED
+   MENU 3 POINTS Ã¢â‚¬â€ FIXED
    ============================ */
 
-/* Do NOT set overflow-y:visible here — combining overflow-x:auto with
+/* Do NOT set overflow-y:visible here Ã¢â‚¬â€ combining overflow-x:auto with
    overflow-y:visible forces both to auto per the CSS spec, which creates
    a stacking context that clips position:fixed children. */
 .forum-admin-table-wrap {
@@ -1278,7 +1328,7 @@ $paginatedPosts = array_slice($filteredPosts, $forumOffset, $forumRowsPerPage);
     padding: 10px 8px !important;
 }
 
-/* The button lives inside the td — no wrapper div needed */
+/* The button lives inside the td Ã¢â‚¬â€ no wrapper div needed */
 .forum-row-menu-btn {
     width: 40px;
     height: 40px;
@@ -1452,69 +1502,6 @@ body.dark .forum-post-open-zone:hover {
 
 
 /* ============================
-   BOUTON LANGUE - COMME FRONT
-   ============================ */
-.back-ig-lang-zone{
-    position:fixed;
-    left:46px;
-    bottom:38px;
-    z-index:999999;
-    color:#737373;
-    font-size:14px;
-}
-.back-ig-lang-wrap{position:relative;display:inline-flex;align-items:center;}
-.back-ig-lang-btn{
-    border:none;
-    background:transparent;
-    color:#737373;
-    font:inherit;
-    cursor:pointer;
-    padding:0;
-    display:inline-flex;
-    align-items:center;
-    gap:4px;
-}
-.back-ig-lang-btn:hover{text-decoration:underline;}
-.back-ig-lang-menu{
-    position:absolute;
-    left:0;
-    bottom:24px;
-    width:210px;
-    max-height:260px;
-    overflow-y:auto;
-    display:none;
-    background:#ffffff;
-    border:1px solid rgba(0,0,0,.12);
-    border-radius:10px;
-    box-shadow:0 8px 24px rgba(0,0,0,.14);
-    padding:6px 0;
-    z-index:999999;
-}
-.back-ig-lang-menu.show{display:block;}
-.back-ig-lang-menu button{
-    width:100%;
-    border:none;
-    background:transparent;
-    color:#262626;
-    font:inherit;
-    text-align:left;
-    cursor:pointer;
-    padding:10px 14px;
-}
-.back-ig-lang-menu button:hover{background:#f5f5f5;}
-#google_translate_element{display:none!important;height:0!important;overflow:hidden!important;}
-.goog-te-banner-frame,.goog-te-balloon-frame,iframe.goog-te-banner-frame,iframe.skiptranslate,#goog-gt-tt,.goog-logo-link,.goog-te-gadget-icon,.goog-te-gadget span{display:none!important;visibility:hidden!important;height:0!important;}
-.goog-te-gadget{height:0!important;overflow:hidden!important;font-size:0!important;line-height:0!important;}
-html{margin-top:0!important;}
-body{top:0!important;position:static!important;}
-body>.skiptranslate{display:none!important;visibility:hidden!important;height:0!important;}
-body.dark .back-ig-lang-menu,body.dark-mode .back-ig-lang-menu,body[data-theme="dark"] .back-ig-lang-menu,body.theme-dark .back-ig-lang-menu{background:#132d46;border-color:rgba(255,255,255,.12);}
-body.dark .back-ig-lang-menu button,body.dark-mode .back-ig-lang-menu button,body[data-theme="dark"] .back-ig-lang-menu button,body.theme-dark .back-ig-lang-menu button{color:#ffffff;}
-body.dark .back-ig-lang-menu button:hover,body.dark-mode .back-ig-lang-menu button:hover,body[data-theme="dark"] .back-ig-lang-menu button:hover,body.theme-dark .back-ig-lang-menu button:hover{background:rgba(255,255,255,.08);}
-@media(max-width:900px){.back-ig-lang-zone{left:20px;bottom:20px;}}
-
-
-/* ============================
    FORUM BACK STATS POPUP - SCHEMAS ANIMES
    ============================ */
 .forum-stats-modal{position:fixed;inset:0;background:rgba(6,14,24,.66);display:none;align-items:center;justify-content:center;z-index:1400000;padding:18px;backdrop-filter:blur(8px)}
@@ -1529,7 +1516,7 @@ body.dark .back-ig-lang-menu button:hover,body.dark-mode .back-ig-lang-menu butt
 .forum-stat-kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:18px}
 .forum-stat-kpi{background:#fff;border:1px solid #e7ebf0;border-radius:26px;padding:18px;box-shadow:0 14px 30px rgba(15,23,42,.07);min-height:118px;position:relative;overflow:hidden;animation:statRise .45s ease both}.forum-stat-kpi:nth-child(2){animation-delay:.06s}.forum-stat-kpi:nth-child(3){animation-delay:.12s}.forum-stat-kpi:nth-child(4){animation-delay:.18s}
 @keyframes statRise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
-.forum-stat-kpi:after{content:attr(data-icon);position:absolute;right:16px;top:12px;font-size:2.4rem;opacity:.95;animation:floatIcon 2.4s ease-in-out infinite}.forum-stat-kpi:nth-child(2):after{animation-delay:.2s}.forum-stat-kpi:nth-child(3):after{animation-delay:.4s}.forum-stat-kpi:nth-child(4):after{animation-delay:.6s}
+.forum-stat-kpi:after{display:none!important;content:""!important;}.forum-stat-kpi:nth-child(2):after{animation-delay:.2s}.forum-stat-kpi:nth-child(3):after{animation-delay:.4s}.forum-stat-kpi:nth-child(4):after{animation-delay:.6s}
 @keyframes floatIcon{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
 .forum-stat-kpi strong{display:block;font-size:2.25rem;color:#142738;line-height:1;margin-bottom:8px}.forum-stat-kpi span{display:block;color:#64748b;font-weight:900}
 .forum-stat-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:18px}.forum-stat-card{background:#fff;border:1px solid #e7ebf0;border-radius:28px;padding:20px;box-shadow:0 14px 30px rgba(15,23,42,.07);animation:statRise .45s ease both}.forum-stat-card h3{margin:0 0 16px;color:#142738;font-size:1.18rem;font-weight:950}
@@ -1561,7 +1548,7 @@ body.dark .forum-stats-box{background:#10263b;border-color:rgba(255,255,255,.08)
     <?php if (isset($_GET['comment_updated'])): ?><div class="forum-admin-success reveal">Commentaire modifié avec succès.</div><?php endif; ?>
 
     <section class="action-bar reveal">
-        <form method="GET" action="/GoService/view/back/index.php" class="forum-admin-filter-line">
+        <form method="GET" action="<?php echo e(forumBackUrl()); ?>" class="forum-admin-filter-line">
             <input type="hidden" name="page" value="forum">
             <input type="hidden" name="filter" value="<?php echo e($filter); ?>">
 
@@ -1571,14 +1558,14 @@ body.dark .forum-stats-box{background:#10263b;border-color:rgba(255,255,255,.08)
 
             <select name="sort" onchange="this.form.submit()">
                 <option value="date" <?php echo $sort === 'date' ? 'selected' : ''; ?>>Date</option>
-                <option value="popularite" <?php echo $sort === 'popularite' ? 'selected' : ''; ?>>Popularité</option>
+                <option value="popularite" <?php echo $sort === 'popularite' ? 'selected' : ''; ?>>Popularite</option>
                 <option value="signalements" <?php echo $sort === 'signalements' ? 'selected' : ''; ?>>Signalements</option>
             </select>
 
             <div class="forum-admin-btns">
-                <button type="button" class="outline-btn" id="openForumStatsModal">📊 Statistiques</button>
-                <button type="button" class="outline-btn" onclick="exportForumTableOnly()">📤 Exporter</button>
-                <button type="button" class="solid-btn" id="openCreatePostModal">📝 + Nouveau post</button>
+                <button type="button" class="outline-btn" id="openForumStatsModal" onclick="document.getElementById('forumStatsModal').classList.add('show');document.body.style.overflow='hidden';">Statistiques</button>
+                <button type="button" class="outline-btn" onclick="exportForumTableOnly()">Exporter</button>
+                <button type="button" class="solid-btn" id="openCreatePostModal" onclick="openPostFormModalFn(); return false;">+ Nouveau post</button>
             </div>
         </form>
     </section>
@@ -1595,17 +1582,17 @@ body.dark .forum-stats-box{background:#10263b;border-color:rgba(255,255,255,.08)
         <div class="forum-stats-box">
             <div class="forum-stats-head">
                 <div>
-                    <h2>📊 Statistiques</h2>
+                    <h2>Statistiques</h2>
                     <p>Schémas dynamiques du forum</p>
                 </div>
-                <button type="button" class="forum-stats-close" id="closeForumStatsModal">×</button>
+                <button type="button" class="forum-stats-close" id="closeForumStatsModal" onclick="document.getElementById('forumStatsModal').classList.remove('show');document.body.style.overflow='';">Ã—</button>
             </div>
             <div class="forum-stats-body">
                 <div class="forum-stat-kpi-grid">
-                    <div class="forum-stat-kpi" data-icon="📝"><strong><?php echo (int)$totalPosts; ?></strong><span>Posts</span></div>
-                    <div class="forum-stat-kpi" data-icon="💬"><strong><?php echo (int)$totalComments; ?></strong><span>Commentaires</span></div>
-                    <div class="forum-stat-kpi" data-icon="🚩"><strong><?php echo (int)$totalReports; ?></strong><span>Signalements</span></div>
-                    <div class="forum-stat-kpi" data-icon="⚡"><strong><?php echo e($forumEngagementScore); ?></strong><span>Interaction/post</span></div>
+                    <div class="forum-stat-kpi" data-icon=""><strong><?php echo (int)$totalPosts; ?></strong><span>Posts</span></div>
+                    <div class="forum-stat-kpi" data-icon=""><strong><?php echo (int)$totalComments; ?></strong><span>Commentaires</span></div>
+                    <div class="forum-stat-kpi" data-icon=""><strong><?php echo (int)$totalReports; ?></strong><span>Signalements</span></div>
+                    <div class="forum-stat-kpi" data-icon=""><strong><?php echo e($forumEngagementScore); ?></strong><span>Interaction/post</span></div>
                 </div>
 
                 <div class="forum-stat-grid">
@@ -1616,8 +1603,8 @@ body.dark .forum-stats-box{background:#10263b;border-color:rgba(255,255,255,.08)
                             $pendingDeg = ($forumPendingCount / $forumModerationTotal) * 100;
                         ?>
                         <div class="forum-donut-layout">
-                            <div class="forum-donut" style="--approved: <?php echo e($approvedDeg); ?>%; --pending: <?php echo e($pendingDeg); ?>%;">
-                                <div class="forum-donut-center"><strong><?php echo $forumApprovalRate; ?>%</strong><span>approuvés</span></div>
+                                <div class="forum-donut" style="--approved: <?php echo e($approvedDeg); ?>%; --pending: <?php echo e($pendingDeg); ?>%;">
+                                <div class="forum-donut-center"><strong><?php echo $forumApprovalRate; ?>%</strong><span>Approuvés</span></div>
                             </div>
                             <div class="forum-legend">
                                 <div class="forum-legend-item"><span class="forum-legend-left"><i class="forum-dot green"></i> Approuvés</span><strong><?php echo $forumApprovedCount; ?></strong></div>
@@ -1691,7 +1678,7 @@ body.dark .forum-stats-box{background:#10263b;border-color:rgba(255,255,255,.08)
                                 <?php endforeach; ?>
                             </div>
                         <?php endif; ?>
-                        <div class="forum-mini-note">Mise à jour automatique après chaque action.</div>
+                        <div class="forum-mini-note">Mise Ã  jour automatique aprÃ¨s chaque action.</div>
                     </div>
                 </div>
             </div>
@@ -1738,14 +1725,14 @@ body.dark .forum-stats-box{background:#10263b;border-color:rgba(255,255,255,.08)
                                 $type = $post['type_post'] ?? 'Discussion';
                                 $status = $post['statut_post'] ?? 'Visible';
                                 $reports = (int)($post['reports_count'] ?? 0);
-                                $imageUrl = !empty($post['image']) ? '/GoService/' . ltrim($post['image'], '/') : '';
+                                $imageUrl = !empty($post['image']) ? forumMediaUrl($post['image']) : '';
                                 $videoUrl = !empty($post['video']) ? forumMediaUrl($post['video']) : '';
                                 $gifUrl = !empty($post['gif_post']) ? forumMediaUrl($post['gif_post']) : '';
                                 $originalPayload = forumOriginalPostPayloadBack($post);
                             ?>
                             <tr>
      <td>
-    <div class="forum-post-open-zone open-view-post"
+    <div class="forum-post-open-zone open-view-post" onclick="if(event.target.closest('button,a,form,input,select,textarea,.forum-row-dropdown')){return;} openForumPostPreview(this);"
         data-title="<?php echo e($title); ?>"
         data-content="<?php echo e($content); ?>"
         data-author="<?php echo e($author); ?>"
@@ -1756,6 +1743,7 @@ body.dark .forum-stats-box{background:#10263b;border-color:rgba(255,255,255,.08)
         data-video="<?php echo e($videoUrl); ?>"
         data-gif="<?php echo e($gifUrl); ?>"
         data-original="<?php echo forumJsonAttr($originalPayload); ?>"
+        data-post-id="<?php echo $postId; ?>"
     >
         <div class="forum-post-title"><?php echo e($title); ?></div>
         <div class="forum-post-sub"><?php echo e(mb_strimwidth($content, 0, 75, '...')); ?></div>
@@ -1786,14 +1774,14 @@ body.dark .forum-stats-box{background:#10263b;border-color:rgba(255,255,255,.08)
                                 <td>
                                     <?php $postCommentsCount = count($commentsByPost[$postId] ?? []); ?>
                                     <button type="button" class="forum-admin-view-btn open-comments-modal" data-post-id="<?php echo $postId; ?>">
-                                        💬 Commentaires (<?php echo $postCommentsCount; ?>)
+                                        Commentaires (<?php echo $postCommentsCount; ?>)
                                     </button>
                                 </td>
                                <td class="forum-actions-cell">
     <?php
         $postReportsMain = $postReportsByPost[$postId] ?? [];
         $firstPostReportMain = $postReportsMain[0] ?? [];
-        $postReportReasonMain = $firstPostReportMain['reason'] ?? 'Contenu signalé';
+        $postReportReasonMain = $firstPostReportMain['reason'] ?? 'Contenu signale';
         $postReportUserMain = !empty($firstPostReportMain['id_user']) ? ('Utilisateur #' . (int)$firstPostReportMain['id_user']) : 'Utilisateur';
         $postReportDateMain = !empty($firstPostReportMain['date_report']) ? date('d/m/Y H:i', strtotime($firstPostReportMain['date_report'])) : '-';
         $postReportPayloadMain = [
@@ -1811,8 +1799,7 @@ body.dark .forum-stats-box{background:#10263b;border-color:rgba(255,255,255,.08)
     class="forum-row-menu-btn"
     aria-label="Options"
     data-menu-target="frm-<?php echo $postId; ?>"
-    onclick="toggleForumRowDropdown(this, event)"
->⋮</button>
+    onclick="return toggleForumRowDropdown(this, event);">...</button>
 </td>
                                
                             </tr>
@@ -1829,7 +1816,7 @@ body.dark .forum-stats-box{background:#10263b;border-color:rgba(255,255,255,.08)
                     <th>Auteur</th>
                     <th>Type</th>
                     <th>Statut</th>
-                    <th>Signalé</th>
+                        <th>Signalé</th>
                     <th>Commentaires</th>
                 </tr>
             </thead>
@@ -1865,7 +1852,7 @@ body.dark .forum-stats-box{background:#10263b;border-color:rgba(255,255,255,.08)
         <?php if ($forumTotalPages > 1): ?>
             <div class="forum-pagination">
                 <?php if ($forumCurrentPage > 1): ?>
-                    <a class="forum-page-link" href="<?php echo e(forumBackUrl(['pg' => $forumCurrentPage - 1])); ?>">‹</a>
+                    <a class="forum-page-link" href="<?php echo e(forumBackUrl(['pg' => $forumCurrentPage - 1])); ?>">â€¹</a>
                 <?php endif; ?>
 
                 <?php for ($i = 1; $i <= $forumTotalPages; $i++): ?>
@@ -1877,7 +1864,7 @@ body.dark .forum-stats-box{background:#10263b;border-color:rgba(255,255,255,.08)
                 <?php endfor; ?>
 
                 <?php if ($forumCurrentPage < $forumTotalPages): ?>
-                    <a class="forum-page-link" href="<?php echo e(forumBackUrl(['pg' => $forumCurrentPage + 1])); ?>">›</a>
+                    <a class="forum-page-link" href="<?php echo e(forumBackUrl(['pg' => $forumCurrentPage + 1])); ?>">â€º</a>
                 <?php endif; ?>
             </div>
         <?php endif; ?>
@@ -1896,7 +1883,7 @@ body.dark .forum-stats-box{background:#10263b;border-color:rgba(255,255,255,.08)
                         <h2>Commentaires</h2>
                         <span>Post : <?php echo e($modalPostTitle); ?></span>
                     </div>
-                    <button type="button" class="forum-post-modal-close close-comments-modal" data-post-id="<?php echo $modalPostId; ?>">×</button>
+                    <button type="button" class="forum-post-modal-close close-comments-modal" data-post-id="<?php echo $modalPostId; ?>">&times;</button>
                 </div>
 
                 <div class="forum-comments-modal-body">
@@ -1927,7 +1914,7 @@ body.dark .forum-stats-box{background:#10263b;border-color:rgba(255,255,255,.08)
                                             if ($commentAuthor === '') $commentAuthor = 'Utilisateur #' . (int)($comment['id_user'] ?? 0);
                                             $commentContent = $comment['contenu_commentaire'] ?? '';
                                             $commentEmoji = $comment['emoji_commentaire'] ?? '';
-                                            $commentImage = !empty($comment['image_commentaire']) ? '/GoService/' . ltrim($comment['image_commentaire'], '/') : '';
+                                            $commentImage = !empty($comment['image_commentaire']) ? forumMediaUrl($comment['image_commentaire']) : '';
                                             $parentId = (int)($comment['id_parent_commentaire'] ?? 0);
                                             $commentDate = !empty($comment['date_commentaire']) ? date('d/m/Y H:i', strtotime($comment['date_commentaire'])) : '-';
                                             $commentStatus = forumCommentStatus($comment);
@@ -1959,7 +1946,7 @@ body.dark .forum-stats-box{background:#10263b;border-color:rgba(255,255,255,.08)
                                             </td>
                                             <td>
                                                 <?php if ($parentId > 0): ?>
-                                                    <span class="forum-comment-parent-badge">Réponse à #<?php echo $parentId; ?></span>
+                                                    <span class="forum-comment-parent-badge">Réponse ÃƒÂ  #<?php echo $parentId; ?></span>
                                                 <?php else: ?>
                                                     <span class="forum-admin-badge forum-admin-type">Commentaire</span>
                                                 <?php endif; ?>
@@ -1987,8 +1974,7 @@ body.dark .forum-stats-box{background:#10263b;border-color:rgba(255,255,255,.08)
         class="forum-row-menu-btn"
         aria-label="Options commentaire"
         data-menu-target="cmt-<?php echo $commentId; ?>"
-        onclick="toggleForumRowDropdown(this, event)"
-    >⋮</button>
+    onclick="return toggleForumRowDropdown(this, event);">...</button>
 
     <div class="forum-row-dropdown" id="cmt-<?php echo $commentId; ?>">
 
@@ -1998,7 +1984,7 @@ body.dark .forum-stats-box{background:#10263b;border-color:rgba(255,255,255,.08)
             <input type="hidden" name="new_status" value="<?php echo $commentStatus === 'Approuvé' ? 'Rejeté' : 'Approuvé'; ?>">
 
             <button type="submit" name="toggle_comment_status" class="forum-row-action">
-                <?php echo $commentStatus === 'Approuvé' ? '🙈 Rejeter' : '✅ Approuver'; ?>
+                <?php echo $commentStatus === 'Approuvé' ? 'Rejeter' : 'Approuver'; ?>
             </button>
         </form>
 
@@ -2010,7 +1996,7 @@ body.dark .forum-stats-box{background:#10263b;border-color:rgba(255,255,255,.08)
             data-content="<?php echo e($commentContent); ?>"
             data-emoji="<?php echo e($commentEmoji); ?>"
         >
-            ✏️ Modifier
+            âœï¸ Modifier
         </button>
 
         <?php if ($commentReported === 1): ?>
@@ -2019,7 +2005,7 @@ body.dark .forum-stats-box{background:#10263b;border-color:rgba(255,255,255,.08)
                 class="forum-row-action open-report-detail"
                 data-report="<?php echo forumJsonAttr($commentReportPayload); ?>"
             >
-                🚩 Traiter signalement
+                Traiter signalement
             </button>
         <?php endif; ?>
 
@@ -2028,7 +2014,7 @@ body.dark .forum-stats-box{background:#10263b;border-color:rgba(255,255,255,.08)
             <input type="hidden" name="post_id" value="<?php echo $modalPostId; ?>">
 
             <button type="submit" name="delete_comment_back" class="forum-row-action danger">
-                🗑️ Supprimer
+                Supprimer
             </button>
         </form>
 
@@ -2050,8 +2036,8 @@ body.dark .forum-stats-box{background:#10263b;border-color:rgba(255,255,255,.08)
             $_type    = $_dp['type_post'] ?? 'Discussion';
             $_status  = $_dp['statut_post'] ?? 'Visible';
             $_reports = (int)($_dp['reports_count'] ?? 0);
-            $_imgUrl  = !empty($_dp['image']) ? '/GoService/' . ltrim($_dp['image'], '/') : '';
-            $_vidUrl  = !empty($_dp['video']) ? '/GoService/' . ltrim($_dp['video'], '/') : '';
+            $_imgUrl  = !empty($_dp['image']) ? forumMediaUrl($_dp['image']) : '';
+            $_vidUrl  = !empty($_dp['video']) ? forumMediaUrl($_dp['video']) : '';
             $_reps    = $postReportsByPost[$_id] ?? [];
             $_frep    = $_reps[0] ?? [];
             $_rpay    = [
@@ -2065,29 +2051,33 @@ body.dark .forum-stats-box{background:#10263b;border-color:rgba(255,255,255,.08)
             ];
         ?>
         <div class="forum-row-dropdown" id="frm-<?php echo $_id; ?>">
-            
 
-            <a class="forum-row-action" href="<?php echo e(forumBackUrl(['edit' => $_id])); ?>">✏️ Modifier</a>
-
-            <?php if ($_reports > 0): ?>
-            <button type="button"
-                class="forum-row-action open-report-detail"
-                data-report="<?php echo forumJsonAttr($_rpay); ?>"
-            >🚩 Traiter signalement</button>
-            <?php endif; ?>
-
+            <!-- Approve / Reject first -->
             <form method="POST" style="margin:0">
                 <input type="hidden" name="post_id" value="<?php echo $_id; ?>">
                 <button type="submit"
                     name="<?php echo $_status === 'Approuvé' ? 'reject_post' : 'approve_post'; ?>"
                     class="forum-row-action"
-                ><?php echo $_status === 'Approuvé' ? '🙈 Rejeter' : '✅ Approuver'; ?></button>
+                ><?php echo $_status === 'Approuvé' ? 'Rejeter' : 'Approuver'; ?></button>
             </form>
 
+            <!-- Modify second -->
+            <a class="forum-row-action" href="<?php echo e(forumBackUrl(['edit' => $_id])); ?>">✏️ Modifier</a>
+
+            <!-- Report handling third -->
+            <?php if ($_reports > 0): ?>
+            <button type="button"
+                class="forum-row-action open-report-detail"
+                data-report="<?php echo forumJsonAttr($_rpay); ?>"
+            >Traiter signalement</button>
+            <?php endif; ?>
+
+            <!-- Delete last -->
             <form method="POST" style="margin:0" onsubmit="return confirm('Supprimer ce post ?');">
                 <input type="hidden" name="post_id" value="<?php echo $_id; ?>">
-                <button type="submit" name="delete_post" class="forum-row-action danger">🗑️ Supprimer</button>
+                <button type="submit" name="delete_post" class="forum-row-action danger">Supprimer</button>
             </form>
+
         </div>
         <?php endforeach; ?>
     </section><!-- end admin-panel -->
@@ -2099,33 +2089,14 @@ body.dark .forum-stats-box{background:#10263b;border-color:rgba(255,255,255,.08)
 
 
 
-<!-- BOUTON LANGUE BACK OFFICE - MEME SYSTEME QUE FRONT -->
-<div class="back-ig-lang-zone notranslate" translate="no">
-    <div class="back-ig-lang-wrap">
-        <button type="button" class="back-ig-lang-btn" onclick="toggleBackIgLangMenu()">Langue ▾</button>
-        <div class="back-ig-lang-menu" id="backIgLangMenu">
-            <button type="button" onclick="changeBackForumLang('fr')">Français</button>
-            <button type="button" onclick="changeBackForumLang('en')">English</button>
-            <button type="button" onclick="changeBackForumLang('ar')">العربية</button>
-            <button type="button" onclick="changeBackForumLang('es')">Español</button>
-            <button type="button" onclick="changeBackForumLang('it')">Italiano</button>
-            <button type="button" onclick="changeBackForumLang('de')">Deutsch</button>
-            <button type="button" onclick="changeBackForumLang('tr')">Türkçe</button>
-            <button type="button" onclick="changeBackForumLang('pt')">Português</button>
-            <button type="button" onclick="changeBackForumLang('ru')">Русский</button>
-            <button type="button" onclick="changeBackForumLang('zh-CN')">中文</button>
-            <button type="button" onclick="changeBackForumLang('ja')">日本語</button>
-            <button type="button" onclick="changeBackForumLang('ko')">한국어</button>
-        </div>
-    </div>
-    <div id="google_translate_element"></div>
+
 </div>
 
 <div class="forum-post-modal" id="viewPostModal">
     <div class="forum-post-modal-box">
         <div class="forum-post-modal-head">
             <h2>Voir le post</h2>
-            <button type="button" class="forum-post-modal-close" id="closeViewPostModal">×</button>
+            <button type="button" class="forum-post-modal-close" id="closeViewPostModal">&times;</button>
         </div>
         <div class="forum-post-modal-body">
             <div class="forum-view-meta" id="viewPostMeta"></div>
@@ -2135,6 +2106,21 @@ body.dark .forum-stats-box{background:#10263b;border-color:rgba(255,255,255,.08)
             <div class="forum-view-media" id="viewPostImageWrap" style="display:none;"><img id="viewPostImage" src="" alt="Image post"></div>
             <div class="forum-view-media" id="viewPostVideoWrap" style="display:none;"><video id="viewPostVideo" controls></video></div>
             <div class="forum-view-external-list" id="viewPostExternalList"></div>
+            <div class="forum-view-actions" id="viewPostActions">
+                <form method="POST" style="margin:0;display:inline-flex;">
+                    <input type="hidden" name="post_id" id="viewApprovePostId" value="">
+                    <button type="submit" name="approve_post" class="forum-row-action forum-view-action-btn">Approuver</button>
+                </form>
+                <form method="POST" style="margin:0;display:inline-flex;">
+                    <input type="hidden" name="post_id" id="viewRejectPostId" value="">
+                    <button type="submit" name="reject_post" class="forum-row-action forum-view-action-btn">Rejeter</button>
+                </form>
+                <a class="forum-row-action forum-view-action-btn" id="viewEditPostLink" href="#">Modifier</a>
+                <form method="POST" style="margin:0;display:inline-flex;" onsubmit="return confirm('Supprimer ce post ?');">
+                    <input type="hidden" name="post_id" id="viewDeletePostId" value="">
+                    <button type="submit" name="delete_post" class="forum-row-action forum-view-action-btn danger">Supprimer</button>
+                </form>
+            </div>
             <div class="forum-original-card" id="viewOriginalPostCard">
                 <div class="forum-original-label">Publication originale</div>
                 <div class="forum-original-meta" id="viewOriginalMeta"></div>
@@ -2154,14 +2140,14 @@ body.dark .forum-stats-box{background:#10263b;border-color:rgba(255,255,255,.08)
     <div class="forum-post-modal-box" style="width:min(720px,100%);">
         <div class="forum-post-modal-head">
             <h2 id="reportDetailTitle">Détails du signalement</h2>
-            <button type="button" class="forum-post-modal-close" id="closeReportDetailModal">×</button>
+            <button type="button" class="forum-post-modal-close" id="closeReportDetailModal">&times;</button>
         </div>
         <div class="forum-post-modal-body">
             <div class="forum-report-detail-grid">
                 <strong>Élément</strong><div id="reportDetailTarget" class="forum-report-detail-box"></div>
                 <strong>Type</strong><div id="reportDetailType"></div>
                 <strong>Motif</strong><div id="reportDetailReason"></div>
-                <strong>Signalé par</strong><div id="reportDetailUser"></div>
+                <strong>SignalÃ© par</strong><div id="reportDetailUser"></div>
                 <strong>Date</strong><div id="reportDetailDate"></div>
                 <strong>Total</strong><div id="reportDetailCount"></div>
             </div>
@@ -2178,8 +2164,8 @@ body.dark .forum-stats-box{background:#10263b;border-color:rgba(255,255,255,.08)
 
 
 <div class="forum-form-modal-head">
-            <h2><?php echo $isEditMode ? 'Modifier la publication' : 'Créer une publication'; ?></h2>
-            <button type="button" class="forum-form-modal-close" id="closePostFormModal">×</button>
+            <h2><?php echo $isEditMode ? 'Modifier la publication' : 'CrÃ©er une publication'; ?></h2>
+            <button type="button" class="forum-form-modal-close" id="closePostFormModal">&times;</button>
         </div>
 
         
@@ -2187,8 +2173,8 @@ body.dark .forum-stats-box{background:#10263b;border-color:rgba(255,255,255,.08)
 
 <div class="forum-form-modal-body">
             <div class="forum-form-top-user">
-                <div class="mini-avatar">E</div>
-                <strong>emma jlassi</strong>
+                <div class="mini-avatar"><?php echo htmlspecialchars(strtoupper(mb_substr($_SESSION['user_name'] ?? ($_SESSION['prenom'] ?? 'U'), 0, 1, 'UTF-8'))); ?></div>
+                <strong><?php echo htmlspecialchars($_SESSION['user_name'] ?? trim(($_SESSION['prenom'] ?? '') . ' ' . ($_SESSION['nom'] ?? ''))); ?></strong>
             </div>
 
             <form method="POST" enctype="multipart/form-data" id="forumBackPostForm">
@@ -2224,31 +2210,31 @@ body.dark .forum-stats-box{background:#10263b;border-color:rgba(255,255,255,.08)
                     <div class="forum-field full">
                         <input type="hidden" name="gif_post" id="back_gif_post" value="<?php echo e($old['gif_post'] ?? ''); ?>">
                         <div class="gif-selected-preview <?php echo !empty($old['gif_post']) ? 'show' : ''; ?>" id="backGifPreviewWrap">
-                            <button type="button" class="gif-clear-btn" id="clearBackGifBtn">×</button>
-                            <img id="backGifPreview" src="<?php echo !empty($old['gif_post']) ? e(forumMediaUrl($old['gif_post'])) : ''; ?>" alt="GIF sélectionné">
+                            <button type="button" class="gif-clear-btn" id="clearBackGifBtn">&times;</button>
+                            <img id="backGifPreview" src="<?php echo !empty($old['gif_post']) ? e(forumMediaUrl($old['gif_post'])) : ''; ?>" alt="Selected GIF">
                         </div>
                         <div class="forum-error"><?php echo e($errors['gif_post'] ?? ''); ?></div>
                     </div>
                 </div>
 
                 <div class="forum-form-tools">
-                    <div>Ajouter à votre publication</div>
+                    <div>Ajouter Ã  votre publication</div>
                     <div class="forum-form-tool-icons">
-                        <button type="button" class="forum-tool-btn" id="triggerBackImage" aria-label="Image">🖼️</button>
-                        <button type="button" class="forum-tool-btn" id="triggerBackVideo" aria-label="Vidéo">🎥</button>
+                        <button type="button" class="forum-tool-btn" id="triggerBackImage" aria-label="Image">ðŸ“·</button>
+                        <button type="button" class="forum-tool-btn" id="triggerBackVideo" aria-label="Video">ðŸŽ¥</button>
                         <button type="button" class="gif-media-btn" id="triggerBackGif" aria-label="GIF" title="Choisir un GIF"><span class="gif-text">GIF</span></button>
-                        <button type="button" class="forum-tool-btn" id="triggerBackEmoji" aria-label="Emoji">😊</button>
+                        <button type="button" class="forum-tool-btn" id="triggerBackEmoji" aria-label="Emoji">ðŸ˜Š</button>
                     </div>
                 </div>
 
                 <div class="forum-field full">
                     <input type="file" name="image" id="back_image" accept=".jpg,.jpeg,.png,.webp,.gif" style="display:none;">
                     <div class="forum-error"><?php echo e($errors['image']); ?></div>
-                    <div class="forum-form-preview" id="backImagePreviewWrap"><img id="backImagePreview" src="" alt="Prévisualisation image"></div>
+                    <div class="forum-form-preview" id="backImagePreviewWrap"><img id="backImagePreview" src="" alt="Image preview"></div>
 
                     <?php if ($isEditMode && $editPost && !empty($editPost['image'])): ?>
                         <div class="forum-current-image show" id="backCurrentImage">
-                            <img src="/GoService/<?php echo e($editPost['image']); ?>" alt="Image actuelle">
+                            <img src="<?php echo e(forumMediaUrl($editPost['image'])); ?>" alt="Image actuelle">
                         </div>
                     <?php else: ?>
                         <div class="forum-current-image" id="backCurrentImage"></div>
@@ -2262,7 +2248,7 @@ body.dark .forum-stats-box{background:#10263b;border-color:rgba(255,255,255,.08)
 
                     <?php if ($isEditMode && $editPost && !empty($editPost['video'])): ?>
                         <div class="forum-current-video show" id="backCurrentVideo">
-                            <video controls autoplay muted loop playsinline><source src="/GoService/<?php echo e($editPost['video']); ?>"></video>
+                            <video controls autoplay muted loop playsinline><source src="<?php echo e(forumMediaUrl($editPost['video'])); ?>"></video>
                         </div>
                     <?php else: ?>
                         <div class="forum-current-video" id="backCurrentVideo"></div>
@@ -2272,7 +2258,7 @@ body.dark .forum-stats-box{background:#10263b;border-color:rgba(255,255,255,.08)
                 <div class="forum-form-actions">
                     <button type="button" class="ghost-btn" id="cancelPostFormModal">Annuler</button>
                     <?php if ($isEditMode): ?>
-                        <button type="submit" name="update_post" class="solid-btn">Mettre à jour</button>
+                        <button type="submit" name="update_post" class="solid-btn">Mettre Ã  jour</button>
                     <?php else: ?>
                         <button type="submit" name="save_post" class="solid-btn">Publier</button>
                     <?php endif; ?>
@@ -2284,7 +2270,7 @@ body.dark .forum-stats-box{background:#10263b;border-color:rgba(255,255,255,.08)
 
 <div class="forum-edit-comment-modal" id="editCommentModal">
     <div class="forum-edit-comment-box">
-        <div class="forum-edit-comment-head"><h2>Modifier le commentaire</h2><button type="button" class="forum-edit-comment-close" id="closeEditCommentModal">×</button></div>
+        <div class="forum-edit-comment-head"><h2>Modifier le commentaire</h2><button type="button" class="forum-edit-comment-close" id="closeEditCommentModal">&times;</button></div>
         <div class="forum-edit-comment-body">
             <form method="POST" enctype="multipart/form-data" id="editCommentBackForm">
                 <input type="hidden" name="update_comment_back" value="1">
@@ -2292,11 +2278,11 @@ body.dark .forum-stats-box{background:#10263b;border-color:rgba(255,255,255,.08)
                 <input type="hidden" name="post_id" id="editCommentPostId" value="">
                 <textarea name="comment_content" id="editCommentContent" placeholder="Commentaire"></textarea>
                 <input type="text" name="comment_emoji" id="editCommentEmoji" placeholder="Emoji">
-                <label class="forum-edit-image-label">🖼️ Changer image
+                <label class="forum-edit-image-label">Changer image
                     <input type="file" name="comment_image" id="editCommentImage" accept=".jpg,.jpeg,.png,.webp,.gif" style="display:none;">
                 </label>
                 <div class="forum-edit-image-name" id="editCommentImageName"></div>
-                <div class="forum-form-actions"><button type="button" class="ghost-btn" id="cancelEditCommentModal">Annuler</button><button type="submit" class="solid-btn">Enregistrer</button><button type="button" class="forum-tool-btn" id="triggerEditCommentEmoji" style="font-size:1.7rem;">😊</button></div>
+                <div class="forum-form-actions"><button type="button" class="ghost-btn" id="cancelEditCommentModal">Annuler</button><button type="submit" class="solid-btn">Enregistrer</button><button type="button" class="forum-tool-btn" id="triggerEditCommentEmoji" style="font-size:1.7rem;"></button></div>
             </form>
         </div>
     </div>
@@ -2307,7 +2293,7 @@ body.dark .forum-stats-box{background:#10263b;border-color:rgba(255,255,255,.08)
     <div class="gif-box">
         <div class="gif-header">
             <input type="text" id="backGifSearch" placeholder="Rechercher un GIF...">
-            <button type="button" id="closeBackGifModal">×</button>
+            <button type="button" id="closeBackGifModal">&times;</button>
         </div>
         <div class="gif-results" id="backGifResults">
             <div class="gif-empty">Chargement des GIFs...</div>
@@ -2367,7 +2353,7 @@ const editCommentImageName = document.getElementById('editCommentImageName');
 
 let activeEmojiTarget = null;
 
-const emojiList = ['😀','😁','😂','🤣','😃','😄','😅','😆','😉','😊','🙂','🙃','😍','🥰','😘','😎','🤩','🥳','😢','😭','😡','🤔','👍','👏','🙌','💪','🙏','❤️','🧡','💛','💚','💙','💜','🖤','🔥','✨','🎉','🎊','💬','📢','🚀','✅','⚠️','🍀','🌟','🌈','🎵','📷','🎥'];
+const emojiList = ['\u{1F600}','\u{1F601}','\u{1F602}','\u{1F603}','\u{1F604}','\u{1F609}','\u{1F60D}','\u{1F44D}','\u{1F44F}','\u{1F64F}','\u2764\uFE0F','\u{1F525}','\u2728','\u{1F389}','\u{1F4AC}','\u{1F4E2}','\u2705','\u26A0\uFE0F','\u{1F3B5}','\u{1F4F7}','\u{1F3A5}'];
 
 function openPostFormModalFn() {
     if (postFormModal) {
@@ -2380,7 +2366,7 @@ function closePostFormModalFn() {
     if (postFormModal) {
         postFormModal.classList.remove('show');
         document.body.style.overflow = '';
-        window.location.href = '/GoService/view/back/index.php?page=forum';
+        window.location.href = "<?php echo e(forumBackUrl()); ?>";
     }
 }
 
@@ -2452,7 +2438,7 @@ function forumBuildExternalMedia(url) {
     const safe = clean.replace(/"/g,'&quot;');
 
     if (forumDirectImageUrl(clean)) {
-        return {type:'image-gif', html:'<img src="'+safe+'" alt="Média du post" loading="lazy">'};
+        return {type:'image-gif', html:'<img src="'+safe+'" alt="MÃƒÂ©dia du post" loading="lazy">'};
     }
 
     const youtube = forumYoutubeEmbed(clean);
@@ -2470,7 +2456,7 @@ const instagram = forumInstagramEmbed(clean);
 if (instagram) return {type:'instagram', html:'<iframe src="'+instagram+'" allowtransparency="true" allowfullscreen loading="lazy"></iframe>'};
     const twitter = forumTwitterEmbed(clean);
     if (twitter) return {type:'twitter', html:'<iframe src="'+twitter+'" allowfullscreen loading="lazy"></iframe>'};
-    return {type:'link', html:'<a class="forum-view-external-link" href="'+safe+'" target="_blank" rel="noopener">🔗 Ouvrir le lien externe <span>↗</span></a>'};
+    return {type:'link', html:'<a class="forum-view-external-link" href="'+safe+'" target="_blank" rel="noopener">Open external link <span>-></span></a>'};
 }
 
 function forumRenderExternalMedia(text) {
@@ -2509,7 +2495,7 @@ function forumRenderOriginalPost(raw) {
         return;
     }
     card.classList.add('show');
-    document.getElementById('viewOriginalMeta').textContent = (data.author || '') + (data.type ? ' • ' + data.type : '') + (data.status ? ' • ' + data.status : '');
+    document.getElementById('viewOriginalMeta').textContent = (data.author || '') + (data.type ? ' - ' + data.type : '') + (data.status ? ' - ' + data.status : '');
     document.getElementById('viewOriginalTitle').textContent = data.title || 'Post original';
     document.getElementById('viewOriginalContent').textContent = data.content || '';
     document.getElementById('viewOriginalEmoji').textContent = data.emoji || '';
@@ -2534,38 +2520,51 @@ function forumRenderOriginalPost(raw) {
     forumRenderExternalMediaInto('viewOriginalExternalList', (data.content || '') + '\n' + (data.gif || ''));
 }
 
+function openForumPostPreview(source) {
+    if (!source || !viewPostModal) return;
+    const postId = source.dataset.postId || '';
+    document.getElementById('viewPostMeta').textContent = (source.dataset.author || '') + ' - ' + (source.dataset.type || '') + ' - ' + (source.dataset.status || '');
+    document.getElementById('viewPostTitle').textContent = source.dataset.title || '';
+    document.getElementById('viewPostContent').textContent = source.dataset.content || '';
+    forumRenderExternalMedia((source.dataset.content || '') + '\n' + (source.dataset.gif || ''));
+    forumRenderOriginalPost(source.dataset.original || '');
+
+    const viewEmoji = document.getElementById('viewPostEmoji');
+    if (viewEmoji) viewEmoji.textContent = source.dataset.emoji || '';
+
+    const imgWrap = document.getElementById('viewPostImageWrap');
+    const img = document.getElementById('viewPostImage');
+    const vidWrap = document.getElementById('viewPostVideoWrap');
+    const vid = document.getElementById('viewPostVideo');
+    imgWrap.style.display = 'none';
+    vidWrap.style.display = 'none';
+    img.src = '';
+    vid.src = '';
+
+    if (source.dataset.image) {
+        img.src = source.dataset.image;
+        imgWrap.style.display = 'block';
+    }
+    if (source.dataset.video) {
+        vid.src = source.dataset.video;
+        vidWrap.style.display = 'block';
+    }
+
+    ['viewApprovePostId','viewRejectPostId','viewDeletePostId'].forEach(function(id){
+        const el = document.getElementById(id);
+        if (el) el.value = postId;
+    });
+    const editLink = document.getElementById('viewEditPostLink');
+    if (editLink) editLink.href = postId ? ('<?php echo e(forumBackUrl()); ?>' + '&edit=' + encodeURIComponent(postId)) : '#';
+
+    viewPostModal.classList.add('show');
+    document.body.style.overflow = 'hidden';
+}
+
 document.querySelectorAll('.open-view-post').forEach(btn => {
-    btn.addEventListener('click', function() {
-        document.getElementById('viewPostMeta').textContent = (this.dataset.author || '') + ' • ' + (this.dataset.type || '') + ' • ' + (this.dataset.status || '');
-        document.getElementById('viewPostTitle').textContent = this.dataset.title || '';
-        document.getElementById('viewPostContent').textContent = this.dataset.content || '';
-        forumRenderExternalMedia((this.dataset.content || '') + '\n' + (this.dataset.gif || ''));
-        forumRenderOriginalPost(this.dataset.original || '');
-        const viewEmoji = document.getElementById('viewPostEmoji');
-        if (viewEmoji) viewEmoji.textContent = this.dataset.emoji || '';
-
-        const imgWrap = document.getElementById('viewPostImageWrap');
-        const img = document.getElementById('viewPostImage');
-        const vidWrap = document.getElementById('viewPostVideoWrap');
-        const vid = document.getElementById('viewPostVideo');
-
-        imgWrap.style.display = 'none';
-        vidWrap.style.display = 'none';
-        img.src = '';
-        vid.src = '';
-
-        if (this.dataset.image) {
-            img.src = this.dataset.image;
-            imgWrap.style.display = 'block';
-        }
-
-        if (this.dataset.video) {
-            vid.src = this.dataset.video;
-            vidWrap.style.display = 'block';
-        }
-
-        viewPostModal.classList.add('show');
-        document.body.style.overflow = 'hidden';
+    btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        openForumPostPreview(this);
     });
 });
 
@@ -2646,12 +2645,12 @@ if (editCommentModal) editCommentModal.addEventListener('click', e => { if (e.ta
 if (editCommentImage) {
     editCommentImage.addEventListener('change', function() {
         if (editCommentImageName) {
-            editCommentImageName.textContent = this.files && this.files[0] ? 'Image sélectionnée : ' + this.files[0].name : '';
+            editCommentImageName.textContent = this.files && this.files[0] ? 'Image sÃ©lectionnÃ©e : ' + this.files[0].name : '';
         }
     });
 }
 
-if (document.getElementById('editCommentBackForm')) document.getElementById('editCommentBackForm').addEventListener('submit', function(e){ const txt=editCommentContent.value.trim(); if(txt==='' || txt.replace(/[^a-zA-ZÀ-ÿ]/gu,'').length<2){e.preventDefault(); alert('Le commentaire doit contenir au moins 2 lettres.');}});
+if (document.getElementById('editCommentBackForm')) document.getElementById('editCommentBackForm').addEventListener('submit', function(e){ const txt=editCommentContent.value.trim(); if(txt==='' || txt.replace(/[^a-zA-ZÃƒâ‚¬-ÃƒÂ¿]/gu,'').length<2){e.preventDefault(); alert('Le commentaire doit contenir au moins 2 lettres.');}});
 
 
 const reportDetailModal = document.getElementById('reportDetailModal');
@@ -2659,7 +2658,7 @@ const closeReportDetailModal = document.getElementById('closeReportDetailModal')
 
 function openReportDetailModal(data) {
     if (!reportDetailModal) return;
-    document.getElementById('reportDetailTitle').textContent = data.title || 'Détails du signalement';
+    document.getElementById('reportDetailTitle').textContent = data.title || 'DÃ©tails du signalement';
     document.getElementById('reportDetailTarget').textContent = data.target || '-';
     document.getElementById('reportDetailType').textContent = data.type || '-';
     document.getElementById('reportDetailReason').textContent = data.reason || '-';
@@ -2681,7 +2680,7 @@ function closeReportDetailModalFn() {
 document.querySelectorAll('.open-report-detail').forEach(btn => {
     btn.addEventListener('click', function() {
         try { openReportDetailModal(JSON.parse(this.dataset.report || '{}')); }
-        catch(e) { openReportDetailModal({title:'Détails du signalement'}); }
+        catch(e) { openReportDetailModal({title:'DÃ©tails du signalement'}); }
     });
 });
 
@@ -2828,7 +2827,7 @@ async function searchBackGifs(q){
 function renderBackGifs(gifs){
     if(!backGifResults) return;
     backGifResults.innerHTML = '';
-    if(!gifs.length){ setBackGifMessage('Aucun GIF trouvé.'); return; }
+    if(!gifs.length){ setBackGifMessage('Aucun GIF trouvÃ©.'); return; }
     gifs.forEach(gif => {
         const fixed = (gif.images && gif.images.fixed_height && gif.images.fixed_height.url) || '';
         const original = (gif.images && gif.images.original && gif.images.original.url) || fixed;
@@ -2865,19 +2864,19 @@ const backStatutPostField = document.getElementById('back_statut_post');
 const backContenuField = document.getElementById('back_contenu');
 
 function getLettersAndSpacesCountJS(text) {
-    const cleaned = text.replace(/[^a-zA-ZÀ-ÿ\s]/gu, '');
+    const cleaned = text.replace(/[^a-zA-ZÃƒâ‚¬-ÃƒÂ¿\s]/gu, '');
     return cleaned.trim().length;
 }
 
 function hasOnlyLettersAndSpaces(text) {
-    return /^[a-zA-ZÀ-ÿ\s]*$/.test(text);
+    return /^[a-zA-ZÃƒâ‚¬-ÃƒÂ¿\s]*$/.test(text);
 }
 
 const backRules = {
     back_titre: {
         validate: value => hasOnlyLettersAndSpaces(value) && getLettersAndSpacesCountJS(value) >= 3,
         message: 'Titre valide.',
-        error: 'Le titre doit contenir au moins 3 caractères.'
+        error: 'Le titre doit contenir au moins 3 caractÃƒÂ¨res.'
     },
     back_type_post: {
         validate: value => value !== '',
@@ -2892,7 +2891,7 @@ const backRules = {
     back_contenu: {
         validate: value => getLettersAndSpacesCountJS(value) >= 5,
         message: 'Description valide.',
-        error: 'La description doit contenir au moins 5 lettres. Les liens externes sont acceptés.'
+        error: 'La description doit contenir au moins 5 lettres. Les liens externes sont acceptÃƒÂ©s.'
     }
 };
 
@@ -2980,7 +2979,7 @@ if (forumBackPostForm) {
     });
 }
 /* ============================
-   MENU 3 POINTS — FIXED
+   MENU 3 POINTS Ã¢â‚¬â€ FIXED
    ============================ */
 
 // On first use, teleport all .forum-row-dropdown elements to <body>
@@ -3060,6 +3059,23 @@ document.addEventListener('click', function (e) {
 }, true); // useCapture:true so it fires even if a child called stopPropagation
 
 
+
+(function forumAdminClickFallback(){
+    document.addEventListener('click', function(e){
+        const menuButton = e.target.closest('.forum-row-menu-btn');
+        if (menuButton) {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleForumRowDropdown(menuButton, e);
+            return;
+        }
+        const preview = e.target.closest('.open-view-post');
+        if (preview && !e.target.closest('button,a,form,input,select,textarea,.forum-row-dropdown')) {
+            e.preventDefault();
+            openForumPostPreview(preview);
+        }
+    }, false);
+})();
 /* ============================
    STATS MODAL BACK OFFICE
    ============================ */
@@ -3087,68 +3103,11 @@ if(forumStatsModal){
 }
 
 
-/* ============================================================ GOOGLE TRANSLATE BACK OFFICE */
-function googleTranslateElementInit(){
-    new google.translate.TranslateElement({
-        pageLanguage:'fr',
-        includedLanguages:'fr,en,ar,es,it,de,tr,pt,ru,zh-CN,ja,ko',
-        autoDisplay:false
-    },'google_translate_element');
-    hideBackGoogleTranslateBar();
-}
-function toggleBackIgLangMenu(){
-    const m=document.getElementById('backIgLangMenu');
-    if(m) m.classList.toggle('show');
-}
-function setBackGoogleTranslateCookie(lang){
-    const v='/fr/'+lang;
-    document.cookie='googtrans='+v+';path=/';
-    document.cookie='googtrans='+v+';domain='+location.hostname+';path=/';
-}
-function hideBackGoogleTranslateBar(){
-    document.documentElement.style.marginTop='0px';
-    document.body.style.top='0px';
-    document.body.style.position='static';
-    document.querySelectorAll('iframe.goog-te-banner-frame,iframe.skiptranslate,.goog-te-banner-frame,body>.skiptranslate').forEach(function(el){
-        el.style.display='none';
-        el.style.visibility='hidden';
-        el.style.height='0px';
-    });
-}
-function changeBackForumLang(lang){
-    setBackGoogleTranslateCookie(lang);
-    const m=document.getElementById('backIgLangMenu');
-    if(m) m.classList.remove('show');
-    let tries=0;
-    const t=setInterval(function(){
-        hideBackGoogleTranslateBar();
-        const sel=document.querySelector('.goog-te-combo');
-        if(sel){
-            sel.value=lang;
-            sel.dispatchEvent(new Event('change'));
-            clearInterval(t);
-            setTimeout(hideBackGoogleTranslateBar,400);
-            setTimeout(hideBackGoogleTranslateBar,1000);
-        }
-        tries++;
-        if(tries>20){
-            clearInterval(t);
-            window.location.reload();
-        }
-    },200);
-}
-document.addEventListener('click',function(e){
-    if(!e.target.closest('.back-ig-lang-wrap')){
-        const m=document.getElementById('backIgLangMenu');
-        if(m) m.classList.remove('show');
-    }
-});
-window.addEventListener('load',hideBackGoogleTranslateBar);
-setInterval(hideBackGoogleTranslateBar,700);
+
 
 </script>
 
-<script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
 
 
 <style>
@@ -3201,9 +3160,9 @@ function exportForumTableOnly(){
     printBox.innerHTML = `
         <div class="print-head">
             <div class="print-brand">
-                <img src="/GoService/assets/images/logo.png" alt="GoService">
+                <img src="<?php echo e(forumBackAppRoot() . '/assets/images/logo.png'); ?>" alt="GoService">
                 <div>
-                    <h1 class="print-title">Modération du forum</h1>
+                    <h1 class="print-title">ModÃ©ration du forum</h1>
                 </div>
             </div>
             <div class="print-meta">${now}</div>
@@ -3217,3 +3176,26 @@ function exportForumTableOnly(){
     }, 120);
 }
 </script>
+
+
+
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    ['.back-ig-lang-zone', '#google_translate_element', '.goog-te-banner-frame', '.goog-te-balloon-frame', 'iframe.skiptranslate', '.skiptranslate', '.goog-te-gadget'].forEach(function (selector) {
+        document.querySelectorAll(selector).forEach(function (node) { node.remove(); });
+    });
+});
+</script>
+<script id="finalForumStatsBinder">
+document.addEventListener('DOMContentLoaded', function () {
+  const modal = document.getElementById('forumStatsModal');
+  const open = document.getElementById('openForumStatsModal');
+  const close = document.getElementById('closeForumStatsModal');
+  if (open && modal) open.addEventListener('click', function (event) { event.preventDefault(); modal.classList.add('show'); document.body.style.overflow = 'hidden'; });
+  if (close && modal) close.addEventListener('click', function () { modal.classList.remove('show'); document.body.style.overflow = ''; });
+  if (modal) modal.addEventListener('click', function (event) { if (event.target === modal) { modal.classList.remove('show'); document.body.style.overflow = ''; } });
+});
+</script>
+

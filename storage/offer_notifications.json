@@ -1,38 +1,5 @@
 [
     {
-        "id": "notif_6a007b01b12b89.29236769",
-        "offer_id": 26,
-        "type": "modification",
-        "headline": {
-            "fr": "Offre modifiée",
-            "en": "Offer updated",
-            "ar": "تم تعديل العرض"
-        },
-        "message": "architechture",
-        "details": {
-            "type_service": "design",
-            "localisation": "34.005057,9.399111",
-            "prix": "4 444.00 TND"
-        },
-        "changes": {
-            "localisation": {
-                "from": "tozeur",
-                "to": "34.005057,9.399111"
-            },
-            "date_expiration": {
-                "from": "2026-05-08 00:00:00",
-                "to": "2026-05-21 00:00:00"
-            },
-            "statut": {
-                "from": "fermee",
-                "to": "ouverte"
-            }
-        },
-        "link": "index.php?page=offre&offer_id=26",
-        "time": "2026-05-10T14:33:05+02:00",
-        "read": false
-    },
-    {
         "id": "notif_6a0071b6b33e79.88917180",
         "offer_id": 32,
         "type": "modification",

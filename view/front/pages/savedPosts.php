@@ -65,13 +65,13 @@ function savedTimeAgo($datetime): string {
         $now = new DateTime('now', new DateTimeZone('Africa/Tunis'));
         $date = new DateTime($datetime, new DateTimeZone('Africa/Tunis'));
         $diff = $now->getTimestamp() - $date->getTimestamp();
-        if ($diff <= 0) return "a l'instant";
-        if ($diff < 60) return "a l'instant";
-        if ($diff < 3600) return floor($diff / 60) . ' min';
-        if ($diff < 86400) return floor($diff / 3600) . ' h';
-        if ($diff < 604800) return floor($diff / 86400) . ' j';
-        if ($diff < 2592000) return floor($diff / 604800) . ' sem';
-        return floor($diff / 2592000) . ' mois';
+        if ($diff <= 0) return app_text("à l'instant", 'just now', 'الآن');
+        if ($diff < 60) return app_text("à l'instant", 'just now', 'الآن');
+        if ($diff < 3600) return floor($diff / 60) . ' ' . app_text('min', 'min', 'د');
+        if ($diff < 86400) return floor($diff / 3600) . ' ' . app_text('h', 'h', 'س');
+        if ($diff < 604800) return floor($diff / 86400) . ' ' . app_text('j', 'd', 'ي');
+        if ($diff < 2592000) return floor($diff / 604800) . ' ' . app_text('sem', 'wk', 'أسبوع');
+        return floor($diff / 2592000) . ' ' . app_text('mois', 'mo', 'شهر');
     } catch (Throwable $e) {
         return '';
     }
@@ -79,7 +79,7 @@ function savedTimeAgo($datetime): string {
 
 $currentUserId = (int) savedSessionValue(['id_user', 'user_id', 'id'], 0);
 if ($currentUserId <= 0) {
-    header('Location: ' . savedAppUrl('view/front/index.php?page=login&error=' . urlencode('Veuillez vous connecter pour voir vos posts sauvegard�s.')));
+    header('Location: ' . savedAppUrl('view/front/index.php?page=login&error=' . urlencode(app_text('Veuillez vous connecter pour voir vos posts sauvegardés.', 'Please log in to view your saved posts.', 'يرجى تسجيل الدخول لعرض منشوراتك المحفوظة.'))));
     exit;
 }
 
@@ -105,7 +105,10 @@ $postsToShow = array_slice($savedPosts, $offset, $postsPerPage);
 
 <style>
 .saved-page{width:min(1380px,calc(100% - 36px));margin:0 auto;padding:28px 0 60px;}
-.saved-hero{border-radius:34px;padding:56px 28px;margin-bottom:28px;background:linear-gradient(135deg,#0b1f34,#18314b);border:1px solid rgba(255,255,255,.08);box-shadow:0 18px 40px rgba(0,0,0,.16);}
+.saved-hero{position:relative;overflow:hidden;border-radius:34px;padding:56px 28px;margin-bottom:28px;background:linear-gradient(135deg,#0b1f34,#18314b);border:1px solid rgba(255,255,255,.08);box-shadow:0 18px 40px rgba(0,0,0,.16);}
+.saved-hero::before{content:"";position:absolute;inset:0;background:url('<?php echo e(savedAppUrl('assets/images/forum-hero.png')); ?>') center/cover no-repeat;opacity:1;z-index:0;pointer-events:none;}
+.saved-hero::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(8,18,30,.84) 0%,rgba(8,18,30,.70) 38%,rgba(8,18,30,.34) 70%,rgba(8,18,30,.14) 100%);z-index:0;pointer-events:none;}
+.saved-hero>*{position:relative;z-index:1;}
 .saved-title{margin:0 0 14px;color:#fff;font-size:48px;line-height:1.08;font-weight:900;}
 .saved-intro{margin:0;max-width:760px;color:#d7e0ea;font-size:18px;line-height:1.55;}
 .saved-topbar{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:24px;flex-wrap:wrap;}
@@ -140,41 +143,38 @@ $postsToShow = array_slice($savedPosts, $offset, $postsPerPage);
 
 <main class="saved-page">
     <section class="saved-hero">
-        <span class="section-badge">Forum social</span>
-        <h1 class="saved-title">My saved posts</h1>
-        <p class="saved-intro">
-            Find here the posts you saved from the forum. This page now runs inside the merged application instead of loading a separate standalone template.
-        </p>
+        <span class="section-badge"><?php echo htmlspecialchars(app_text('Forum social', 'Social forum', 'المنتدى الاجتماعي'), ENT_QUOTES, 'UTF-8'); ?></span>
+        <h1 class="saved-title"><?php echo htmlspecialchars(app_text('Mes posts sauvegardés', 'My saved posts', 'منشوراتي المحفوظة'), ENT_QUOTES, 'UTF-8'); ?></h1>
+        <p class="saved-intro"><?php echo htmlspecialchars(app_text('Retrouvez ici les posts que vous avez sauvegardés depuis le forum.', 'Find here the posts you saved from the forum.', 'اعثر هنا على المنشورات التي حفظتها من المنتدى.'), ENT_QUOTES, 'UTF-8'); ?></p>
     </section>
 
     <div class="saved-topbar">
         <div>
-            <h2 class="saved-page-title">Saved posts</h2>
-            <p class="saved-count"><?php echo $totalPosts; ?> saved post<?php echo $totalPosts === 1 ? '' : 's'; ?></p>
+            <h2 class="saved-page-title"><?php echo htmlspecialchars(app_text('Posts sauvegardés', 'Saved posts', 'المنشورات المحفوظة'), ENT_QUOTES, 'UTF-8'); ?></h2>
+            <p class="saved-count"><?php $countLabel = $totalPosts === 1 ? app_text('post sauvegardé', 'saved post', 'منشور محفوظ') : app_text('posts sauvegardés', 'saved posts', 'منشورات محفوظة'); echo $totalPosts . ' ' . $countLabel; ?></p>
         </div>
-
-        <a href="<?php echo e(savedAppUrl('view/front/index.php?page=forum')); ?>" class="solid-btn">Back to forum</a>
+        <a href="<?php echo e(savedAppUrl('view/front/index.php?page=forum')); ?>" class="solid-btn"><?php echo htmlspecialchars(app_text('Retour au forum', 'Back to forum', 'العودة إلى المنتدى'), ENT_QUOTES, 'UTF-8'); ?></a>
     </div>
 
     <?php if (empty($savedPosts)): ?>
         <div class="saved-empty">
-            <h3>No saved posts</h3>
-            <p>When you save a forum post, it will appear here.</p>
-            <a href="<?php echo e(savedAppUrl('view/front/index.php?page=forum')); ?>" class="solid-btn">Open forum</a>
+            <h3><?php echo htmlspecialchars(app_text('Aucun post sauvegardé', 'No saved posts', 'لا توجد منشورات محفوظة'), ENT_QUOTES, 'UTF-8'); ?></h3>
+            <p><?php echo htmlspecialchars(app_text('Quand vous enregistrez un post du forum, il apparaîtra ici.', 'When you save a forum post, it will appear here.', 'عندما تحفظ منشوراً من المنتدى سيظهر هنا.'), ENT_QUOTES, 'UTF-8'); ?></p>
+            <a href="<?php echo e(savedAppUrl('view/front/index.php?page=forum')); ?>" class="solid-btn"><?php echo htmlspecialchars(app_text('Ouvrir le forum', 'Open forum', 'فتح المنتدى'), ENT_QUOTES, 'UTF-8'); ?></a>
         </div>
     <?php else: ?>
         <div class="saved-grid">
             <?php foreach ($postsToShow as $post): ?>
                 <?php
-                $title = $post['titre'] ?? 'Untitled post';
+                $title = $post['titre'] ?? app_text('Post sans titre', 'Untitled post', 'منشور بدون عنوان');
                 $content = trim((string) ($post['contenu'] ?? ''));
                 $imageUrl = !empty($post['image']) ? savedMediaUrl($post['image']) : '';
                 $videoUrl = !empty($post['video']) ? savedMediaUrl($post['video']) : '';
                 $fullname = trim((string) (($post['prenom'] ?? '') . ' ' . ($post['nom'] ?? '')));
                 if ($fullname === '') {
-                    $fullname = 'Utilisateur';
+                    $fullname = app_text('Utilisateur', 'User', 'مستخدم');
                 }
-                $avatarLetter = strtoupper(substr($fullname, 0, 1));
+                $avatarLetter = mb_strtoupper(mb_substr($fullname, 0, 1, 'UTF-8'), 'UTF-8');
                 $postId = (int) ($post['id_post'] ?? 0);
                 ?>
                 <article class="saved-card" id="saved-post-<?php echo $postId; ?>">
@@ -184,14 +184,14 @@ $postsToShow = array_slice($savedPosts, $offset, $postsPerPage);
                                 <source src="<?php echo e($videoUrl); ?>">
                             </video>
                         <?php elseif ($imageUrl): ?>
-                            <img src="<?php echo e($imageUrl); ?>" alt="Saved post image">
+                            <img src="<?php echo e($imageUrl); ?>" alt="<?php echo htmlspecialchars(app_text('Image du post sauvegardé', 'Saved post image', 'صورة المنشور المحفوظ'), ENT_QUOTES, 'UTF-8'); ?>">
                         <?php else: ?>
-                            <div class="saved-thumb-placeholder">Post</div>
+                            <div class="saved-thumb-placeholder"><?php echo htmlspecialchars(app_text('Post', 'Post', 'منشور'), ENT_QUOTES, 'UTF-8'); ?></div>
                         <?php endif; ?>
                     </div>
 
                     <div class="saved-content">
-                        <span class="saved-post-type"><?php echo e($post['type_post'] ?? 'Discussion'); ?></span>
+                        <span class="saved-post-type"><?php echo e($post['type_post'] ?? app_text('Discussion', 'Discussion', 'نقاش')); ?></span>
                         <h3 class="saved-post-title"><?php echo e($title); ?></h3>
                         <?php if ($content !== ''): ?>
                             <p class="saved-post-text"><?php echo e($content); ?></p>
@@ -207,11 +207,11 @@ $postsToShow = array_slice($savedPosts, $offset, $postsPerPage);
                     </div>
 
                     <div class="saved-actions">
-                        <a class="saved-open-btn" href="<?php echo e(savedAppUrl('view/front/index.php?page=forum&open_post=' . $postId)); ?>#post-<?php echo $postId; ?>">Open</a>
+                        <a class="saved-open-btn" href="<?php echo e(savedAppUrl('view/front/index.php?page=forum&open_post=' . $postId)); ?>#post-<?php echo $postId; ?>"><?php echo htmlspecialchars(app_text('Ouvrir', 'Open', 'فتح'), ENT_QUOTES, 'UTF-8'); ?></a>
                         <form method="POST" style="flex:1; margin:0;">
                             <input type="hidden" name="remove_saved" value="1">
                             <input type="hidden" name="post_id" value="<?php echo $postId; ?>">
-                            <button type="submit" class="saved-remove-btn">Remove</button>
+                            <button type="submit" class="saved-remove-btn"><?php echo htmlspecialchars(app_text('Retirer', 'Remove', 'إزالة'), ENT_QUOTES, 'UTF-8'); ?></button>
                         </form>
                     </div>
                 </article>
@@ -221,7 +221,7 @@ $postsToShow = array_slice($savedPosts, $offset, $postsPerPage);
         <?php if ($totalPages > 1): ?>
             <div class="saved-pagination">
                 <?php if ($currentPage > 1): ?>
-                    <a class="saved-page-link" href="<?php echo e(savedAppUrl('view/front/index.php?page=savedPosts&p=' . ($currentPage - 1))); ?>">Prev</a>
+                    <a class="saved-page-link" href="<?php echo e(savedAppUrl('view/front/index.php?page=savedPosts&p=' . ($currentPage - 1))); ?>"><?php echo htmlspecialchars(app_text('Préc.', 'Prev', 'السابق'), ENT_QUOTES, 'UTF-8'); ?></a>
                 <?php endif; ?>
 
                 <?php for ($i = 1; $i <= $totalPages; $i++): ?>
@@ -231,10 +231,9 @@ $postsToShow = array_slice($savedPosts, $offset, $postsPerPage);
                 <?php endfor; ?>
 
                 <?php if ($currentPage < $totalPages): ?>
-                    <a class="saved-page-link" href="<?php echo e(savedAppUrl('view/front/index.php?page=savedPosts&p=' . ($currentPage + 1))); ?>">Next</a>
+                    <a class="saved-page-link" href="<?php echo e(savedAppUrl('view/front/index.php?page=savedPosts&p=' . ($currentPage + 1))); ?>"><?php echo htmlspecialchars(app_text('Suiv.', 'Next', 'التالي'), ENT_QUOTES, 'UTF-8'); ?></a>
                 <?php endif; ?>
             </div>
         <?php endif; ?>
     <?php endif; ?>
 </main>
-
