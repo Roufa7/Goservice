@@ -1,26 +1,31 @@
 <?php
 
+require_once __DIR__ . '/../config.php';
+
 class OllamaChatbotService
 {
-    private string $url = 'http://localhost:11434/api/chat';
-    private string $model = 'qwen2.5:7b';
+    private string $url;
+    private string $model;
+
+    public function __construct()
+    {
+        $baseUrl = rtrim((string) config::env('OLLAMA_BASE_URL', 'http://localhost:11434'), '/');
+        $this->url = $baseUrl . '/api/generate';
+        $this->model = (string) config::env('OLLAMA_MODEL', 'qwen2.5:7b');
+    }
 
     public function chat(array $messages): string
     {
-        $system = [
-            'role' => 'system',
-            'content' => "
-Tu es l'assistant officiel du site GoService.
-Tu réponds comme dans une vraie discussion.
-GoService est une plateforme avec forum, services, catégories, contrats, réservations et prestataires.
-Réponds en français, naturellement, court et utile.
-"
-        ];
+        $prompt = $this->buildPrompt($messages);
+
+        if ($prompt === '') {
+            return "Veuillez écrire un message.";
+        }
 
         $data = [
             'model' => $this->model,
-            'messages' => array_merge([$system], $messages),
-            'stream' => false
+            'prompt' => $prompt,
+            'stream' => false,
         ];
 
         $ch = curl_init($this->url);
@@ -41,12 +46,42 @@ Réponds en français, naturellement, court et utile.
 
         $result = json_decode($response, true);
 
-        return trim($result['message']['content'] ?? "Je n'ai pas reçu de réponse.");
+        return trim((string) ($result['response'] ?? $result['message']['content'] ?? "Je n'ai pas reçu de réponse."));
+    }
+
+    private function buildPrompt(array $messages): string
+    {
+        $lastUserMessage = '';
+        foreach ($messages as $message) {
+            if (!is_array($message)) {
+                continue;
+            }
+
+            $role = strtoupper(trim((string) ($message['role'] ?? 'user')));
+            $content = trim((string) ($message['content'] ?? ''));
+
+            if ($content === '' || $role !== 'USER') {
+                continue;
+            }
+
+            $lastUserMessage = $content;
+        }
+
+        if ($lastUserMessage === '') {
+            return '';
+        }
+
+        return implode("\n", [
+            "Tu es l'assistant officiel du site GoService.",
+            'Réponds en français, naturellement, court et utile.',
+            'Message utilisateur: ' . $lastUserMessage,
+            'Réponse:',
+        ]);
     }
 }
 
 // POST handler for AJAX chat requests
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
     header('Content-Type: application/json; charset=utf-8');
     
     $message = trim($_POST['message'] ?? '');

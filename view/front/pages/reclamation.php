@@ -169,7 +169,7 @@ $userReclamations = $GLOBALS['userReclamations'] ?? [];
 
                 <div class="form-grid">
                     <select id="avis-reclamation-id" name="id_reclamation"
-                        style="padding: 12px; border: 1px solid #e1e4e8; border-radius: 8px; font-size: 14px; margin-bottom: 10px; width: 100%;">
+                        style="padding: 12px; border: 1px solid var(--line); border-radius: 8px; font-size: 14px; margin-bottom: 10px; width: 100%; background: var(--panel); color: var(--text);">
                         <option value="">-- Sélectionner la réclamation associée --</option>
                         <?php foreach ($userReclamations as $rec): ?>
                             <option value="<?php echo $rec['id_reclamation']; ?>">
@@ -179,7 +179,7 @@ $userReclamations = $GLOBALS['userReclamations'] ?? [];
                     </select>
 
                     <div class="star-input-group"
-                        style="font-size: 24px; cursor: pointer; user-select: none; margin-bottom: 10px;">
+                        style="font-size: 24px; cursor: pointer; user-select: none; margin-bottom: 10px; color: var(--text);">
                         <span class="star" data-value="1" style="color:#ffd700">★</span>
                         <span class="star" data-value="2" style="color:#ffd700">★</span>
                         <span class="star" data-value="3" style="color:#ffd700">★</span>
@@ -187,7 +187,7 @@ $userReclamations = $GLOBALS['userReclamations'] ?? [];
                         <span class="star" data-value="5" style="color:#ffd700">★</span>
                     </div>
 
-                    <textarea id="avis-commentaire" name="commentaire" placeholder="Votre avis..."></textarea>
+                    <textarea id="avis-commentaire" name="commentaire" placeholder="Votre avis..." style="background: var(--panel); color: var(--text); border: 1px solid var(--line);"></textarea>
                 </div>
                 <div id="avis-error-message" style="color: red; margin-top: 10px; display: none;"></div>
                 <div id="avis-success-message" style="color: green; margin-top: 10px; display: none;"></div>

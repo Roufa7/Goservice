@@ -18,6 +18,7 @@ class EventCalendarService
         $calendar
             ->setName(config::appName())
             ->setDescription('Evenement GoService')
+            ->setMethod('PUBLISH')
             ->setTimezone($this->timezone->getName());
 
         $calendarEvent = new Event($this->buildUniqueId($event));
@@ -49,8 +50,10 @@ class EventCalendarService
     public function streamDownload(array $event): void
     {
         $content = $this->buildCalendarContent($event);
-        header('Content-Type: text/calendar; charset=UTF-8');
+        header('Content-Type: text/calendar; charset=UTF-8; method=PUBLISH');
         header('Content-Disposition: attachment; filename="' . $this->fileName($event) . '"');
+        header('Content-Transfer-Encoding: 8bit');
+        header('X-Content-Type-Options: nosniff');
         echo $content;
         exit;
     }

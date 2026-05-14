@@ -2,8 +2,15 @@
 
 class OllamaSentimentService
 {
-    private string $url = 'http://localhost:11434/api/generate';
-    private string $model = 'qwen2.5:7b';
+    private string $url;
+    private string $model;
+
+    public function __construct()
+    {
+        $baseUrl = rtrim((string) config::env('OLLAMA_BASE_URL', 'http://localhost:11434'), '/');
+        $this->url = $baseUrl . '/api/generate';
+        $this->model = (string) config::env('OLLAMA_MODEL', 'qwen2.5:7b');
+    }
 
     public function analyser(string $texte): array
     {

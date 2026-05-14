@@ -311,8 +311,10 @@ body.dark .admin-nav a:hover {
 }
 .ghost-btn,
 .outline-btn {
-    background: transparent;
+    background: var(--panel);
     color: var(--text);
+    border-color: var(--line);
+    box-shadow: 0 10px 24px rgba(20,39,56,0.08);
 }
 
 .small-btn {
@@ -352,6 +354,7 @@ body.dark .admin-nav a:hover {
 .ghost-btn:hover,
 .outline-btn:hover {
     background: var(--grad-soft);
+    color: var(--text);
 }
 
 /* common */
@@ -1733,6 +1736,24 @@ body.dark .site-footer {
     background: rgba(255,255,255,0.85);
     color: var(--text);
     outline: none;
+}
+
+.auth-captcha-box {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 180px;
+    min-height: 52px;
+    margin-bottom: 10px;
+    padding: 0 16px;
+    border-radius: 14px;
+    border: 1px solid var(--line);
+    background: linear-gradient(135deg, rgba(238, 88, 40, 0.12), rgba(20, 39, 56, 0.04));
+    color: var(--text);
+    font-size: 1.05rem;
+    font-weight: 800;
+    letter-spacing: 0.25em;
+    user-select: none;
 }
 
 body.dark .auth-form input {

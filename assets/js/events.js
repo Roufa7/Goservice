@@ -273,3 +273,52 @@ if (eventActionField) {
     });
 }
 
+const resetEventDraftBtn = document.getElementById("resetEventDraftBtn");
+if (resetEventDraftBtn) {
+    resetEventDraftBtn.addEventListener("click", () => {
+        const resetUrl = resetEventDraftBtn.getAttribute("data-reset-url") || window.location.href;
+        const form = document.querySelector(".event-admin-form-grid");
+
+        if (form) {
+            form.reset();
+
+            const eventAction = form.querySelector("#event_action_field");
+            if (eventAction) {
+                eventAction.value = "create_event";
+            }
+
+            const aiFeedback = form.querySelector("input[name='ai_feedback']");
+            if (aiFeedback) {
+                aiFeedback.value = "";
+            }
+
+            const imageInput = form.querySelector("input[name='image']");
+            if (imageInput) {
+                imageInput.value = "";
+            }
+
+            const inlineImage = form.closest(".event-admin-form-panel")?.querySelector(".event-inline-image");
+            const inlineImageTag = inlineImage?.querySelector("img");
+            if (inlineImageTag) {
+                inlineImageTag.removeAttribute("src");
+                inlineImageTag.alt = "";
+            }
+
+            const previewImage = form.querySelector(".event-inline-image");
+            if (previewImage) {
+                previewImage.hidden = true;
+            }
+
+            document.querySelectorAll(".field-block-live-valid, .field-block-live-invalid").forEach((block) => {
+                block.classList.remove("field-block-live-valid", "field-block-live-invalid");
+                const hint = block.querySelector(".event-live-hint");
+                if (hint) {
+                    hint.textContent = "";
+                }
+            });
+        }
+
+        window.location.href = resetUrl;
+    });
+}
+

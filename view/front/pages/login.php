@@ -1,3 +1,5 @@
+<?php require_once __DIR__ . '/../auth_captcha.php'; ?>
+
 <section class="page-hero reveal">
     <span class="section-badge">Connexion</span>
     <h1 class="page-title">Se connecter</h1>
@@ -32,6 +34,12 @@
                 <div class="field-block">
                     <label for="password">Mot de passe</label>
                     <input type="password" id="password" name="password" required>
+                </div>
+
+                <div class="field-block">
+                    <label for="captcha">Captcha</label>
+                    <div class="auth-captcha-box"><?php echo htmlspecialchars(authCaptchaCode(), ENT_QUOTES, 'UTF-8'); ?></div>
+                    <input type="text" id="captcha" name="captcha" required autocomplete="off" placeholder="Recopiez le code">
                 </div>
 
             <div class="icon-actions" style="margin-top: 20px;">

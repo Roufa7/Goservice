@@ -35,7 +35,7 @@ $selectedEventFrontUrl = (string) ($data['selectedEventFrontUrl'] ?? '');
 $participationRecordQr = (string) ($data['participationRecordQr'] ?? '');
 $participationRecordQrReference = (string) ($data['participationRecordQrReference'] ?? '');
 $mailConfigured = (bool) ($data['mailConfigured'] ?? false);
-$ollamaModel = (string) ($data['ollamaModel'] ?? 'qwen2.5:3b');
+$ollamaModel = (string) ($data['ollamaModel'] ?? 'qwen2.5:7b');
 
 $eventRecord = $eventForm['record'] ?? null;
 $eventValues = $eventForm['values'] ?? [];
@@ -451,11 +451,11 @@ if (!empty($selectedEventParticipationStats['latest_registration'])) {
                 <label>Assistant de redaction</label>
                 <p class="event-ai-copy">Affinez la fiche avant publication : reformulation, version promotionnelle et lecture rapide des points forts a mettre en avant.</p>
                 <div class="icon-actions event-ai-actions">
-                    <button type="submit" class="small-btn" data-event-action="ai_improve_description">Ameliorer la description</button>
-                    <button type="submit" class="small-btn" data-event-action="ai_generate_promo">Generer une version promo</button>
-                    <button type="submit" class="small-btn" data-event-action="ai_suggest_title">Proposer un meilleur titre</button>
+                    <button type="submit" formnovalidate class="small-btn" data-event-action="ai_improve_description">Ameliorer la description</button>
+                    <button type="submit" formnovalidate class="small-btn" data-event-action="ai_generate_promo">Generer une version promo</button>
+                    <button type="submit" formnovalidate class="small-btn" data-event-action="ai_suggest_title">Proposer un meilleur titre</button>
 
-                    <button type="submit" class="small-btn" data-event-action="ai_analyze_event">Analyser l'evenement</button>
+                    <button type="submit" formnovalidate class="small-btn" data-event-action="ai_analyze_event">Analyser l'evenement</button>
                 </div>
                 <?php if ($eventValue('ai_feedback') !== ''): ?>
                     <article class="event-ai-insight">
@@ -467,7 +467,7 @@ if (!empty($selectedEventParticipationStats['latest_registration'])) {
 
             <div class="icon-actions field-span-2">
                 <button type="submit" class="solid-btn" data-event-action="<?php echo $eventMode === 'edit' ? 'update_event' : 'create_event'; ?>"><?php echo $eventMode === 'edit' ? 'Mettre &agrave; jour' : 'Cr&eacute;er l\'&eacute;v&eacute;nement'; ?></button>
-                <a class="outline-btn" href="<?php echo $escape($buildAdminUrl(['edit_event' => null], '#event-form')); ?>">Nouveau formulaire</a>
+                <button type="button" class="outline-btn" id="resetEventDraftBtn" data-reset-url="<?php echo $escape($buildAdminUrl(['edit_event' => null], '#event-form')); ?>">Nouveau formulaire</button>
                 <?php if ($eventMode === 'edit' && $eventRecord): ?>
                     <a class="outline-btn" href="../front/index.php?page=events&amp;event_id=<?php echo $escape($eventRecord['id_evenement']); ?>#event-focus">Voir en front</a>
                 <?php endif; ?>

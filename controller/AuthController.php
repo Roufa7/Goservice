@@ -3,6 +3,7 @@ session_start();
 
 require_once __DIR__ . '/../model/User.php';
 require_once __DIR__ . '/../lib/MailService.php';
+require_once __DIR__ . '/../view/front/auth_captcha.php';
 require_once __DIR__ . '/../view/i18n.php';
 
 function authAppRoot(): string
@@ -64,6 +65,8 @@ function authHydrateSession(array $user): void
     $_SESSION['prenom'] = $firstName;
     $_SESSION['nom'] = $lastName;
     $_SESSION['user_photo'] = trim((string) ($user['photo'] ?? ''));
+
+    session_regenerate_id(true);
 }
 
 $action = $_GET['action'] ?? '';
@@ -72,6 +75,12 @@ $userModel = new User();
 switch ($action) {
     case 'register':
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            if (!authCaptchaValidate($_POST['captcha'] ?? null)) {
+                authCaptchaReset();
+                header('Location: ' . authFrontUrl('page=register&error=' . urlencode('Captcha invalide. Reessayez.')));
+                exit;
+            }
+
             $nom = trim((string) ($_POST['nom'] ?? ''));
             $prenom = trim((string) ($_POST['prenom'] ?? ''));
             $email = trim((string) ($_POST['email'] ?? ''));
@@ -117,6 +126,12 @@ switch ($action) {
 
     case 'login':
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            if (!authCaptchaValidate($_POST['captcha'] ?? null)) {
+                authCaptchaReset();
+                header('Location: ' . authFrontUrl('page=login&error=' . urlencode('Captcha invalide. Reessayez.')));
+                exit;
+            }
+
             $email = trim((string) ($_POST['email'] ?? ''));
             $password = (string) ($_POST['password'] ?? '');
 
@@ -141,6 +156,12 @@ switch ($action) {
 
     case 'forgot_password':
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            if (!authCaptchaValidate($_POST['captcha'] ?? null)) {
+                authCaptchaReset();
+                header('Location: ' . authFrontUrl('page=forgot_password&error=' . urlencode('Captcha invalide. Reessayez.')));
+                exit;
+            }
+
             $email = trim((string) ($_POST['email'] ?? ''));
             $rawToken = $userModel->createPasswordResetToken($email);
 
@@ -180,7 +201,11 @@ switch ($action) {
         break;
 
     case 'logout':
-        session_unset();
+        $_SESSION = [];
+        if (ini_get('session.use_cookies')) {
+            $params = session_get_cookie_params();
+            setcookie(session_name(), '', time() - 42000, $params['path'], $params['domain'], $params['secure'], $params['httponly']);
+        }
         session_destroy();
         header('Location: ' . authFrontUrl('page=home'));
         exit;

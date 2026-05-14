@@ -5,6 +5,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
 require_once __DIR__ . '/../../i18n.php';
 require_once __DIR__ . '/../../../model/User.php';
+require_once __DIR__ . '/../auth_captcha.php';
 
 app_set_language_from_request();
 
@@ -239,6 +240,12 @@ $mainNav = [
                 <div class="field-block">
                     <label for="login_password"><?php echo htmlspecialchars(app_text('Mot de passe', 'Password', 'كلمة المرور'), ENT_QUOTES, 'UTF-8'); ?></label>
                     <input type="password" id="login_password" name="password" required>
+                </div>
+
+                <div class="field-block">
+                    <label for="login_captcha">Captcha</label>
+                    <div class="auth-captcha-box"><?php echo htmlspecialchars(authCaptchaCode(), ENT_QUOTES, 'UTF-8'); ?></div>
+                    <input type="text" id="login_captcha" name="captcha" required autocomplete="off" placeholder="<?php echo htmlspecialchars(app_text('Recopiez le code', 'Copy the code', 'أعد كتابة الرمز'), ENT_QUOTES, 'UTF-8'); ?>">
                 </div>
 
                 <button type="submit" class="solid-btn auth-submit"><?php echo htmlspecialchars(app_text('Se connecter', 'Sign in', 'تسجيل الدخول'), ENT_QUOTES, 'UTF-8'); ?></button>

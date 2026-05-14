@@ -136,7 +136,7 @@ $totalDisponibles = count(array_filter($services, fn($s) => srvIsAvailable($s)))
     display:flex !important;
     align-items:center !important;
     gap:10px !important;
-    color:#fff !important;
+    color:var(--text) !important;
     text-decoration:none !important;
     padding: 10px 12px !important;
     border-radius: 14px !important;
@@ -146,11 +146,11 @@ $totalDisponibles = count(array_filter($services, fn($s) => srvIsAvailable($s)))
 .srv-category-pill:hover,
 .srv-category-pill.active{
     background: rgba(238,88,40,.14) !important;
-    color:#fff !important;
+    color:var(--text) !important;
 }
 
 .srv-filter-title{
-    color:#fff !important;
+    color:var(--text) !important;
     font-size: 1.1rem !important;
     font-weight: 800 !important;
     margin-bottom: 12px !important;
@@ -264,7 +264,7 @@ $totalDisponibles = count(array_filter($services, fn($s) => srvIsAvailable($s)))
     flex-direction:column !important;
     gap: 14px !important;
     padding: 18px 18px 20px !important;
-    color:#fff !important;
+    color:var(--text) !important;
     flex:1 !important;
 }
 
@@ -273,7 +273,7 @@ $totalDisponibles = count(array_filter($services, fn($s) => srvIsAvailable($s)))
 .srv-rating-row,
 .srv-price-main,
 .srv-price-unit{
-    color:#fff !important;
+    color:var(--text) !important;
 }
 
 .srv-card-footer{
@@ -299,7 +299,7 @@ $totalDisponibles = count(array_filter($services, fn($s) => srvIsAvailable($s)))
 
 .srv-empty{
     grid-column: 1 / -1 !important;
-    background: rgba(255,255,255,0.04) !important;
+    background: var(--panel) !important;
     border-radius: 22px !important;
     padding: 28px !important;
 }

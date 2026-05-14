@@ -62,23 +62,16 @@ function forumResolveCurrentUser(): array {
         } catch (Throwable $e) {}
     }
 
-    // Fallback pour tester le module forum avant l'intÃ©gration du module User.
-    if ($id <= 0 && class_exists('config')) {
-        try {
-            $db = config::getConnexion();
-            $u = $db->query("SELECT u.id_user, COALESCE(pr.nom, SUBSTRING_INDEX(u.email, '@', 1)) AS nom, COALESCE(pr.prenom, '') AS prenom, u.role FROM `user` u LEFT JOIN profile pr ON pr.id_user = u.id_user ORDER BY u.id_user ASC LIMIT 1")->fetch(PDO::FETCH_ASSOC);
-            if ($u) {
-                $id = (int)$u['id_user'];
-                $nom = trim((string)($u['nom'] ?? ''));
-                $prenom = trim((string)($u['prenom'] ?? ''));
-                $role = (string)($u['role'] ?? 'user');
-            }
-        } catch (Throwable $e) {}
+    if ($id <= 0) {
+        $nom = '';
+        $prenom = '';
+        $role = 'guest';
     }
 
-    if ($id <= 0) $id = 1;
     $full = trim($prenom . ' ' . $nom);
-    if ($full === '') $full = 'Utilisateur #' . $id;
+    if ($full === '') {
+        $full = $id > 0 ? 'Utilisateur #' . $id : 'Visiteur';
+    }
 
     return [
         'id' => $id,
@@ -280,8 +273,8 @@ function uploadVideoFile(array $file,array &$errors,?string $oldPath=null): ?str
 function uploadCommentImageFile(array $file,array &$errors,?string $oldPath=null): ?string {
     if(empty($file['name'])) return null;
     $ext=strtolower(pathinfo($file['name'],PATHINFO_EXTENSION));
-    if(!in_array($ext,['jpg','jpeg','png','webp','gif'],true)){ $errors['comment']='Formats image autorisÃ©s : JPG, JPEG, PNG, WEBP, GIF.'; return null; }
-    if($file['size']>3*1024*1024){ $errors['comment']="L'image du commentaire ne doit pas dÃ©passer 3 Mo."; return null; }
+    if(!in_array($ext,['jpg','jpeg','png','webp','gif'],true)){ $errors['comment']='Formats image autorises : JPG, JPEG, PNG, WEBP, GIF.'; return null; }
+    if($file['size']>3*1024*1024){ $errors['comment']="L'image du commentaire ne doit pas depasser 3 Mo."; return null; }
     $dir=__DIR__.'/../../../uploads/comments/'; if(!is_dir($dir)) mkdir($dir,0777,true);
     $name=uniqid('comment_img_',true).'.'.$ext;
     if(move_uploaded_file($file['tmp_name'],$dir.$name)){
@@ -546,7 +539,7 @@ function forumRenderSharedOriginalBox(?array $original): string {
                 <div class="mini-avatar shared-mini-avatar"><?php echo e($avatar); ?></div>
                 <div>
                     <strong><?php echo e($originalName); ?></strong>
-                    <div class="shared-original-meta"><?php echo e(timeAgo($original['date_publication']??'')); ?> Â· ðŸŒ</div>
+                    <div class="shared-original-meta"><?php echo e(timeAgo($original['date_publication']??'')); ?> · 🌐</div>
                 </div>
             </div>
             <div class="shared-original-title"><?php echo e($original['titre']??'Publication originale'); ?></div>
@@ -588,7 +581,7 @@ function forumShareInsideGoService(PostController $postController,int $originalP
 
     try{
         // Comme Facebook : le nouveau post contient seulement le texte du partage,
-        // et le post original reste dans une carte imbriquÃ©e avec ses donnÃ©es.
+        // et le post original reste dans une carte imbriquee avec ses donnees.
         $newPost=new Post(null,$title,$finalContent,null,null,$typePost,'Approuvé',$userId);
         $postController->addPost($newPost);
        $newId=forumFindLastPostId($userId,$title,$finalContent);
@@ -670,7 +663,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'&&(isset($_POST['publish_post'])||isset($_
             $old['statut_post']=$editPost['statut_post']??'Approuvé';
 
             if($old['contenu']==='') $errors['contenu']='Le contenu du partage est obligatoire.';
-            elseif(mb_strlen($old['contenu'])<2) $errors['contenu']='Le contenu du partage doit contenir au moins 2 caractÃ¨res.';
+            elseif(mb_strlen($old['contenu'])<2) $errors['contenu']='Le contenu du partage doit contenir au moins 2 caracteres.';
             if(!isEmojiOnlyForum($old['emoji_post'])) $errors['emoji_post']='Le champ emoji accepte uniquement des emojis.';
 
             $hasErrors=false; foreach($errors as $err){ if(!empty($err)){ $hasErrors=true; break; } }
@@ -683,7 +676,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'&&(isset($_POST['publish_post'])||isset($_
 
     if($old['titre']==='') $errors['titre']='Le titre est obligatoire.'; elseif(getLettersCount($old['titre'])<3) $errors['titre']='Le titre doit contenir au moins 3 lettres.';
     if($old['type_post']==='') $errors['type_post']='Veuillez choisir le type du post.';
-    if($old['contenu']==='') $errors['contenu']='La description est obligatoire.'; elseif(mb_strlen($old['contenu'])<5) $errors['contenu']='La description doit contenir au moins 5 caractÃ¨res.';
+    if($old['contenu']==='') $errors['contenu']='La description est obligatoire.'; elseif(mb_strlen($old['contenu'])<5) $errors['contenu']='La description doit contenir au moins 5 caracteres.';
     if(!isEmojiOnlyForum($old['emoji_post'])) $errors['emoji_post']='Le champ emoji accepte uniquement des emojis.';
     if($gifPost!=='' && !preg_match('~^https?://~i',$gifPost)) $errors['gif']='GIF invalide.';
     $hasErrors=false; foreach($errors as $err){ if(!empty($err)){ $hasErrors=true; break; } }
@@ -1337,7 +1330,7 @@ body.dark .video-more-dropdown a:hover,body.dark .video-more-dropdown button:hov
 
             <div class="forum-posts-list">
                 <?php if(empty($posts)): ?>
-                <article class="panel"><span class="section-badge">Aucun rÃ©sultat</span><p style="margin-top:14px;">Aucun post trouvÃ©.</p></article>
+                <article class="panel"><span class="section-badge">Aucun resultat</span><p style="margin-top:14px;">Aucun post trouve.</p></article>
                 <?php else: ?>
                 <?php foreach($posts as $post):
                     $fullname=trim(($post['prenom']??'').' '.($post['nom']??'')); if($fullname==='') $fullname='Utilisateur';
@@ -1818,8 +1811,8 @@ body.dark .video-more-dropdown a:hover,body.dark .video-more-dropdown button:hov
         <div class="forum-post-modal-body">
             <form method="POST" action="">
                 <input type="hidden" name="post_id" id="report-post-id" value=""><input type="hidden" name="report_post" value="1">
-                <div style="margin-bottom:16px;"><label style="display:block;font-weight:600;margin-bottom:8px;">Raison du signalement</label><select name="report_reason" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px;" required><option value="">Choisir une raison</option><option value="spam">Spam</option><option value="inappropriate">Contenu inapproprié</option><option value="offensive">Contenu offensant</option><option value="misinformation">Désinformation</option><option value="other">Autre</option></select></div>
-                <div style="margin-bottom:16px;"><label style="display:block;font-weight:600;margin-bottom:8px;">Détails supplémentaires (optionnel)</label><textarea name="report_details" placeholder="Expliquez pourquoi vous signalez ce post..." style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px;min-height:100px;font-family:inherit;resize:vertical;"></textarea></div>
+                <div style="margin-bottom:16px;"><label style="display:block;font-weight:600;margin-bottom:8px;color:var(--text);">Raison du signalement</label><select name="report_reason" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;font-size:14px;background:var(--panel);color:var(--text);" required><option value="">Choisir une raison</option><option value="spam">Spam</option><option value="inappropriate">Contenu inapproprié</option><option value="offensive">Contenu offensant</option><option value="misinformation">Désinformation</option><option value="other">Autre</option></select></div>
+                <div style="margin-bottom:16px;"><label style="display:block;font-weight:600;margin-bottom:8px;color:var(--text);">Détails supplémentaires (optionnel)</label><textarea name="report_details" placeholder="Expliquez pourquoi vous signalez ce post..." style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;font-size:14px;min-height:100px;font-family:inherit;resize:vertical;background:var(--panel);color:var(--text);"></textarea></div>
                 <div style="display:flex;gap:10px;justify-content:flex-end;"><button type="button" onclick="closeReportModal()" class="ghost-btn">Annuler</button><button type="submit" class="solid-btn">Signaler</button></div>
             </form>
         </div>
@@ -1828,13 +1821,13 @@ body.dark .video-more-dropdown a:hover,body.dark .video-more-dropdown button:hov
 
 <!-- MODAL SIGNALER COMMENTAIRE -->
 <div id="reportCommentModal">
-    <div style="background:#fff;border-radius:24px;padding:28px;width:min(520px,100%);box-shadow:0 30px 80px rgba(15,23,42,.25);">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;"><h2 style="margin:0;font-size:22px;">Signaler ce commentaire</h2><button type="button" onclick="closeReportCommentModal()" style="width:38px;height:38px;border:none;border-radius:50%;background:#f2f4f8;font-size:20px;cursor:pointer;">x</button></div>
+    <div style="background:var(--panel);border-radius:24px;padding:28px;width:min(520px,100%);box-shadow:var(--shadow);border:1px solid var(--line);color:var(--text);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;"><h2 style="margin:0;font-size:22px;color:var(--text);">Signaler ce commentaire</h2><button type="button" onclick="closeReportCommentModal()" style="width:38px;height:38px;border:1px solid var(--line);border-radius:50%;background:var(--bg);color:var(--text);font-size:20px;cursor:pointer;">x</button></div>
         <form method="POST" action="" id="reportCommentForm">
             <input type="hidden" name="report_comment" value="1"><input type="hidden" name="comment_id" id="report-comment-id" value=""><input type="hidden" name="post_id" id="report-comment-post-id" value="">
-            <div style="margin-bottom:16px;"><label style="display:block;font-weight:600;margin-bottom:8px;">Raison du signalement</label><select name="report_reason" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px;" required><option value="">Choisir une raison</option><option value="spam">Spam</option><option value="inappropriate">Contenu inapproprié</option><option value="offensive">Contenu offensant</option><option value="misinformation">Désinformation</option><option value="other">Autre</option></select></div>
-            <div style="margin-bottom:20px;"><label style="display:block;font-weight:600;margin-bottom:8px;">Détails (optionnel)</label><textarea name="report_details" placeholder="Expliquez pourquoi..." style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px;min-height:90px;font-family:inherit;resize:vertical;box-sizing:border-box;"></textarea></div>
-            <div style="display:flex;gap:10px;justify-content:flex-end;"><button type="button" onclick="closeReportCommentModal()" style="padding:10px 20px;border:1px solid #ddd;border-radius:10px;background:#fff;cursor:pointer;font-weight:600;">Annuler</button><button type="submit" class="solid-btn">Signaler</button></div>
+            <div style="margin-bottom:16px;"><label style="display:block;font-weight:600;margin-bottom:8px;color:var(--text);">Raison du signalement</label><select name="report_reason" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;font-size:14px;background:var(--panel);color:var(--text);" required><option value="">Choisir une raison</option><option value="spam">Spam</option><option value="inappropriate">Contenu inapproprié</option><option value="offensive">Contenu offensant</option><option value="misinformation">Désinformation</option><option value="other">Autre</option></select></div>
+            <div style="margin-bottom:20px;"><label style="display:block;font-weight:600;margin-bottom:8px;color:var(--text);">Détails (optionnel)</label><textarea name="report_details" placeholder="Expliquez pourquoi..." style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;font-size:14px;min-height:90px;font-family:inherit;resize:vertical;box-sizing:border-box;background:var(--panel);color:var(--text);"></textarea></div>
+            <div style="display:flex;gap:10px;justify-content:flex-end;"><button type="button" onclick="closeReportCommentModal()" style="padding:10px 20px;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--text);cursor:pointer;font-weight:600;">Annuler</button><button type="submit" class="solid-btn">Signaler</button></div>
         </form>
     </div>
 </div>
@@ -1910,7 +1903,7 @@ function openMediaViewer(data){
     if(!mediaViewer) return;
     currentViewerPostData=data||{};
     hideAllViewerModes();
-    const safeTitle=data.title||'',safeContent=data.content||'',safeUser=data.user||'Utilisateur',safeTime=data.time||"Ã  l'instant",likes=Number(data.likes||0),comments=Number(data.comments||0),shares=Number(data.shares||0);
+    const safeTitle=data.title||'',safeContent=data.content||'',safeUser=data.user||'Utilisateur',safeTime=data.time||"a l'instant",likes=Number(data.likes||0),comments=Number(data.comments||0),shares=Number(data.shares||0);
     const vPostId=document.getElementById('viewerPostId'),vLikePostId=document.getElementById('viewerLikePostId'),vSavePostId=document.getElementById('viewerSavePostId'),vLikeBtn=document.getElementById('viewerLikeBtn'),vSaveBtn=document.getElementById('viewerSaveBtn'),vComments=document.getElementById('viewerComments'),vShareBtn=document.getElementById('viewerShareBtn');
     const videoPostId=document.getElementById('videoCommentPostId'),videoComments=document.getElementById('videoViewerComments');
     if(vPostId) vPostId.value=data.id||'';
@@ -1919,7 +1912,7 @@ function openMediaViewer(data){
     if(vSavePostId) vSavePostId.value=data.id||'';
     const vParentId=document.getElementById('viewerParentId'),vCommentContent=document.getElementById('viewerCommentContent');
     if(vParentId) vParentId.value='';
-    if(vCommentContent){vCommentContent.value='';vCommentContent.placeholder='Ã‰crire un commentaire...';}
+    if(vCommentContent){vCommentContent.value='';vCommentContent.placeholder='Ecrire un commentaire...';}
     const vImgInput=document.getElementById('viewerCommentImage'),vImgPreview=document.getElementById('viewerCommentPreview'),vEmojiH=document.getElementById('viewerEmojiHidden'),vErr=document.getElementById('err-viewerCommentContent'),vExpanded=document.getElementById('viewerCommentExpanded'),vMini=document.getElementById('viewerCommentMini');
     if(vImgInput) vImgInput.value='';
     if(vImgPreview) vImgPreview.classList.remove('show');
@@ -1929,8 +1922,8 @@ function openMediaViewer(data){
     if(vMini) vMini.style.display='flex';
     closeVideoCommentBox(false);
     videoSetAddMode();
-    if(vLikeBtn) vLikeBtn.textContent=data.is_liked?'â¤ï¸':'ðŸ‘';
-    if(vSaveBtn) vSaveBtn.textContent=data.is_saved?'ðŸ“Œ':'ðŸ”–';
+    if(vLikeBtn) vLikeBtn.textContent=data.is_liked?'❤️':'👍';
+    if(vSaveBtn) vSaveBtn.textContent=data.is_saved?'📌':'🔖';
     if(vShareBtn) vShareBtn.onclick=function(){openAdvancedShareModal({id:data.id,title:safeTitle,content:safeContent,user:safeUser,image:data.image||'',video:data.video||''});};
     const commentsHtml=formatViewerComments(Array.isArray(data.comments_data)?data.comments_data:[]);
     const emptyComments='<div class="viewer-comment-item"><div class="mini-avatar">U</div><div class="viewer-comment-bubble">Aucun commentaire pour le moment.</div></div>';
@@ -1963,19 +1956,19 @@ function renderVideoMoreMenu(data){
     if(!menu) return;
     const postId=Number(data.id||0);
     if(data.is_owner){
-        menu.innerHTML=`<a href="${FORUM_INDEX_URL}&edit=${postId}" onclick="localStorage.setItem('openForumModal','1')">âœï¸ Modifier</a><button type="button" class="danger" onclick="viewerDeletePost(${postId})">ðŸ—‘ Supprimer</button>`;
+        menu.innerHTML=`<a href="${FORUM_INDEX_URL}&edit=${postId}" onclick="localStorage.setItem('openForumModal','1')">✏️ Modifier</a><button type="button" class="danger" onclick="viewerDeletePost(${postId})">🗑 Supprimer</button>`;
     }else{
-        menu.innerHTML=`<button type="button" onclick="openReportModal(${postId});toggleVideoMoreMenu(false);">ðŸš© Signaler</button>`;
+        menu.innerHTML=`<button type="button" onclick="openReportModal(${postId});toggleVideoMoreMenu(false);">🚩 Signaler</button>`;
     }
 }
 function toggleVideoMoreMenu(force){const m=document.getElementById('reelMoreDropdown');if(!m) return;if(force===false)m.classList.remove('show');else m.classList.toggle('show');}
 function viewerDeletePost(postId){toggleVideoMoreMenu(false);if(!confirm('Supprimer ce post ?')) return;const i=document.getElementById('deletePostViewerId'),f=document.getElementById('deletePostViewerForm');if(i&&f){i.value=postId;f.submit();}}
 function toggleVideoCommentsPanel(){const p=document.getElementById('videoCommentsPanel');if(p) p.classList.toggle('show');}
-function closeVideoCommentBox(hidePanel=true){const p=document.getElementById('videoCommentsPanel'),f=document.getElementById('videoCommentForm'),ta=document.getElementById('videoCommentContent'),em=document.getElementById('videoEmojiHidden'),par=document.getElementById('videoParentId'),err=document.getElementById('err-videoCommentContent');if(hidePanel&&p)p.classList.remove('show');if(ta){ta.value='';ta.placeholder='Ã‰crire un commentaire...';}if(em)em.value='';if(par)par.value='';if(err)err.textContent='';videoSetAddMode();}
+function closeVideoCommentBox(hidePanel=true){const p=document.getElementById('videoCommentsPanel'),f=document.getElementById('videoCommentForm'),ta=document.getElementById('videoCommentContent'),em=document.getElementById('videoEmojiHidden'),par=document.getElementById('videoParentId'),err=document.getElementById('err-videoCommentContent');if(hidePanel&&p)p.classList.remove('show');if(ta){ta.value='';ta.placeholder='Ecrire un commentaire...';}if(em)em.value='';if(par)par.value='';if(err)err.textContent='';videoSetAddMode();}
 function videoSetAddMode(){const f=document.getElementById('videoCommentForm');if(!f)return;const upd=f.querySelector('input[name="update_comment"]');if(upd)upd.remove();const cid=f.querySelector('#videoEditCommentId');if(cid)cid.remove();let add=f.querySelector('input[name="add_comment"]');if(!add){add=document.createElement('input');add.type='hidden';add.name='add_comment';add.value='1';f.prepend(add);}const sb=document.getElementById('videoCommentSubmitBtn');if(sb)sb.textContent='Publier';}
 function videoSetEditMode(commentId){const f=document.getElementById('videoCommentForm');if(!f)return;const add=f.querySelector('input[name="add_comment"]');if(add)add.remove();let upd=f.querySelector('input[name="update_comment"]');if(!upd){upd=document.createElement('input');upd.type='hidden';upd.name='update_comment';upd.value='1';f.prepend(upd);}let cid=f.querySelector('#videoEditCommentId');if(!cid){cid=document.createElement('input');cid.type='hidden';cid.name='comment_id';cid.id='videoEditCommentId';f.appendChild(cid);}cid.value=commentId;const sb=document.getElementById('videoCommentSubmitBtn');if(sb)sb.textContent='Update';}
 function isVideoCommentsOpen(){const p=document.getElementById('videoCommentsPanel');return !!(p&&p.classList.contains('show'));}
-function setVideoReplyTarget(commentId,authorName){const p=document.getElementById('videoCommentsPanel'),pf=document.getElementById('videoParentId'),ta=document.getElementById('videoCommentContent');if(p)p.classList.add('show');videoSetAddMode();if(pf)pf.value=commentId;if(ta){ta.value='@'+authorName+' ';ta.placeholder='@'+authorName+', votre rÃ©ponse...';ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length);}}
+function setVideoReplyTarget(commentId,authorName){const p=document.getElementById('videoCommentsPanel'),pf=document.getElementById('videoParentId'),ta=document.getElementById('videoCommentContent');if(p)p.classList.add('show');videoSetAddMode();if(pf)pf.value=commentId;if(ta){ta.value='@'+authorName+' ';ta.placeholder='@'+authorName+', votre reponse...';ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length);}}
 function startVideoEditComment(commentId,postId,content,emoji){const p=document.getElementById('videoCommentsPanel'),pid=document.getElementById('videoCommentPostId'),pf=document.getElementById('videoParentId'),ta=document.getElementById('videoCommentContent'),em=document.getElementById('videoEmojiHidden');if(p)p.classList.add('show');videoSetEditMode(commentId);if(pid)pid.value=postId;if(pf)pf.value='';if(ta){ta.value=content||'';ta.placeholder='Modifier votre commentaire...';ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length);}if(em)em.value=emoji||'';document.querySelectorAll('.viewer-comment-dropdown').forEach(m=>m.classList.remove('show'));}
 document.addEventListener('click',function(e){if(!e.target.closest('#reelMoreBtn')&&!e.target.closest('#reelMoreDropdown')) toggleVideoMoreMenu(false);});
 document.addEventListener('DOMContentLoaded',function(){const c=document.getElementById('closeVideoCommentsPanel'),x=document.getElementById('videoCancelCommentBtn');if(c)c.addEventListener('click',()=>{const p=document.getElementById('videoCommentsPanel');if(p)p.classList.remove('show');});if(x)x.addEventListener('click',()=>closeVideoCommentBox(false));});
@@ -2018,7 +2011,7 @@ function setGifMessage(message){ if(gifResults) gifResults.innerHTML='<div class
 function giphyReady(){ return GIPHY_API_KEY && GIPHY_API_KEY!=='PASTE_YOUR_GIPHY_API_KEY_HERE'; }
 async function loadTrendingGifs(){
     if(!gifResults) return;
-    if(!giphyReady()){ setGifMessage('Ajoute ta clÃ© GIPHY dans GIPHY_API_KEY.'); return; }
+    if(!giphyReady()){ setGifMessage('Ajoute ta cle GIPHY dans GIPHY_API_KEY.'); return; }
     setGifMessage('Chargement des GIFs...');
     try{
         const response=await fetch('https://api.giphy.com/v1/gifs/trending?api_key='+encodeURIComponent(GIPHY_API_KEY)+'&limit=24&rating=g');
@@ -2028,7 +2021,7 @@ async function loadTrendingGifs(){
 }
 let gifSearchTimer=null;
 async function searchGifs(query){
-    if(!giphyReady()){ setGifMessage('Ajoute ta clÃ© GIPHY dans GIPHY_API_KEY.'); return; }
+    if(!giphyReady()){ setGifMessage('Ajoute ta cle GIPHY dans GIPHY_API_KEY.'); return; }
     if(query.trim().length<2){ loadTrendingGifs(); return; }
     setGifMessage('Recherche...');
     try{
@@ -2040,7 +2033,7 @@ async function searchGifs(query){
 function renderGifs(gifs){
     if(!gifResults) return;
     gifResults.innerHTML='';
-    if(!gifs.length){ setGifMessage('Aucun GIF trouvÃ©.'); return; }
+    if(!gifs.length){ setGifMessage('Aucun GIF trouve.'); return; }
     gifs.forEach(gif=>{
         const fixed=(gif.images&&gif.images.fixed_height&&gif.images.fixed_height.url)||'';
         const original=(gif.images&&gif.images.original&&gif.images.original.url)||fixed;
@@ -2077,8 +2070,8 @@ function setValid(field,msg){field.classList.remove('field-invalid');field.class
 function validateField(field){const rule=rules[field.id];if(!rule) return true;const v=field.value.trim();if(v===''){setError(field,rule.error);return false;}if(!rule.validate(field.value)){setError(field,rule.error);return false;}setValid(field,rule.message);return true;}
 Object.keys(rules).forEach(id=>{const f=document.getElementById(id);if(!f) return;f.addEventListener('input',()=>validateField(f));f.addEventListener('change',()=>validateField(f));f.addEventListener('blur',()=>validateField(f));});
 
-if(imageField){imageField.addEventListener('change',function(){const eb=document.getElementById('err-image');this.classList.remove('field-invalid');eb.textContent='';const file=this.files[0];if(!file){previewBox.classList.remove('show');previewImg.src='';return;}if(!['image/jpeg','image/png','image/webp','image/gif'].includes(file.type)){this.classList.add('field-invalid');eb.textContent='Formats image autorisÃ©s : JPG, JPEG, PNG, WEBP, GIF.';previewBox.classList.remove('show');previewImg.src='';return;}if(file.size>5*1024*1024){this.classList.add('field-invalid');eb.textContent="L'image ne doit pas dÃ©passer 5 Mo.";previewBox.classList.remove('show');previewImg.src='';return;}const reader=new FileReader();reader.onload=function(e){previewImg.src=e.target.result;previewBox.classList.add('show');if(currentImageBox) currentImageBox.classList.remove('show');eb.textContent='Image valide.';eb.className='field-valid';};reader.readAsDataURL(file);});}
-if(videoField){videoField.addEventListener('change',function(){const eb=document.getElementById('err-video');this.classList.remove('field-invalid');eb.textContent='';const file=this.files[0];if(!file){videoPreviewBox.classList.remove('show');previewVideo.src='';return;}if(!['video/mp4','video/webm','video/ogg'].includes(file.type)){this.classList.add('field-invalid');eb.textContent='Formats vidÃ©o autorisÃ©s : MP4, WEBM, OGG.';videoPreviewBox.classList.remove('show');previewVideo.src='';return;}if(file.size>25*1024*1024){this.classList.add('field-invalid');eb.textContent="La vidÃ©o ne doit pas dÃ©passer 25 Mo.";videoPreviewBox.classList.remove('show');previewVideo.src='';return;}const url=URL.createObjectURL(file);previewVideo.src=url;previewVideo.load();previewVideo.play().catch(()=>{});videoPreviewBox.classList.add('show');if(currentVideoBox) currentVideoBox.classList.remove('show');eb.textContent='Vidéo valide.';eb.className='field-valid';});}
+if(imageField){imageField.addEventListener('change',function(){const eb=document.getElementById('err-image');this.classList.remove('field-invalid');eb.textContent='';const file=this.files[0];if(!file){previewBox.classList.remove('show');previewImg.src='';return;}if(!['image/jpeg','image/png','image/webp','image/gif'].includes(file.type)){this.classList.add('field-invalid');eb.textContent='Formats image autorises : JPG, JPEG, PNG, WEBP, GIF.';previewBox.classList.remove('show');previewImg.src='';return;}if(file.size>5*1024*1024){this.classList.add('field-invalid');eb.textContent="L'image ne doit pas depasser 5 Mo.";previewBox.classList.remove('show');previewImg.src='';return;}const reader=new FileReader();reader.onload=function(e){previewImg.src=e.target.result;previewBox.classList.add('show');if(currentImageBox) currentImageBox.classList.remove('show');eb.textContent='Image valide.';eb.className='field-valid';};reader.readAsDataURL(file);});}
+if(videoField){videoField.addEventListener('change',function(){const eb=document.getElementById('err-video');this.classList.remove('field-invalid');eb.textContent='';const file=this.files[0];if(!file){videoPreviewBox.classList.remove('show');previewVideo.src='';return;}if(!['video/mp4','video/webm','video/ogg'].includes(file.type)){this.classList.add('field-invalid');eb.textContent='Formats video autorises : MP4, WEBM, OGG.';videoPreviewBox.classList.remove('show');previewVideo.src='';return;}if(file.size>25*1024*1024){this.classList.add('field-invalid');eb.textContent="La video ne doit pas depasser 25 Mo.";videoPreviewBox.classList.remove('show');previewVideo.src='';return;}const url=URL.createObjectURL(file);previewVideo.src=url;previewVideo.load();previewVideo.play().catch(()=>{});videoPreviewBox.classList.add('show');if(currentVideoBox) currentVideoBox.classList.remove('show');eb.textContent='Vidéo valide.';eb.className='field-valid';});}
 if(postForm){postForm.addEventListener('submit',function(e){let ok=true;Object.keys(rules).forEach(id=>{const f=document.getElementById(id);if(f&&!validateField(f)) ok=false;});if(!ok){e.preventDefault();openModal();}});}
 
 /* ============================================================ MENUS 3 POINTS POST */
@@ -2089,7 +2082,7 @@ document.addEventListener('click',function(e){if(!e.target.closest('.post-menu-w
 function toggleCommentMenu(menuId){document.querySelectorAll('.comment-dropdown').forEach(m=>{if(m.id!==menuId) m.classList.remove('show');});const m=document.getElementById(menuId);if(m) m.classList.toggle('show');}
 function startEditComment(commentId,postId){document.querySelectorAll('.comment-dropdown').forEach(m=>m.classList.remove('show'));const td=document.getElementById('comment-text-'+commentId),ez=document.getElementById('comment-edit-zone-'+commentId);if(td) td.style.display='none';if(ez) ez.style.display='block';const inp=document.getElementById('comment-edit-input-'+commentId);if(inp){inp.focus();inp.setSelectionRange(inp.value.length,inp.value.length);}}
 function cancelEditComment(commentId){const td=document.getElementById('comment-text-'+commentId),ez=document.getElementById('comment-edit-zone-'+commentId);if(td) td.style.display='';if(ez) ez.style.display='none';}
-function deleteComment(commentId,postId,parentId){document.querySelectorAll('.comment-dropdown').forEach(m=>m.classList.remove('show'));const msg=parentId===0?'Supprimer ce commentaire et toutes ses rÃ©ponses ?':'Supprimer cette rÃ©ponse ?';if(!confirm(msg)) return;document.getElementById('deleteCommentId').value=commentId;document.getElementById('deleteCommentPostId').value=postId;document.getElementById('deleteCommentParentId').value=parentId;document.getElementById('deleteCommentForm').submit();}
+function deleteComment(commentId,postId,parentId){document.querySelectorAll('.comment-dropdown').forEach(m=>m.classList.remove('show'));const msg=parentId===0?'Supprimer ce commentaire et toutes ses reponses ?':'Supprimer cette reponse ?';if(!confirm(msg)) return;document.getElementById('deleteCommentId').value=commentId;document.getElementById('deleteCommentPostId').value=postId;document.getElementById('deleteCommentParentId').value=parentId;document.getElementById('deleteCommentForm').submit();}
 
 /* ============================================================ MODAL SIGNALER COMMENTAIRE */
 function openReportCommentModal(commentId,postId){document.querySelectorAll('.comment-dropdown').forEach(m=>m.classList.remove('show'));document.getElementById('report-comment-id').value=commentId;document.getElementById('report-comment-post-id').value=postId;document.getElementById('reportCommentModal').classList.add('show');}
@@ -2105,20 +2098,20 @@ function closeReportModal(){document.getElementById('reportModal').style.display
 
 /* ============================================================ VIEWER COMMENT FORM */
 const viewerCommentForm=document.getElementById('viewerCommentForm');
-if(viewerCommentForm){viewerCommentForm.addEventListener('submit',function(e){const pf=document.getElementById('viewerPostId'),cf=document.getElementById('viewerCommentContent'),eb=document.getElementById('err-viewerCommentContent'),postId=pf?pf.value.trim():'',content=cf?cf.value.trim():'';if(!postId){e.preventDefault();if(eb) eb.textContent='Post introuvable.';return;}if(content===''){ e.preventDefault();if(eb) eb.textContent='Le commentaire est obligatoire.';return;}if(content!==''&&content.replace(/[^a-zA-ZÃ€-Ã¿]/gu,'').length<5){e.preventDefault();if(eb) eb.textContent='Le commentaire doit contenir au moins 5 lettres.';return;}if(eb) eb.textContent='';});}
+if(viewerCommentForm){viewerCommentForm.addEventListener('submit',function(e){const pf=document.getElementById('viewerPostId'),cf=document.getElementById('viewerCommentContent'),eb=document.getElementById('err-viewerCommentContent'),postId=pf?pf.value.trim():'',content=cf?cf.value.trim():'';if(!postId){e.preventDefault();if(eb) eb.textContent='Post introuvable.';return;}if(content===''){ e.preventDefault();if(eb) eb.textContent='Le commentaire est obligatoire.';return;}if(content!==''&&content.replace(/[^a-zA-ZÀ-ÿ]/gu,'').length<5){e.preventDefault();if(eb) eb.textContent='Le commentaire doit contenir au moins 5 lettres.';return;}if(eb) eb.textContent='';});}
 const vci=document.getElementById('viewerCommentImage');
-if(vci){vci.addEventListener('change',function(){const preview=document.getElementById('viewerCommentPreview'),img=preview?preview.querySelector('img'):null,eb=document.getElementById('err-viewerCommentContent'),file=this.files[0];if(!preview||!img) return;if(!file){preview.classList.remove('show');img.src='';return;}if(!['image/jpeg','image/png','image/webp','image/gif'].includes(file.type)){if(eb) eb.textContent='Formats image commentaire autorisÃ©s : JPG, JPEG, PNG, WEBP.';this.value='';preview.classList.remove('show');img.src='';return;}if(file.size>3*1024*1024){if(eb) eb.textContent="L'image du commentaire ne doit pas dÃ©passer 3 Mo.";this.value='';preview.classList.remove('show');img.src='';return;}const reader=new FileReader();reader.onload=function(ev){img.src=ev.target.result;preview.classList.add('show');if(eb&&eb.textContent.includes('image')) eb.textContent='';};reader.readAsDataURL(file);});}
+if(vci){vci.addEventListener('change',function(){const preview=document.getElementById('viewerCommentPreview'),img=preview?preview.querySelector('img'):null,eb=document.getElementById('err-viewerCommentContent'),file=this.files[0];if(!preview||!img) return;if(!file){preview.classList.remove('show');img.src='';return;}if(!['image/jpeg','image/png','image/webp','image/gif'].includes(file.type)){if(eb) eb.textContent='Formats image commentaire autorises : JPG, JPEG, PNG, WEBP.';this.value='';preview.classList.remove('show');img.src='';return;}if(file.size>3*1024*1024){if(eb) eb.textContent="L'image du commentaire ne doit pas depasser 3 Mo.";this.value='';preview.classList.remove('show');img.src='';return;}const reader=new FileReader();reader.onload=function(ev){img.src=ev.target.result;preview.classList.add('show');if(eb&&eb.textContent.includes('image')) eb.textContent='';};reader.readAsDataURL(file);});}
 const vCBtn=document.getElementById('viewerCommentBtn');if(vCBtn) vCBtn.addEventListener('click',function(){const f=document.getElementById('viewerCommentContent');if(f) f.focus();});
 
 /* ============================================================ VALIDATION COMMENTAIRES */
-function validateComment(textareaId,errorId){const ta=document.getElementById(textareaId),eb=document.getElementById(errorId);if(!ta) return true;const text=ta.value.trim(),letters=text.replace(/[^a-zA-ZÃ€-Ã¿]/gu,'');if(text===''){if(eb){eb.textContent='Le commentaire est obligatoire.';eb.style.display='block';} return false;}if(letters.length<5){if(eb){eb.textContent='Le commentaire doit contenir au moins 5 lettres.';eb.style.display='block';} return false;}if(eb){eb.textContent='';eb.style.display='none';} return true;}
-function validateEditCommentForm(form){const ta=form.querySelector('textarea[name="comment_content"]'),eb=form.querySelector('.field-error'),imgInp=form.querySelector('input[name="comment_image"]');if(!ta) return true;const text=ta.value.trim(),letters=text.replace(/[^a-zA-ZÃ€-Ã¿]/gu,'');if(text===''){if(eb){eb.textContent='Le commentaire est obligatoire.';eb.style.display='block';eb.style.color='#dc2626';}ta.classList.add('field-invalid');ta.classList.remove('field-valid-input');return false;}if(letters.length<5){if(eb){eb.textContent='Le commentaire doit contenir au moins 5 lettres.';eb.style.display='block';eb.style.color='#dc2626';}ta.classList.add('field-invalid');ta.classList.remove('field-valid-input');return false;}if(imgInp&&imgInp.files&&imgInp.files.length>0){const f=imgInp.files[0];if(!['image/jpeg','image/png','image/webp','image/gif'].includes(f.type)){if(eb){eb.textContent='Formats image autorisÃ©s : JPG, JPEG, PNG, WEBP, GIF.';eb.style.display='block';eb.style.color='#dc2626';} return false;}if(f.size>3*1024*1024){if(eb){eb.textContent="L'image ne doit pas dÃ©passer 3 Mo.";eb.style.display='block';eb.style.color='#dc2626';} return false;}}if(eb){eb.textContent='Commentaire valide.';eb.style.display='block';eb.style.color='#22a559';}ta.classList.remove('field-invalid');ta.classList.add('field-valid-input');return true;}
+function validateComment(textareaId,errorId){const ta=document.getElementById(textareaId),eb=document.getElementById(errorId);if(!ta) return true;const text=ta.value.trim(),letters=text.replace(/[^a-zA-ZÀ-ÿ]/gu,'');if(text===''){if(eb){eb.textContent='Le commentaire est obligatoire.';eb.style.display='block';} return false;}if(letters.length<5){if(eb){eb.textContent='Le commentaire doit contenir au moins 5 lettres.';eb.style.display='block';} return false;}if(eb){eb.textContent='';eb.style.display='none';} return true;}
+function validateEditCommentForm(form){const ta=form.querySelector('textarea[name="comment_content"]'),eb=form.querySelector('.field-error'),imgInp=form.querySelector('input[name="comment_image"]');if(!ta) return true;const text=ta.value.trim(),letters=text.replace(/[^a-zA-ZÀ-ÿ]/gu,'');if(text===''){if(eb){eb.textContent='Le commentaire est obligatoire.';eb.style.display='block';eb.style.color='#dc2626';}ta.classList.add('field-invalid');ta.classList.remove('field-valid-input');return false;}if(letters.length<5){if(eb){eb.textContent='Le commentaire doit contenir au moins 5 lettres.';eb.style.display='block';eb.style.color='#dc2626';}ta.classList.add('field-invalid');ta.classList.remove('field-valid-input');return false;}if(imgInp&&imgInp.files&&imgInp.files.length>0){const f=imgInp.files[0];if(!['image/jpeg','image/png','image/webp','image/gif'].includes(f.type)){if(eb){eb.textContent='Formats image autorises : JPG, JPEG, PNG, WEBP, GIF.';eb.style.display='block';eb.style.color='#dc2626';} return false;}if(f.size>3*1024*1024){if(eb){eb.textContent="L'image ne doit pas depasser 3 Mo.";eb.style.display='block';eb.style.color='#dc2626';} return false;}}if(eb){eb.textContent='Commentaire valide.';eb.style.display='block';eb.style.color='#22a559';}ta.classList.remove('field-invalid');ta.classList.add('field-valid-input');return true;}
 document.addEventListener('input',function(e){const ta=e.target.closest('.comment-edit-form textarea[name="comment_content"]');if(!ta) return;validateEditCommentForm(ta.closest('.comment-edit-form'));});
 document.addEventListener('change',function(e){const ii=e.target.closest('.comment-edit-form input[name="comment_image"]');if(!ii) return;validateEditCommentForm(ii.closest('.comment-edit-form'));});
 document.addEventListener('submit',function(e){const form=e.target.closest('.comment-edit-form');if(!form) return;if(!validateEditCommentForm(form)) e.preventDefault();});
 document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('form[method="POST"]').forEach(form=>{const ta=form.querySelector('textarea[name="comment_content"]');if(!ta) return;const eid=ta.id?'err-'+ta.id:null;if(ta.id&&eid){ta.addEventListener('blur',()=>validateComment(ta.id,eid));ta.addEventListener('keyup',()=>validateComment(ta.id,eid));}form.addEventListener('submit',event=>{if(!ta||!ta.id||!eid) return;if(!validateComment(ta.id,eid)) event.preventDefault();});});});
 
-/* Boutons RÃ©pondre */
+/* Boutons Repondre */
 document.addEventListener('click',function(e){const btn=e.target.closest('.reply-btn');if(!btn) return;const rootId=btn.dataset.rootId,holderId=btn.dataset.holderId,author=btn.dataset.author||'Utilisateur';if(!rootId||!holderId) return;const box=document.getElementById('reply-box-'+rootId),holder=document.getElementById(holderId);if(!box||!holder) return;const ta=document.getElementById('reply-content-'+rootId),emojiInp=document.getElementById('emoji-reply-'+rootId),imgInp=document.getElementById('reply-img-'+rootId),eb=document.getElementById('err-reply-content-'+rootId);const already=box.parentElement===holder&&box.style.display==='block';document.querySelectorAll('.reply-box').forEach(b=>b.style.display='none');if(already){box.style.display='none';return;}holder.appendChild(box);box.style.display='block';if(ta){ta.value='@'+author+' ';ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length);}if(emojiInp){emojiInp.value='';emojiInp.classList.remove('field-invalid','field-valid-input');}if(imgInp) imgInp.value='';if(eb){eb.textContent='';eb.style.display='none';}});
 
 /* ============================================================ AUTO-OPEN */
@@ -2130,13 +2123,13 @@ window.addEventListener('load',function(){const postId=<?php echo (int)$_GET['op
 
 /* ============================================================ POPUP COMPACT COMMENT */
 function openViewerCommentBox(){const expanded=document.getElementById('viewerCommentExpanded'),mini=document.getElementById('viewerCommentMini'),ta=document.getElementById('viewerCommentContent');if(expanded) expanded.classList.add('show');if(mini) mini.style.display='none';if(ta) setTimeout(()=>ta.focus(),80);}
-function closeViewerCommentBox(){const mini=document.getElementById('viewerCommentMini'),expanded=document.getElementById('viewerCommentExpanded'),ta=document.getElementById('viewerCommentContent'),emoji=document.getElementById('viewerEmojiHidden'),img=document.getElementById('viewerCommentImage'),preview=document.getElementById('viewerCommentPreview'),error=document.getElementById('err-viewerCommentContent'),pf=document.getElementById('viewerParentId');viewerSetAddMode();if(expanded) expanded.classList.remove('show');if(mini){mini.style.display='flex';const sp=mini.querySelector('span');if(sp) sp.textContent='Ã‰crire un commentaire...';}if(ta){ta.value='';ta.placeholder='Ã‰crire un commentaire...';}if(emoji) emoji.value='';if(img) img.value='';if(preview) preview.classList.remove('show');if(error) error.textContent='';if(pf) pf.value='';}
-function setViewerReplyTarget(commentId,authorName){if(isVideoCommentsOpen()) return setVideoReplyTarget(commentId,authorName);const pf=document.getElementById('viewerParentId'),ta=document.getElementById('viewerCommentContent'),mini=document.getElementById('viewerCommentMini');viewerSetAddMode();if(pf) pf.value=commentId;openViewerCommentBox();if(ta){ta.value='@'+authorName+' ';ta.placeholder='@'+authorName+', votre rÃ©ponse...';ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length);}if(mini&&mini.querySelector('span')) mini.querySelector('span').textContent='RÃ©pondre Ã  @'+authorName;}
+function closeViewerCommentBox(){const mini=document.getElementById('viewerCommentMini'),expanded=document.getElementById('viewerCommentExpanded'),ta=document.getElementById('viewerCommentContent'),emoji=document.getElementById('viewerEmojiHidden'),img=document.getElementById('viewerCommentImage'),preview=document.getElementById('viewerCommentPreview'),error=document.getElementById('err-viewerCommentContent'),pf=document.getElementById('viewerParentId');viewerSetAddMode();if(expanded) expanded.classList.remove('show');if(mini){mini.style.display='flex';const sp=mini.querySelector('span');if(sp) sp.textContent='Ecrire un commentaire...';}if(ta){ta.value='';ta.placeholder='Ecrire un commentaire...';}if(emoji) emoji.value='';if(img) img.value='';if(preview) preview.classList.remove('show');if(error) error.textContent='';if(pf) pf.value='';}
+function setViewerReplyTarget(commentId,authorName){if(isVideoCommentsOpen()) return setVideoReplyTarget(commentId,authorName);const pf=document.getElementById('viewerParentId'),ta=document.getElementById('viewerCommentContent'),mini=document.getElementById('viewerCommentMini');viewerSetAddMode();if(pf) pf.value=commentId;openViewerCommentBox();if(ta){ta.value='@'+authorName+' ';ta.placeholder='@'+authorName+', votre reponse...';ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length);}if(mini&&mini.querySelector('span')) mini.querySelector('span').textContent='Repondre a @'+authorName;}
 function viewerSetAddMode(){const form=document.getElementById('viewerCommentForm');if(!form) return;const ai=form.querySelector('input[name="update_comment"]');if(ai) ai.remove();const ci=form.querySelector('#viewerEditCommentId');if(ci) ci.remove();let ad=form.querySelector('input[name="add_comment"]');if(!ad){ad=document.createElement('input');ad.type='hidden';ad.name='add_comment';ad.value='1';form.prepend(ad);}const sb=form.querySelector('.viewer-publish-btn');if(sb) sb.textContent='Publier';}
 function viewerSetEditMode(commentId){const form=document.getElementById('viewerCommentForm');if(!form) return;const ad=form.querySelector('input[name="add_comment"]');if(ad) ad.remove();let ai=form.querySelector('input[name="update_comment"]');if(!ai){ai=document.createElement('input');ai.type='hidden';ai.name='update_comment';ai.value='1';form.prepend(ai);}let ci=form.querySelector('#viewerEditCommentId');if(!ci){ci=document.createElement('input');ci.type='hidden';ci.name='comment_id';ci.id='viewerEditCommentId';form.appendChild(ci);}ci.value=commentId;const sb=form.querySelector('.viewer-publish-btn');if(sb) sb.textContent='Update';}
 function startViewerEditComment(commentId,postId,content,emoji){if(isVideoCommentsOpen()) return startVideoEditComment(commentId,postId,content,emoji);const pf=document.getElementById('viewerPostId'),ta=document.getElementById('viewerCommentContent'),ei=document.getElementById('viewerEmojiHidden'),mini=document.getElementById('viewerCommentMini');viewerSetEditMode(commentId);if(pf) pf.value=postId;document.getElementById('viewerParentId').value='';openViewerCommentBox();if(ta){ta.value=content||'';ta.placeholder='Modifier votre commentaire...';ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length);}if(ei) ei.value=emoji||'';if(mini&&mini.querySelector('span')) mini.querySelector('span').textContent='Modifier le commentaire';document.querySelectorAll('.viewer-comment-dropdown').forEach(m=>m.classList.remove('show'));}
 function toggleViewerCommentMenu(menuId){document.querySelectorAll('.viewer-comment-dropdown').forEach(m=>{if(m.id!==menuId) m.classList.remove('show');});const m=document.getElementById(menuId);if(m) m.classList.toggle('show');}
-function viewerDeleteComment(commentId,postId,parentId){document.querySelectorAll('.viewer-comment-dropdown').forEach(m=>m.classList.remove('show'));if(!confirm(parentId===0?'Supprimer ce commentaire et toutes ses rÃ©ponses ?':'Supprimer cette rÃ©ponse ?')) return;document.getElementById('deleteCommentId').value=commentId;document.getElementById('deleteCommentPostId').value=postId;document.getElementById('deleteCommentParentId').value=parentId;document.getElementById('deleteCommentForm').submit();}
+function viewerDeleteComment(commentId,postId,parentId){document.querySelectorAll('.viewer-comment-dropdown').forEach(m=>m.classList.remove('show'));if(!confirm(parentId===0?'Supprimer ce commentaire et toutes ses reponses ?':'Supprimer cette reponse ?')) return;document.getElementById('deleteCommentId').value=commentId;document.getElementById('deleteCommentPostId').value=postId;document.getElementById('deleteCommentParentId').value=parentId;document.getElementById('deleteCommentForm').submit();}
 function viewerReportComment(commentId,postId){document.querySelectorAll('.viewer-comment-dropdown').forEach(m=>m.classList.remove('show'));openReportCommentModal(commentId,postId);}
 document.addEventListener('click',function(e){if(!e.target.closest('.viewer-comment-menu-btn')&&!e.target.closest('.viewer-comment-dropdown')) document.querySelectorAll('.viewer-comment-dropdown').forEach(m=>m.classList.remove('show'));});
 document.addEventListener('DOMContentLoaded',function(){const mini=document.getElementById('viewerCommentMini'),cancelBtn=document.getElementById('viewerCancelCommentBtn');if(mini) mini.addEventListener('click',function(){viewerSetAddMode();openViewerCommentBox();});if(cancelBtn) cancelBtn.addEventListener('click',closeViewerCommentBox);});
@@ -2147,9 +2140,9 @@ function viewerEscapeJs(t){return String(t||'').replace(/\\/g,'\\\\').replace(/'
 function viewerCommentMenuHtml(id,postId,parentId,isOwner,content,emoji){
     const menuId=(parentId>0?'viewer-cmenu-reply-':'viewer-cmenu-')+id;
     if(isOwner){
-        return `<div class="viewer-comment-menu-wrap"><button type="button" class="viewer-comment-menu-btn" onclick="toggleViewerCommentMenu('${menuId}')">â‹¯</button><div class="viewer-comment-dropdown" id="${menuId}"><button type="button" onclick="startViewerEditComment(${id},${postId},'${content}','${emoji}')">âœï¸ Modifier</button><button type="button" class="danger" onclick="viewerDeleteComment(${id},${postId},${parentId})">ðŸ—‘ Supprimer</button></div></div>`;
+        return `<div class="viewer-comment-menu-wrap"><button type="button" class="viewer-comment-menu-btn" onclick="toggleViewerCommentMenu('${menuId}')">⋯</button><div class="viewer-comment-dropdown" id="${menuId}"><button type="button" onclick="startViewerEditComment(${id},${postId},'${content}','${emoji}')">✏️ Modifier</button><button type="button" class="danger" onclick="viewerDeleteComment(${id},${postId},${parentId})">🗑 Supprimer</button></div></div>`;
     }
-    return `<div class="viewer-comment-menu-wrap"><button type="button" class="viewer-comment-menu-btn" onclick="toggleViewerCommentMenu('${menuId}')">â‹¯</button><div class="viewer-comment-dropdown" id="${menuId}"><button type="button" onclick="viewerReportComment(${id},${postId})">ðŸš© Signaler</button></div></div>`;
+    return `<div class="viewer-comment-menu-wrap"><button type="button" class="viewer-comment-menu-btn" onclick="toggleViewerCommentMenu('${menuId}')">⋯</button><div class="viewer-comment-dropdown" id="${menuId}"><button type="button" onclick="viewerReportComment(${id},${postId})">🚩 Signaler</button></div></div>`;
 }
 function formatViewerComments(comments){
     const rootComments=[],repliesByParent={},currentPostId=document.getElementById('viewerPostId')?Number(document.getElementById('viewerPostId').value||0):Number((currentViewerPostData&&currentViewerPostData.id)||0);
@@ -2157,8 +2150,8 @@ function formatViewerComments(comments){
     return rootComments.map(comment=>{
         const cid=Number(comment.id_commentaire||0),author=`${comment.prenom||''} ${comment.nom||''}`.trim()||'Utilisateur',aL=author.charAt(0).toUpperCase(),content=viewerEscapeHtml(comment.contenu_commentaire||''),rawContent=viewerEscapeJs(comment.contenu_commentaire||''),emoji=viewerEscapeHtml(comment.emoji_commentaire||''),rawEmoji=viewerEscapeJs(comment.emoji_commentaire||''),time=viewerEscapeHtml(comment.date_commentaire||''),img=comment.image_commentaire?`${FORUM_APP_ROOT}/${String(comment.image_commentaire).replace(/^\/+/,'')}`:'',safeAJ=viewerEscapeJs(author),replies=repliesByParent[cid]||[],isOwner=Number(comment.id_user||0)===CURRENT_FORUM_USER_ID;
         const menuHtml=viewerCommentMenuHtml(cid,currentPostId,0,isOwner,rawContent,rawEmoji);
-        const repliesHtml=replies.map(reply=>{const rid=Number(reply.id_commentaire||0),ra=`${reply.prenom||''} ${reply.nom||''}`.trim()||'Utilisateur',rL=ra.charAt(0).toUpperCase(),rc=viewerEscapeHtml(reply.contenu_commentaire||''),rrc=viewerEscapeJs(reply.contenu_commentaire||''),re=viewerEscapeHtml(reply.emoji_commentaire||''),rre=viewerEscapeJs(reply.emoji_commentaire||''),ri=reply.image_commentaire?`${FORUM_APP_ROOT}/${String(reply.image_commentaire).replace(/^\/+/,'')}`:'',sraJ=viewerEscapeJs(ra),rOwner=Number(reply.id_user||0)===CURRENT_FORUM_USER_ID,rMenu=viewerCommentMenuHtml(rid,currentPostId,cid,rOwner,rrc,rre);return `<div class="viewer-reply-item"><div class="mini-avatar">${rL}</div><div class="viewer-comment-content"><div class="viewer-reply-bubble viewer-comment-bubble"><div class="viewer-comment-head-row"><span class="viewer-comment-author">${viewerEscapeHtml(ra)}</span>${rMenu}</div>${rc?`<div>${rc}</div>`:''}${re?`<div style="margin-top:6px;">${re}</div>`:''}${ri?`<div style="margin-top:8px;"><img src="${ri}" style="max-width:180px;border-radius:10px;"></div>`:''}</div><div class="viewer-comment-meta"><span>${viewerEscapeHtml(reply.date_commentaire||'')}</span><button type="button" class="viewer-reply-btn" onclick="setViewerReplyTarget(${cid},'${sraJ}')">RÃ©pondre</button></div></div></div>`;}).join('');
-        return `<div class="viewer-comment-item"><div class="mini-avatar">${aL}</div><div class="viewer-comment-content"><div class="viewer-comment-bubble"><div class="viewer-comment-head-row"><span class="viewer-comment-author">${viewerEscapeHtml(author)}</span>${menuHtml}</div>${content?`<div>${content}</div>`:''}${emoji?`<div style="margin-top:6px;">${emoji}</div>`:''}${img?`<div style="margin-top:8px;"><img src="${img}" style="max-width:220px;border-radius:10px;"></div>`:''}</div><div class="viewer-comment-meta"><span>${time}</span><button type="button" class="viewer-reply-btn" onclick="setViewerReplyTarget(${cid},'${safeAJ}')">RÃ©pondre</button></div>${replies.length?`<div class="viewer-replies">${repliesHtml}</div>`:''}</div></div>`;
+        const repliesHtml=replies.map(reply=>{const rid=Number(reply.id_commentaire||0),ra=`${reply.prenom||''} ${reply.nom||''}`.trim()||'Utilisateur',rL=ra.charAt(0).toUpperCase(),rc=viewerEscapeHtml(reply.contenu_commentaire||''),rrc=viewerEscapeJs(reply.contenu_commentaire||''),re=viewerEscapeHtml(reply.emoji_commentaire||''),rre=viewerEscapeJs(reply.emoji_commentaire||''),ri=reply.image_commentaire?`${FORUM_APP_ROOT}/${String(reply.image_commentaire).replace(/^\/+/,'')}`:'',sraJ=viewerEscapeJs(ra),rOwner=Number(reply.id_user||0)===CURRENT_FORUM_USER_ID,rMenu=viewerCommentMenuHtml(rid,currentPostId,cid,rOwner,rrc,rre);return `<div class="viewer-reply-item"><div class="mini-avatar">${rL}</div><div class="viewer-comment-content"><div class="viewer-reply-bubble viewer-comment-bubble"><div class="viewer-comment-head-row"><span class="viewer-comment-author">${viewerEscapeHtml(ra)}</span>${rMenu}</div>${rc?`<div>${rc}</div>`:''}${re?`<div style="margin-top:6px;">${re}</div>`:''}${ri?`<div style="margin-top:8px;"><img src="${ri}" style="max-width:180px;border-radius:10px;"></div>`:''}</div><div class="viewer-comment-meta"><span>${viewerEscapeHtml(reply.date_commentaire||'')}</span><button type="button" class="viewer-reply-btn" onclick="setViewerReplyTarget(${cid},'${sraJ}')">Répondre</button></div></div></div>`;}).join('');
+        return `<div class="viewer-comment-item"><div class="mini-avatar">${aL}</div><div class="viewer-comment-content"><div class="viewer-comment-bubble"><div class="viewer-comment-head-row"><span class="viewer-comment-author">${viewerEscapeHtml(author)}</span>${menuHtml}</div>${content?`<div>${content}</div>`:''}${emoji?`<div style="margin-top:6px;">${emoji}</div>`:''}${img?`<div style="margin-top:8px;"><img src="${img}" style="max-width:220px;border-radius:10px;"></div>`:''}</div><div class="viewer-comment-meta"><span>${time}</span><button type="button" class="viewer-reply-btn" onclick="setViewerReplyTarget(${cid},'${safeAJ}')">Répondre</button></div>${replies.length?`<div class="viewer-replies">${repliesHtml}</div>`:''}</div></div>`;
     }).join('');
 }
 
@@ -2175,7 +2168,7 @@ if('IntersectionObserver' in window){const obs=new IntersectionObserver(function
 
 /* Local Google Translate removed: global GoService language switcher owns translation. */
 
-/* ============================================================ ADVANCED SHARE - CORRIGÃ‰ */
+/* ============================================================ ADVANCED SHARE - CORRIGE */
 let currentSharePostId=0,currentSharePostTitle='Post GoService',currentSharePostContent='',currentSharePostUser='Utilisateur',currentSharePostUrl='',currentSharePostImage='',currentSharePostVideo='',currentShareThumbUrl='';
 
 function buildForumPostUrl(postId){
@@ -2209,11 +2202,11 @@ function openAdvancedShareModal(data){
         if(currentSharePostImage){
             const img=document.createElement('img');img.src=currentSharePostImage;img.alt=currentSharePostTitle;media.appendChild(img);currentShareThumbUrl=currentSharePostImage;
         }else if(currentSharePostVideo){
-            /* Capture miniature vidÃ©o via canvas */
+            /* Capture miniature video via canvas */
             const tmpV=document.createElement('video');tmpV.src=currentSharePostVideo;tmpV.crossOrigin='anonymous';tmpV.muted=true;tmpV.playsInline=true;tmpV.style.display='none';document.body.appendChild(tmpV);
             tmpV.addEventListener('loadeddata',()=>{tmpV.currentTime=0.5;});
             tmpV.addEventListener('seeked',()=>{const canvas=document.createElement('canvas');canvas.width=tmpV.videoWidth||640;canvas.height=tmpV.videoHeight||360;canvas.getContext('2d').drawImage(tmpV,0,0,canvas.width,canvas.height);const thumbUrl=canvas.toDataURL('image/jpeg',0.85);document.body.removeChild(tmpV);currentShareThumbUrl=thumbUrl;
-                const wrapper=document.createElement('div');wrapper.className='thumb-wrapper';const ti=document.createElement('img');ti.src=thumbUrl;wrapper.appendChild(ti);const pi=document.createElement('div');pi.className='thumb-play';pi.textContent='â–¶';wrapper.appendChild(pi);media.appendChild(wrapper);});
+                const wrapper=document.createElement('div');wrapper.className='thumb-wrapper';const ti=document.createElement('img');ti.src=thumbUrl;wrapper.appendChild(ti);const pi=document.createElement('div');pi.className='thumb-play';pi.textContent='▶';wrapper.appendChild(pi);media.appendChild(wrapper);});
             tmpV.addEventListener('error',()=>{try{document.body.removeChild(tmpV);}catch(ex){}media.textContent='🎥 Vidéo';});
             tmpV.load();
         }else{media.textContent='GoService Forum';}
@@ -2270,7 +2263,7 @@ async function sharePostAdvanced(platform){
         const data=await registerAdvancedShare('internal');
         closeAdvancedShareModal();
         if(data&&data.success){
-            showAdvancedShareToast('Post partagÃ© sur GoService âœ…');
+            showAdvancedShareToast('Post partage sur GoService ✅');
             const newId=data.new_post_id||currentSharePostId;
             setTimeout(()=>{window.location.href=FORUM_INDEX_URL+'&open_post='+encodeURIComponent(newId)+'#post-'+encodeURIComponent(newId);},650);
         }else{
@@ -2287,7 +2280,7 @@ async function sharePostAdvanced(platform){
         const txt=buildShareText(true);
         window.open('https://wa.me/?text='+encodeURIComponent(txt),'_blank');
         closeAdvancedShareModal();
-        showAdvancedShareToast('Partage WhatsApp ouvert âœ…');
+        showAdvancedShareToast('Partage WhatsApp ouvert ✅');
         return;
     }
 
@@ -2295,14 +2288,14 @@ async function sharePostAdvanced(platform){
         const fbUrl=buildForumPostUrl(currentSharePostId);
         window.open('https://www.facebook.com/sharer/sharer.php?u='+encodeURIComponent(fbUrl),'_blank','width=900,height=700,scrollbars=yes');
         closeAdvancedShareModal();
-        showAdvancedShareToast('Partage Facebook ouvert âœ…');
+        showAdvancedShareToast('Partage Facebook ouvert ✅');
         return;
     }
 
     if(platform==='copy'){
         const ok=await copyToClipboard(currentSharePostUrl);
         closeAdvancedShareModal();
-        showAdvancedShareToast(ok?'Lien copiÃ© âœ…':'Copie impossible');
+        showAdvancedShareToast(ok?'Lien copie ✅':'Copie impossible');
         return;
     }
 }

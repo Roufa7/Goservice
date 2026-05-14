@@ -1131,10 +1131,10 @@ document.addEventListener('DOMContentLoaded', function() {
 .application-empty-state {
     margin-top: 15px;
     padding: 20px;
-    background: #fff6f6;
-    border: 1px solid #f5c6cb;
+    background: var(--panel);
+    border: 1px solid var(--line);
     border-radius: 12px;
-    color: #721c24;
+    color: var(--text);
 }
 
 .application-empty-state p {
@@ -1171,7 +1171,7 @@ document.addEventListener('DOMContentLoaded', function() {
 .offer-recommendation-card {
     border: 1px solid rgba(20,39,56,0.10);
     border-radius: 14px;
-    background: #fff;
+    background: var(--card);
     padding: 14px;
     box-shadow: 0 8px 20px rgba(20,39,56,0.06);
 }
